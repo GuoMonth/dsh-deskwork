@@ -1,6 +1,6 @@
 # H-001：Electron 会话与页面控制
 
-状态：验证中。候选技术：Electron 44.2.0。来源：固定 ERP 工作台设计。
+状态：范围内支持，需本地 sandbox 适配。候选技术：Electron 44.2.0。来源：固定 ERP 工作台设计。
 
 ## 假设
 
@@ -20,7 +20,7 @@
 
 仅测试本机 Linux、模拟 HTTP ERP、持久化 Cookie 与 Electron 原生 CDP。未覆盖 Browser Harness、DSH、真实 SSO/MFA、操作系统密钥保护、崩溃恢复、Windows/macOS 或产品标签栏 UI。
 
-实验入口：`npm run experiment:electron-session`。测试契约先于实验实现编写；结果入口见[实验索引](../experiments/README.md)。
+实验入口：`npm run experiment:electron-session`。测试契约先于实验实现编写；结果见 [2026-09-05 实验记录](../experiments/2026-09-05-electron-session-control.md)。
 
 ## 设计线索
 

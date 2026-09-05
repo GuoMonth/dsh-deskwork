@@ -1,0 +1,9 @@
+{
+  "hypothesis": "H-001",
+  "executedAt": "2026-09-05T09:47:16.463Z",
+  "control": "Temporarily replace account-b partition with account-a; keep expected isolated status 401",
+  "result": "failed",
+  "expectedStatuses": [200, 200, 401],
+  "observedStatuses": [200, 200, 200],
+  "restoredBaselinePassed": true
+}
