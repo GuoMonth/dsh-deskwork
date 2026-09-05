@@ -27,5 +27,6 @@ AI chooses ordinary implementation details and reversible experiment setup. Huma
 - Run focused tests during editing. Documentation-only work uses `npm run check:docs`; code/config changes finish with `npm run check`; CI uses `npm run check:fresh` to bypass local caches.
 - Cache only with understood invalidation. Do not cache typed-lint results by individual file when types can change elsewhere. Do not weaken checks to claim a speedup.
 - Keep Node 24 / npm / the compatible TypeScript-linter pair pinned. Do not replace the runtime, compiler, package manager, or test framework for an unmeasured gain. Benchmark representative work before adding daemons or custom infrastructure.
+- For a measured CPU/memory/resource hotspot, AI may prototype a small Rust module directly. Choose Wasm, Node-API, or a persistent sidecar by the boundary and end-to-end evidence; retain strong TS contracts. See [performance escalation](../decisions/0003-performance-escalation.md). Do not install a second JS runtime merely for preference.
 
 Setup and command entrypoints: [CONTRIBUTING](../../CONTRIBUTING.md). Tradeoffs: [ADR-0002](../decisions/0002-ai-owned-development.md).

@@ -4,12 +4,13 @@ AI owns code, tests, experiments, documentation maintenance, commits, and PR upd
 
 ## Load only the context this task needs
 
-| Task                      | Read                                                                                                                          |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Code or tooling           | [Engineering](docs/standards/engineering.md); [types](docs/standards/typescript.md) when crossing a type boundary             |
-| Experiment or integration | Relevant entry in [hypotheses](docs/hypotheses/README.md), then [verification](docs/standards/verification.md)                |
-| Product or architecture   | [Principles](docs/principles/product.md), relevant [design](docs/design/workspace.md) or [decision](docs/decisions/README.md) |
-| Documentation only        | Relevant document and [navigation](docs/README.md); no full repository read                                                   |
+| Task                               | Read                                                                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Code or tooling                    | [Engineering](docs/standards/engineering.md); [types](docs/standards/typescript.md) when crossing a type boundary             |
+| Experiment or integration          | Relevant entry in [hypotheses](docs/hypotheses/README.md), then [verification](docs/standards/verification.md)                |
+| Product or architecture            | [Principles](docs/principles/product.md), relevant [design](docs/design/workspace.md) or [decision](docs/decisions/README.md) |
+| Documentation only                 | Relevant document and [navigation](docs/README.md); no full repository read                                                   |
+| Performance or resource bottleneck | [Performance escalation](docs/decisions/0003-performance-escalation.md), then the relevant measured evidence                  |
 
 ## Execute
 
