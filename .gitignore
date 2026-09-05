@@ -1,0 +1,25 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local business sessions and runtime data
+.deskwork/
+.dsh/
+browser-data/
+user-data/
+*.log
+
+# Build outputs and dependencies
+node_modules/
+dist/
+build/
+target/
+coverage/
+
+# Editor and OS files
+.idea/
+.DS_Store
+Thumbs.db
