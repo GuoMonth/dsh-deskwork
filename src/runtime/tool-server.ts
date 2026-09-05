@@ -11,9 +11,11 @@ export async function startToolServer(call: (request: ToolRequest) => Promise<un
   close: () => Promise<void>;
 }> {
   let token = randomBytes(32).toString('hex');
+  let queue = Promise.resolve();
   const server: Server = createServer((request, response) => {
     const handle = async (): Promise<void> => {
       const authorization = Buffer.from(request.headers.authorization ?? '');
+      const requestToken = token;
       const expected = Buffer.from(`Bearer ${token}`);
       if (
         request.method !== 'POST' ||
@@ -35,7 +37,16 @@ export async function startToolServer(call: (request: ToolRequest) => Promise<un
           return;
         }
       }
-      const result = await call(toolRequestSchema.parse(JSON.parse(body)));
+      const input = toolRequestSchema.parse(JSON.parse(body));
+      const operation = queue.then(() => {
+        if (requestToken !== token || response.destroyed) throw new Error('工具调用已撤销');
+        return call(input);
+      });
+      queue = operation.then(
+        () => undefined,
+        () => undefined,
+      );
+      const result = await operation;
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(result));
     };
     void handle().catch((error: unknown) => {
@@ -59,6 +70,7 @@ export async function startToolServer(call: (request: ToolRequest) => Promise<un
       token = randomBytes(32).toString('hex');
     },
     close: async (): Promise<void> => {
+      token = randomBytes(32).toString('hex');
       server.closeAllConnections();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {

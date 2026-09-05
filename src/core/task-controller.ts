@@ -177,7 +177,6 @@ export class TaskController {
 
   async step(text: string): Promise<void> {
     this.state.steps.push({ id: randomUUID(), text });
-    this.state.metrics.toolCalls++;
     await this.save();
   }
 
