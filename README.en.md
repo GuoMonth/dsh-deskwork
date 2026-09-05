@@ -4,11 +4,11 @@
 
 An AI desktop workspace for ERP and business operations, powered by DeepSeek Harness.
 
-[简体中文](./README.md) · [Design (中文)](./docs/design.md) · [Roadmap (中文)](./docs/roadmap.md) · [Contributing](./CONTRIBUTING.md) · [MIT License](./LICENSE)
+[简体中文](./README.md) · [Design (中文)](./docs/design/workspace.md) · [Roadmap (中文)](./docs/roadmap.md) · [Contributing](./CONTRIBUTING.md) · [MIT License](./LICENSE)
 
 DSH Deskwork aims to package **DeepSeek Harness (DSH) into a desktop workspace** for people working with existing ERP and business applications. Its workbench takes inspiration from VS Code and Cursor, with business pages alongside an AI assistant and a dedicated Agent conversation mode.
 
-> **Status: product design and repository initialization.** This repository currently contains documentation only. There is no runnable desktop application, installer, or integrated DSH runtime yet. All capabilities below are planned.
+> **Status: product design and repository initialization.** This repository currently contains development standards and isolated technical experiments. There is no runnable desktop application, installer, or integrated DSH runtime yet. All capabilities below are planned.
 
 ## Two modes, shared context
 
@@ -24,10 +24,10 @@ Work with your business application on the left and DSH chat on the right. Open 
 
 Focus on tasks and conversation without a business page in the main view. Two execution paths are planned:
 
-| Path | How it works |
-| --- | --- |
+| Path                        | How it works                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Authenticated business APIs | Use a controlled execution layer to reuse the selected session and invoke validated business endpoints. |
-| User-configured MCP | Connect MCP services with user-configured credentials and tool access. |
+| User-configured MCP         | Connect MCP services with user-configured credentials and tool access.                                  |
 
 Both modes share connections, session selection, and task context. When authentication expires, the user can reopen the business page, sign in, and resume the task.
 
@@ -51,7 +51,7 @@ The first milestone targets one ERP and one verifiable workflow, covering manual
 
 ## Development status
 
-The desktop framework, embedded browser, DSH version, and release platforms are still to be selected. Setup instructions will follow the first runnable implementation. See the [design](./docs/design.md) and [roadmap](./docs/roadmap.md) for planned decisions and acceptance criteria.
+Electron + DSH + Browser Harness is a candidate composition, not an accepted product architecture. See [the contributor guide](./CONTRIBUTING.md) for experiment setup and [the documentation index](./docs/README.md) for principles, standards, decisions, hypotheses, and evidence. Product runtime versions and release platforms remain open. See the [design](./docs/design/workspace.md) and [roadmap](./docs/roadmap.md) for planned decisions and acceptance criteria.
 
 ## License
 

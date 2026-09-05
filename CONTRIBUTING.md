@@ -1,26 +1,41 @@
 # Contributing / 参与贡献
 
-DSH Deskwork 目前处于设计阶段，欢迎通过 Issue 或 Pull Request 提交业务场景、设计改进与文档修正。
+先阅读 [AGENTS.md](./AGENTS.md) 与[文档导航](./docs/README.md)。人和 AI 使用同一套语义、强类型、测试与证据规则；规范不要求为每个小改动建立额外文档。
 
-## 提交业务场景
+## 环境与检查
 
-请描述目标系统类型、用户要完成的任务、当前操作步骤，以及如何判断执行成功。涉及界面或接口示例时，请使用模拟或脱敏数据，不要提交真实账户、Cookie、Token 或业务记录。
+使用 [.node-version](./.node-version) 指定的 Node.js 和 npm 11：
 
-## 提交改动
+```sh
+npm ci
+npm run check
+```
 
-1. 先阅读 [README](./README.md)、[设计说明](./docs/design.md) 与[路线图](./docs/roadmap.md)。
-2. 保持一次改动聚焦一个问题。影响架构、运行时或新依赖的提案，请先用 Issue 说明设计与验证方式。
-3. 产品定位或状态变更同步更新中英文 README，明确区分计划与已实现能力。
-4. PR 中说明修改原因与验证结果。文档改动检查相对链接；后续代码改动应提供与行为相符的验证。
+修改格式运行 `npm run format`。统一检查入口包括格式、TypeScript、typed lint、本地 Markdown 文件链接和快速行为测试。
 
-当前尚无构建或测试命令，不需要为文档贡献安装桌面运行时。
+## 本地 Electron 实验
 
-提交贡献即表示你有权提供这些内容，并同意以本仓库的 [MIT License](./LICENSE) 发布。
+```sh
+npm run experiment:prepare
+npm run experiment:electron-session
+```
+
+准备步骤下载锁定的 Electron 二进制；实验不依赖模型 API Key。Linux 无显示环境需要 `xvfb-run` 与 Electron 系统库。保留 Chromium sandbox；若环境不支持，记录限制，不通过关闭 sandbox 伪造通过结果。
+
+脚本启动模拟 ERP 和两个先后运行的真实 Electron 进程，使用临时 profile 并清理。机器可读结果位于 `.artifacts/electron-session-control/latest.json`。实验尚不覆盖真实 ERP、DSH 或 Browser Harness。
+
+PR CI 运行相同的 `npm run check`。较重的浏览器实验优先本地执行，也可从 GitHub Actions 的 Verify 工作流手动触发。
+
+## 提交贡献
+
+业务场景说明目标、当前步骤与成功判据，使用模拟或脱敏数据。行为改动先测试，再实现；架构变化记录理由与证据。PR 说明最终结果和实际验证，文档避免翻译已经清楚的实现。
+
+贡献需拥有相应权利，并同意采用本仓库 [MIT License](./LICENSE)。
 
 ## English
 
-The project is in its design phase. Issues and pull requests for business workflows, design improvements, and documentation fixes are welcome.
+Read [AGENTS.md](./AGENTS.md) first. Use the pinned Node.js version and npm 11, then run `npm ci` and `npm run check`. Format changes with `npm run format`.
 
-Describe the intended outcome, current workflow, and how success can be verified. Use synthetic or redacted examples; do not include real credentials or business records. Keep changes focused, discuss architecture and new dependencies in an issue first, and keep both README versions aligned when changing product scope or status. Include relevant validation in your PR. No build or test commands exist yet.
+For the real Electron experiment, run `npm run experiment:prepare` followed by `npm run experiment:electron-session`. Headless Linux needs Xvfb and Electron system libraries. Do not disable Chromium sandbox to pass verification. The experiment uses synthetic ERP data and temporary profiles; it does not prove real ERP, DSH, or Browser Harness compatibility.
 
-By contributing, you confirm that you have the right to submit your contribution and agree to license it under this repository's MIT License.
+Use behavioral tests before implementation and record decisions and evidence rather than duplicating code in prose. Keep changes focused and describe actual validation in the PR. Contributions are licensed under MIT.

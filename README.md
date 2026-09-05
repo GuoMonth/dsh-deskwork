@@ -4,13 +4,13 @@
 
 An AI desktop workspace for ERP and business operations, powered by DeepSeek Harness.
 
-[English](./README.en.md) · [设计说明](./docs/design.md) · [路线图](./docs/roadmap.md) · [参与贡献](./CONTRIBUTING.md) · [MIT License](./LICENSE)
+[English](./README.en.md) · [文档导航](./docs/README.md) · [设计说明](./docs/design/workspace.md) · [路线图](./docs/roadmap.md) · [参与贡献](./CONTRIBUTING.md) · [MIT License](./LICENSE)
 
 DSH Deskwork 计划将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用户在熟悉的 ERP 和其他业务系统中，通过对话查询信息、操作页面、调用业务接口和完成工作流。
 
 产品交互借鉴 VS Code / Cursor 的工作台：业务页面与 AI 并排协作，也可以切换为专注任务的 Agent 对话。面向已有业务系统，尽量降低系统改造和员工使用成本。
 
-> **项目状态：产品设计与仓库初始化。** 当前仅包含文档，尚无可运行桌面应用、安装包或已集成的 DSH 运行时。下文描述的是目标能力，实施进度见[路线图](./docs/roadmap.md)。
+> **项目状态：产品设计与仓库初始化。** 当前包含开发规范与隔离技术实验，尚无可运行产品、安装包或已集成的 DSH 运行时。下文描述的是目标能力，实施进度见[路线图](./docs/roadmap.md)。
 
 ## 两种工作模式
 
@@ -37,10 +37,10 @@ DSH Deskwork 计划将 **DeepSeek Harness（DSH）打包进桌面工作台**，�
 
 主界面不展示业务页面，用户直接交代任务。Agent 有两条可组合的执行路径：
 
-| 路径 | 连接方式 | 适用情况 |
-| --- | --- | --- |
+| 路径                  | 连接方式                                           | 适用情况                           |
+| --------------------- | -------------------------------------------------- | ---------------------------------- |
 | 已登录系统 + 业务 API | 通过受控执行层复用选定会话，调用经过验证的业务接口 | 系统已有网页，适合逐步沉淀接口能力 |
-| 用户配置的 MCP | 用户配置 MCP 服务、凭据和可用工具 | 已有系统集成或专门的业务工具 |
+| 用户配置的 MCP        | 用户配置 MCP 服务、凭据和可用工具                  | 已有系统集成或专门的业务工具       |
 
 两种模式共用系统连接、会话选择和任务上下文。从 Copilot 切换到 Agent 后，应能继续处理同一个任务。首次登录或会话过期时，仍可打开业务页面，由用户完成认证后恢复任务。
 
@@ -84,16 +84,14 @@ flowchart TD
 
 ## 仓库内容
 
-```text
-README.md          中文产品介绍
-README.en.md       English overview
-docs/design.md     模式、会话、执行层与待定技术决策
-docs/roadmap.md    分阶段目标与验收标准
-CONTRIBUTING.md    贡献说明
-LICENSE           MIT 许可证
-```
+| 入口                                    | 职责                               |
+| --------------------------------------- | ---------------------------------- |
+| [AGENTS.md](./AGENTS.md)                | 人与 AI 共同遵循的仓库规则         |
+| [文档导航](./docs/README.md)            | 原则、标准、设计、决策、假设和实验 |
+| [贡献指南](./CONTRIBUTING.md)           | 环境准备与统一检查入口             |
+| [假设登记](./docs/hypotheses/README.md) | 候选技术需要证明的事项             |
 
-桌面框架、浏览器嵌入方案、DSH 集成版本和发布平台尚未确定。确定可运行的首个切片后，再补充安装、配置和开发命令。
+Electron + DSH + Browser Harness 是候选组合。实验代码位于 `experiments/`，不代表产品架构已确定；具体结论见[实验记录](./docs/experiments/README.md)。
 
 ## License
 
