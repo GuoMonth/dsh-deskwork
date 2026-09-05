@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "我的业务工作区",
+  "sites": [
+    {
+      "id": "senguo",
+      "name": "森果 · 档口批发",
+      "url": "https://center.senguo.cc/#/main/shopList",
+      "sessionId": "senguo",
+      "profileId": "unconfigured"
+    }
+  ]
+}

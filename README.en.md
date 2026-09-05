@@ -8,7 +8,9 @@ An AI desktop workspace for ERP and business operations, powered by DeepSeek Har
 
 DSH Deskwork aims to package **DeepSeek Harness (DSH) into a desktop workspace** for people working with existing ERP and business applications. Its workbench takes inspiration from VS Code and Cursor, with business pages alongside an AI assistant and a dedicated Agent conversation mode.
 
-> **Status: product design and repository initialization.** This repository currently contains development standards and isolated technical experiments. There is no runnable desktop application, installer, or integrated DSH runtime yet. All capabilities below are planned.
+> **Status: M1 preview implementation.** The Electron workbench, shared Copilot/Agent views, published DSH runtime integration, and a confirmed read/write flow against a local ERP fixture are implemented. The first real target is Senguo Wholesale. Its authenticated field adapter, live DeepSeek validation, and user Mac acceptance remain pending. The sections below also describe future capabilities. See the [M1 specification](./docs/specs/m1-senguo-workspace.md) and [preview guide](./docs/preview.md).
+
+Use `npm run dev` for the explicitly synthetic design preview, or `npm start` for the desktop app.
 
 ## Two modes, shared context
 
@@ -53,7 +55,7 @@ The first milestone targets one ERP and one verifiable workflow, covering manual
 
 AI owns implementation, tests, experiments, and maintenance. Humans provide specifications, consequential decisions, and review. Agents load only relevant context through [AGENTS.md](./AGENTS.md).
 
-Electron + DSH + Browser Harness is a candidate composition, not an accepted product architecture. See [the contributor guide](./CONTRIBUTING.md) for experiment setup and [the documentation index](./docs/README.md) for principles, standards, decisions, hypotheses, and evidence. Product runtime versions and release platforms remain open. See the [design](./docs/design/workspace.md) and [roadmap](./docs/roadmap.md) for planned decisions and acceptance criteria.
+M1 uses Electron, DSH and a host-owned CDP adapter; Browser Harness remains an isolated integration candidate. See [the contributor guide](./CONTRIBUTING.md) for experiment setup and [the documentation index](./docs/README.md) for principles, standards, decisions, hypotheses, and evidence. M1 targets macOS arm64. See [ADR-0004](./docs/decisions/0004-m1-desktop-integration.md) for pinned runtime and distribution boundaries. See the [design](./docs/design/workspace.md) and [roadmap](./docs/roadmap.md) for planned decisions and acceptance criteria.
 
 ## License
 

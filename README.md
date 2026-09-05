@@ -6,11 +6,13 @@ An AI desktop workspace for ERP and business operations, powered by DeepSeek Har
 
 [English](./README.en.md) · [文档导航](./docs/README.md) · [设计说明](./docs/design/workspace.md) · [路线图](./docs/roadmap.md) · [参与贡献](./CONTRIBUTING.md) · [MIT License](./LICENSE)
 
-DSH Deskwork 计划将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用户在熟悉的 ERP 和其他业务系统中，通过对话查询信息、操作页面、调用业务接口和完成工作流。
+DSH Deskwork 将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用户在熟悉的 ERP 和其他业务系统中，通过对话查询信息、操作页面、调用业务接口和完成工作流。
 
 产品交互借鉴 VS Code / Cursor 的工作台：业务页面与 AI 并排协作，也可以切换为专注任务的 Agent 对话。面向已有业务系统，尽量降低系统改造和员工使用成本。
 
-> **项目状态：产品设计与仓库初始化。** 当前包含开发规范与隔离技术实验，尚无可运行产品、安装包或已集成的 DSH 运行时。下文描述的是目标能力，实施进度见[路线图](./docs/roadmap.md)。
+> **项目状态：M1 预览实现中。** 已有 Electron 工作台、统一视觉、Copilot／轻量 Agent、发布版 DSH 运行时及本地 ERP 确认读写验证。首个真实目标为森果档口批发；真实字段适配、DeepSeek 联调和用户 Mac 验收待完成。下文也包含后续目标能力，当前边界见 [M1 规格](./docs/specs/m1-senguo-workspace.md)。
+
+运行 `npm run dev` 查看交互预览，`npm start` 打开桌面客户端。安装、连接与测试说明见[预览指南](./docs/preview.md)。
 
 ## 两种工作模式
 
@@ -95,7 +97,7 @@ AI 负责实现、测试、实验和日常维护，人聚焦产品规格、必�
 | [贡献指南](./CONTRIBUTING.md)           | 环境准备与统一检查入口             |
 | [假设登记](./docs/hypotheses/README.md) | 候选技术需要证明的事项             |
 
-Electron + DSH + Browser Harness 是候选组合。实验代码位于 `experiments/`，不代表产品架构已确定；具体结论见[实验记录](./docs/experiments/README.md)。
+M1 使用 Electron + DSH + 宿主 CDP 适配器，Browser Harness 保留为独立验证候选。版本、分发与工具范围的选择见 [ADR-0004](./docs/decisions/0004-m1-desktop-integration.md)，结论边界见[实验记录](./docs/experiments/README.md)。
 
 ## License
 

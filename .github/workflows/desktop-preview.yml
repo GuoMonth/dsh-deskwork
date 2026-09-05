@@ -1,0 +1,40 @@
+name: Desktop preview
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-preview:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: test "$(uname -m)" = arm64
+      - run: npm ci
+      - run: npm run experiment:prepare
+      - run: npm run build
+      - run: node --test tests/runtime.integration.ts tests/desktop.integration.ts
+      - run: npm run package:mac > .artifacts/package-mac.log 2>&1
+      - run: node scripts/verify-package.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-arm64-preview
+          path: |
+            .artifacts/releases/*.zip
+            .artifacts/desktop/
+            .artifacts/package-mac.log
+          if-no-files-found: error
+          retention-days: 14
