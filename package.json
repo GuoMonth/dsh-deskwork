@@ -16,10 +16,13 @@
     "lint": "eslint . --max-warnings 0",
     "docs:check": "node scripts/check-doc-links.ts",
     "test": "node --test tests/*.test.ts",
-    "check": "npm run format:check && npm run typecheck && npm run lint && npm run docs:check && npm test",
+    "check": "node scripts/check.ts",
+    "check:docs": "node scripts/check.ts --docs",
+    "check:fresh": "node scripts/check.ts --fresh",
     "experiment:build": "tsc -p tsconfig.experiments.json",
     "experiment:prepare": "install-electron",
-    "experiment:electron-session": "npm run experiment:build && node --test experiments/electron-session-control/session-control.integration.ts"
+    "experiment:electron-session": "node scripts/run-electron-experiment.ts host",
+    "experiment:electron-session:chromium": "node scripts/run-electron-experiment.ts chromium"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

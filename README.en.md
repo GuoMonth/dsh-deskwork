@@ -51,6 +51,8 @@ The first milestone targets one ERP and one verifiable workflow, covering manual
 
 ## Development status
 
+AI owns implementation, tests, experiments, and maintenance. Humans provide specifications, consequential decisions, and review. Agents load only relevant context through [AGENTS.md](./AGENTS.md).
+
 Electron + DSH + Browser Harness is a candidate composition, not an accepted product architecture. See [the contributor guide](./CONTRIBUTING.md) for experiment setup and [the documentation index](./docs/README.md) for principles, standards, decisions, hypotheses, and evidence. Product runtime versions and release platforms remain open. See the [design](./docs/design/workspace.md) and [roadmap](./docs/roadmap.md) for planned decisions and acceptance criteria.
 
 ## License

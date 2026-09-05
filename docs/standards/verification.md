@@ -1,29 +1,31 @@
-# 测试与技术假设验证
+# AI verification contract
 
-## 测试驱动
+Primary audience: coding agents. Verify the relevant uncertainty with the smallest credible experiment; local compute is the default.
 
-对新行为与缺陷修复先编写可观察的失败用例，保留一次 red → green 的命令与结果摘要。测试失败应来自行为缺失，不把编译错误或缺少依赖当作行为红灯。
+## Behavior and evidence
 
-快速测试覆盖配置、状态、输入边界和错误处理；集成测试验证真实外部接口。为关键边界加入反例，防止测试永远成功。文档改动只需链接与格式验证，不写复制实现的测试或追逐无意义覆盖率。
+- Define a falsifiable acceptance criterion before implementation. Changed behavior gets a failing test; exploratory integrations may begin with executable assertions. Preserve useful regressions, not every scratch attempt.
+- Keep a brief red → green result for a meaningful behavior change. Do not require a separate report for every edit, or count missing dependencies as a behavior failure.
+- Test real boundaries with real processes when the claim depends on them. Synthetic ERP results apply to the fixture only. Include a meaningful negative control for critical boundaries.
+- Record hypothesis, environment/mode, source identity, command, observations, conclusion, and limits. Upstream documentation is a lead, not proof. Preserve important failures, not repetitive logs in prose.
 
-## 假设与实验
+## Experiment isolation
 
-每项假设有 ID、来源、可证伪描述、通过/失败判据、范围、实验入口、结果与下一步。状态为「待验证」「验证中」「范围内支持」「被证伪」或「结果不充分」。
+The supplied development account is already an isolated environment, as confirmed by the project owner. In this environment, AI may run local fixture experiments with Chromium sandbox disabled and reuse the outer boundary. Do not spend time provisioning a second sandbox or ask again for this already authorized setup.
 
-实验记录环境、版本/锁文件、源码提交、执行命令、预期、观察、结论和局限。上游文档只支持实验设计，不能替代结果。失败与混合结果同样保留。
+`npm run experiment:electron-session` selects **host** isolation for that environment. It launches the real Electron fixture with `--no-sandbox`; session partitions, context isolation, disabled Node integration, temporary profiles, deadlines, and cleanup remain part of the experiment. The report records the selected mode and actual launch switch.
 
-使用隔离的临时 profile 和模拟业务数据，限制执行时间并清理进程。真实集成实验不能通过 mock 证明；模拟 ERP 只能证明该夹具上的行为。
+`npm run experiment:electron-session:chromium` selects Chromium sandbox when that boundary itself is under test or the host requires it. Do not silently fall back between modes. A host-isolated result supports the session/CDP behavior tested there; it cannot prove Chromium sandbox, desktop distribution, or production-security compatibility. Product defaults remain a separate architecture decision.
 
-## 本地与 CI
+Use synthetic data and controlled fixtures for these fast experiments. Treat unknown external content, real credentials, deployment targets, and system-level changes according to the actual task and its authorization; do not infer their requirements from a fixture test.
 
-- `npm run check` 是本地和 PR CI 共用的快速入口。
-- `npm run experiment:electron-session` 在本地运行真实 Electron；Linux 无显示环境使用 Xvfb。保留 Chromium sandbox，不以 `--no-sandbox` 通过集成验收。
-- 重型实验先本地执行；CI 可以手动触发同一实验，按明确需要扩展操作系统矩阵。
-- 原始输出写入 `.artifacts/`，profile、日志与截图默认不提交；脱敏后的机器可读摘要放入 `docs/experiments/evidence/`，供结论引用。
-- 无法执行时记录环境限制，不自动跳过后宣称成功。
+## Feedback cost
 
-## 自进化的证据要求
+- During an edit, run affected tests/type checks; after a documentation-only diff run `check:docs`; after code/config changes run `check`. Reuse the result until relevant inputs change.
+- `check` runs independent tools together, with incremental TypeScript and content-based formatting cache. Typed lint and tests execute every time. `check:fresh` runs the same suite without local caches and is the CI entrypoint.
+- Heavy experiments run locally on relevant changes, not on every formatting edit. Disposable GitHub-hosted runners may run the explicit host-isolated fixture workflow; no privileged sandbox setup is needed there.
+- Full local diagnostics live in `.artifacts/`. Commit concise sanitized evidence only when it changes a conclusion. An unavailable or failing check stays visible; no silent success.
 
-分别测量首次探索、已有技能复用、页面变化后的识别与修复。固定输入类别和业务结果判据，记录正确率、耗时、模型调用/Token 和人工介入。
+## Learning claims
 
-手写脚本重复成功只能支持执行复用；模型生成、验证、启用、失效识别和回滚均有独立证据后，才讨论自主进化能力。涉及写入的失败恢复必须验证结果核对与避免重复提交。
+Measure initial exploration, skill reuse, and behavior after a page change separately. Track correct outcomes, elapsed time, model calls/tokens, and human intervention. Replaying a handwritten script proves reuse only; autonomous learning additionally needs generated candidates, validation, activation, invalidation, and rollback evidence.

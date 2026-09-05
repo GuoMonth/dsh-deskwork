@@ -6,6 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { startErpFixture } from './erp-fixture.ts';
+import { electronIsolationArguments, parseExperimentIsolation } from './experiment-isolation.ts';
+
+const isolation = parseExperimentIsolation(process.env['DESKWORK_EXPERIMENT_ISOLATION']);
 
 async function runElectron(
   phase: 'seed' | 'restore',
@@ -21,6 +24,7 @@ async function runElectron(
         : 'electron';
   const executable = path.resolve('node_modules/electron/dist', platformExecutable);
   const args = [
+    ...electronIsolationArguments(isolation),
     path.resolve('.artifacts/build/experiments/electron-session-control/electron-probe.js'),
     phase,
     profileDirectory,
@@ -69,6 +73,7 @@ await test(
       architecture: process.arch,
       kernel: os.release(),
       nodeVersion: process.version,
+      isolation,
     };
     await writeFile(
       evidencePath,
@@ -110,6 +115,9 @@ await test(
           path.join(temporaryDirectory, `${phase}.json`),
         );
         assert.ok(typeof report === 'object' && report !== null && 'observations' in report);
+        assert.ok('isolation' in report && 'chromiumSandboxDisabled' in report);
+        assert.equal(report.isolation, isolation);
+        assert.equal(report.chromiumSandboxDisabled, isolation === 'host');
         assert.deepEqual(report.observations, {
           configuredTabIds: ['procurement', 'inventory', 'isolated-account'],
           distinctPageTargets: 3,

@@ -3,6 +3,7 @@ import type { WebContents } from 'electron';
 import { once } from 'node:events';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseWorkspaceConfiguration } from './workspace-configuration.ts';
+import { parseExperimentIsolation } from './experiment-isolation.ts';
 
 async function evaluatePage(contents: WebContents, expression: string): Promise<unknown> {
   // Electron declares CDP responses as any; keep that external value unknown until validated.
@@ -35,7 +36,10 @@ async function collectFromPages(
 }
 
 async function runProbe(): Promise<void> {
-  const [phase, profileDirectory, configurationPath, reportPath] = process.argv.slice(2);
+  const [phase, profileDirectory, configurationPath, reportPath] = process.argv
+    .filter((argument) => argument !== '--no-sandbox')
+    .slice(2);
+  const isolation = parseExperimentIsolation(process.env['DESKWORK_EXPERIMENT_ISOLATION']);
   if (
     (phase !== 'seed' && phase !== 'restore') ||
     !profileDirectory ||
@@ -53,7 +57,7 @@ async function runProbe(): Promise<void> {
     const view = new WebContentsView({
       webPreferences: {
         partition: tab.sessionPartition,
-        sandbox: true,
+        sandbox: isolation === 'chromium',
         contextIsolation: true,
         nodeIntegration: false,
       },
@@ -94,6 +98,8 @@ async function runProbe(): Promise<void> {
       JSON.stringify(
         {
           phase,
+          isolation,
+          chromiumSandboxDisabled: app.commandLine.hasSwitch('no-sandbox'),
           electronVersion: process.versions['electron'],
           chromiumVersion: process.versions['chrome'],
           observations: {

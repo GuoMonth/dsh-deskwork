@@ -1,41 +1,32 @@
 # Contributing / 参与贡献
 
-先阅读 [AGENTS.md](./AGENTS.md) 与[文档导航](./docs/README.md)。人和 AI 使用同一套语义、强类型、测试与证据规则；规范不要求为每个小改动建立额外文档。
+DSH Deskwork 由 AI 主导开发。人主要提供业务规格、必要决策和审核；AI 负责代码、测试、实验、文档维护与 PR。
 
-## 环境与检查
+给人看的入口：[产品介绍](README.md)、[原则](docs/principles/product.md)、[设计](docs/design/workspace.md)、[决策](docs/decisions/README.md)。编码代理从 [AGENTS.md](AGENTS.md) 按需加载规范，无需每次阅读全部文档。
 
-使用 [.node-version](./.node-version) 指定的 Node.js 和 npm 11：
+## 开发入口（供 AI 使用）
 
-```sh
-npm ci
-npm run check
-```
+首次准备使用 [.node-version](.node-version) 指定的 Node.js 和 npm 11，执行 `npm ci`。已有匹配锁文件的依赖直接复用。
 
-修改格式运行 `npm run format`。统一检查入口包括格式、TypeScript、typed lint、本地 Markdown 文件链接和快速行为测试。
+| 场景                         | 命令                                           |
+| ---------------------------- | ---------------------------------------------- |
+| 编辑期间                     | 相关测试或 `npm run typecheck`                 |
+| 仅文档                       | `npm run check:docs`                           |
+| 代码改动完成                 | `npm run check`                                |
+| CI / 排查缓存                | `npm run check:fresh`                          |
+| 调整格式                     | `npm exec -- prettier --write path/to/file`    |
+| 首次下载 Electron            | `npm run experiment:prepare`                   |
+| 已隔离开发环境中的实验       | `npm run experiment:electron-session`          |
+| 验证 Chromium sandbox 的实验 | `npm run experiment:electron-session:chromium` |
 
-## 本地 Electron 实验
+当前提供的账号已是隔离开发环境，默认本地实验使用外层隔离，不再配置嵌套 Chromium sandbox。输出记录隔离模式；该结果不证明产品发布环境的安全或兼容性。Linux 无显示环境仍需 Xvfb。实验只运行模拟 ERP，使用临时 profile 并清理进程。
 
-```sh
-npm run experiment:prepare
-npm run experiment:electron-session
-```
+成功检查输出简短摘要，完整日志见 `.artifacts/check-latest.json`；实验输出见 `.artifacts/electron-session-control/latest.json`。详细执行约定见[验证规范](docs/standards/verification.md)。
 
-准备步骤下载锁定的 Electron 二进制；实验不依赖模型 API Key。Linux 无显示环境需要 `xvfb-run` 与 Electron 系统库。保留 Chromium sandbox；若环境不支持，记录限制，不通过关闭 sandbox 伪造通过结果。
-
-脚本启动模拟 ERP 和两个先后运行的真实 Electron 进程，使用临时 profile 并清理。机器可读结果位于 `.artifacts/electron-session-control/latest.json`。实验尚不覆盖真实 ERP、DSH 或 Browser Harness。
-
-PR CI 运行相同的 `npm run check`。较重的浏览器实验优先本地执行，也可从 GitHub Actions 的 Verify 工作流手动触发。
-
-## 提交贡献
-
-业务场景说明目标、当前步骤与成功判据，使用模拟或脱敏数据。行为改动先测试，再实现；架构变化记录理由与证据。PR 说明最终结果和实际验证，文档避免翻译已经清楚的实现。
-
-贡献需拥有相应权利，并同意采用本仓库 [MIT License](./LICENSE)。
+贡献需拥有相应权利，并同意采用本仓库 [MIT License](LICENSE)。
 
 ## English
 
-Read [AGENTS.md](./AGENTS.md) first. Use the pinned Node.js version and npm 11, then run `npm ci` and `npm run check`. Format changes with `npm run format`.
+AI owns implementation, tests, experiments, documentation maintenance, and PR updates. Humans provide specifications, consequential decisions, and review. Agents load [AGENTS.md](AGENTS.md) and only relevant context.
 
-For the real Electron experiment, run `npm run experiment:prepare` followed by `npm run experiment:electron-session`. Headless Linux needs Xvfb and Electron system libraries. Do not disable Chromium sandbox to pass verification. The experiment uses synthetic ERP data and temporary profiles; it does not prove real ERP, DSH, or Browser Harness compatibility.
-
-Use behavioral tests before implementation and record decisions and evidence rather than duplicating code in prose. Keep changes focused and describe actual validation in the PR. Contributions are licensed under MIT.
+Reuse the pinned toolchain. Use `check:docs` for documentation, `check` at a code-change boundary, and `check:fresh` for CI or cache diagnosis. The default Electron fixture experiment uses host isolation on the supplied isolated development account; the separate `:chromium` command tests nested Chromium isolation. Reports distinguish these modes. Contributions are licensed under MIT.

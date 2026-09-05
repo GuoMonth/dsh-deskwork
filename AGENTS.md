@@ -1,16 +1,24 @@
-# DSH Deskwork — contributor and AI coding contract
+# DSH Deskwork — AI execution contract
 
-Read [docs/README.md](docs/README.md) first, then the relevant standard, decision, and hypothesis. These rules apply to humans and coding agents throughout this repository.
+AI owns code, tests, experiments, documentation maintenance, commits, and PR updates. Humans set product direction, decide consequential tradeoffs, and review outcomes. Complete routine work autonomously within existing authorization; do not turn tool choices, local experiments, or small type exceptions into approval requests.
 
-- Document principles, intent, tradeoffs, decisions, and experimental evidence. Let semantic code and behavioral tests describe implementation. Do not translate completed code into redundant prose.
-- Before changing behavior, state an observable acceptance criterion and write a meaningful failing test. Implement the smallest passing change, then refactor. Documentation-only changes need link/format checks, not artificial unit tests.
-- Treat Electron + DSH + Browser Harness as a candidate composition. An upstream claim is a hypothesis until exercised locally. Keep experiments in `experiments/`; do not turn experimental structure into product architecture implicitly.
-- Use strict TypeScript for first-party executable code. External values start as `unknown`, are validated at the boundary, and become domain types. Explicit `any` is an exceptional local interoperability escape hatch; follow [the exception policy](docs/standards/typescript.md).
-- Choose semantic names for variables, types, files, tests, and directories. Prefer domain vocabulary and explicit state transitions; avoid miscellaneous `utils`, `common`, `manager`, or `data` buckets without a specific domain meaning.
-- Use the repository formatter, typed lint, compiler, and lockfile. Do not disable checks across a file or weaken global rules to make a change pass.
-- Preserve unrelated work. Make coherent commits on a task branch; PRs record the problem, outcome, evidence, and limits. Existing user authorization governs external actions; this document adds no separate approval gate.
-- Run `npm run check` for changes; run the relevant local experiment for changed integration behavior. Report failed or unavailable checks honestly. Heavy experiments run locally first; CI uses the same commands.
-- Never claim DSH integration, Browser Harness compatibility, ERP coverage, or self-improvement from an Electron-only or synthetic test. Link evidence to the exact hypothesis it supports.
-- Do not add speculative abstractions, a monorepo, frontend framework, storage engine, or generic plugin system before a tested need exists.
+## Load only the context this task needs
 
-See [engineering](docs/standards/engineering.md), [TypeScript](docs/standards/typescript.md), and [verification](docs/standards/verification.md).
+| Task                      | Read                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Code or tooling           | [Engineering](docs/standards/engineering.md); [types](docs/standards/typescript.md) when crossing a type boundary             |
+| Experiment or integration | Relevant entry in [hypotheses](docs/hypotheses/README.md), then [verification](docs/standards/verification.md)                |
+| Product or architecture   | [Principles](docs/principles/product.md), relevant [design](docs/design/workspace.md) or [decision](docs/decisions/README.md) |
+| Documentation only        | Relevant document and [navigation](docs/README.md); no full repository read                                                   |
+
+## Execute
+
+- Search narrowly with `rg`; batch independent reads/checks and reuse prior results. Do not repeatedly dump whole files or poll unchanged work.
+- Establish observable acceptance criteria before implementation. Use failing behavioral tests for changed contracts; use executable assertions for exploratory experiments, then retain useful regressions.
+- Keep strict types, semantic names, explicit states, and one formatter. External data starts as `unknown`; local `any` exceptions require a precise reason and boundary validation, not routine paperwork.
+- Document intent, decisions, and evidence. Code and tests express implementation. Most documents are working context for AI; keep human review focused on specifications, architecture tradeoffs, and outcomes.
+- Electron + DSH + Browser Harness remains a candidate. Keep probes in `experiments/`; do not promote a probe into architecture without evidence.
+- Use `npm run check:docs` for documentation-only changes, relevant tests during coding, and `npm run check` once at the code-change boundary. Use `npm run check:fresh` when changing checks/caches or investigating stale results. No unchanged reruns without a reason.
+- This task's supplied development account is already isolated. Use the host-isolated experiment command here without repeated confirmation or nested sandbox setup. Record the mode. Product/security claims need their relevant environment, not this shortcut.
+- Reuse installed dependencies and runtimes; run `npm ci` only for fresh setup or lockfile changes. Prefer verified stable tooling over speculative upgrades. Keep output concise and full diagnostics addressable.
+- Preserve unrelated work, update the current task branch/PR, and report results and limits honestly. Ask humans only for missing intent, consequential unresolved decisions, or actions outside existing authorization.

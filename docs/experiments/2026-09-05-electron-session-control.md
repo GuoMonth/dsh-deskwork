@@ -2,6 +2,8 @@
 
 日期：2026-09-05。假设：[H-001](../hypotheses/h001-electron-session-control.md)。源码提交：`9b1429e45adb59aa4089d45a87dac7a77a031761`。
 
+本记录保留当时命令与隔离条件；当前开发政策见 [ADR-0002](../decisions/0002-ai-owned-development.md)。当前默认实验命令已改为 host 隔离，复现本记录需使用 `npm run experiment:electron-session:chromium` 并满足原记录的 helper 条件。
+
 ## 结论
 
 在下述 Linux 环境、已配置 sandbox helper 和模拟 ERP 范围内，配置创建页面、会话共享/隔离、完整进程重启后的登录恢复以及 CDP 定向操作均通过。**未经准备的 npm Electron sandbox 在本机启动失败**，因此不支持「下载后直接在所有 Linux 桌面可用」的推断。

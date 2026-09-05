@@ -1,32 +1,31 @@
-# 工程约定
+# AI engineering workflow
 
-## 改动顺序
+Primary audience: coding agents. Humans review decisions and outcomes; AI performs the complete implementation loop.
 
-1. 阅读相关原则、现有代码与决策，说明要改变的可观察行为。
-2. 新的重要不确定性登记为假设；架构选择先保留为提案。
-3. 行为修改先写失败测试，确认因目标行为缺失而失败，再最小实现并重构。
-4. 执行相关检查，记录实际结果与局限；只有原则、决策、使用入口或实验结论变化才更新文档。
-5. 提交聚焦改动，PR 指向相关假设和证据。无需为每个小改动建立 Issue 或 ADR。
+## Work loop
 
-## 语义与一致性
+1. Load only relevant code, contracts, and prior evidence. Define the observable target.
+2. Implement from a failing behavior check. For exploration, start with a falsifiable assertion and capture useful regressions once a path works. No ceremonial stub or new test suite for every edit.
+3. Fix failures autonomously. Run the smallest relevant feedback loop while editing; batch independent checks, keep dependent mutations sequential.
+4. At completion, run checks appropriate to the diff once, update only changed principles/decisions/evidence, and maintain the current PR.
 
-- 英文代码标识符；中文作为主要设计讨论语言。README 保留中英文入口，不要求每份设计文档翻译。
-- 文件和目录使用 `kebab-case`；值和函数使用 `camelCase`；类型使用 `PascalCase`。
-- 名字表达业务对象、动作和单位，如 `sessionPartition`、`restoreWorkspace`、`timeoutMilliseconds`。布尔值表达判断，如 `isAuthenticated`。
-- 测试名称描述条件和预期结果。显式表达状态，避免几个布尔量组成不可解释的状态组合。
-- 小而聚焦的模块放在使用处，真实复用出现后再抽取；不要预建空的架构目录。
-- 使用 ESM、命名导出和 `import type`；工具要求的配置入口可以默认导出。路径保持可追踪，不提前添加别名层。
-- Prettier 是格式事实来源，ESLint 是编码约束事实来源，不手工维护另一套排版规则。
-- 错误包含动作和上下文，日志不包含真实会话凭据。不能静默吞掉错误或用默认成功结果掩盖异常。
+AI chooses ordinary implementation details and reversible experiment setup. Humans decide product intent, major architecture tradeoffs that evidence cannot resolve, and necessary review/approval. Do not require an Issue, ADR, human-authored code, or confirmation for each small change.
 
-## 依赖与工具
+## Semantic consistency
 
-使用 Node.js 24、npm 和提交的锁文件；新增依赖固定直接版本，先验证工具之间的兼容性。工具链决策见 [ADR-0001](../decisions/0001-evidence-first-tooling.md)。
+- English identifiers; `kebab-case` paths, `camelCase` values/functions, `PascalCase` types. Use domain names, verbs, units, and explicit states.
+- ESM, named exports, `import type`; configuration entrypoints can default-export. Keep modules near use sites; extract real reuse, not speculative architecture.
+- Strict types and runtime boundary validation: [type contract](typescript.md). Prettier and ESLint configs own syntax/style rules.
+- Explain reasons or external constraints in comments, not the visible implementation. No parallel prose description of finished code.
+- Errors carry useful action/context; do not silently treat errors as successful defaults.
 
-`npm ci` 安装；`npm run format` 格式化；`npm run check` 执行格式、类型、typed lint、文档链接与快速测试。涉及浏览器边界时另外执行 `npm run experiment:electron-session`。
+## Optimize the agent feedback loop
 
-实验依赖不自动成为产品依赖。尚不选择 UI 框架、产品构建系统或持久化数据库。
+- Reuse installed dependencies, prepared runtimes, and valid prior observations. Avoid fresh installation or browser restart on every tool call when reuse is supported and does not contaminate the experiment.
+- Prefer batched reads and independent process parallelism; do not parallelize mutations to shared state.
+- Successful checks print short status/timing summaries; keep full output in an addressable artifact. Failures must retain diagnostics and a nonzero exit.
+- Run focused tests during editing. Documentation-only work uses `npm run check:docs`; code/config changes finish with `npm run check`; CI uses `npm run check:fresh` to bypass local caches.
+- Cache only with understood invalidation. Do not cache typed-lint results by individual file when types can change elsewhere. Do not weaken checks to claim a speedup.
+- Keep Node 24 / npm / the compatible TypeScript-linter pair pinned. Do not replace the runtime, compiler, package manager, or test framework for an unmeasured gain. Benchmark representative work before adding daemons or custom infrastructure.
 
-## 完成判据
-
-行为有可运行证据，相关检查通过，没有未说明的跳过；外部事实与本地结果有来源；计划能力与已验证能力分开。PR 描述问题、最终变化、验证与适用范围，不复述修改过程或逐行代码。
+Setup and command entrypoints: [CONTRIBUTING](../../CONTRIBUTING.md). Tradeoffs: [ADR-0002](../decisions/0002-ai-owned-development.md).
