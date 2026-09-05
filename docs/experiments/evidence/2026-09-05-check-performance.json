@@ -1,0 +1,80 @@
+{
+  "sourceCommit": "848c895ea57a0d084a1c9fe0fb65d80d0ad56cb8",
+  "platform": "linux-x64",
+  "nodeVersion": "v24.18.0",
+  "method": "Three sequential wall-clock samples per variant on the same source tree, warm variants primed once; no tool operations concurrent with measurement",
+  "results": {
+    "sequentialSameSource": {
+      "samples": [
+        {
+          "milliseconds": 2611,
+          "outputBytes": 1370
+        },
+        {
+          "milliseconds": 2573,
+          "outputBytes": 1367
+        },
+        {
+          "milliseconds": 2537,
+          "outputBytes": 1371
+        }
+      ],
+      "medianMilliseconds": 2573,
+      "medianOutputBytes": 1370
+    },
+    "parallelFresh": {
+      "samples": [
+        {
+          "milliseconds": 1162,
+          "outputBytes": 228
+        },
+        {
+          "milliseconds": 1135,
+          "outputBytes": 228
+        },
+        {
+          "milliseconds": 1178,
+          "outputBytes": 228
+        }
+      ],
+      "medianMilliseconds": 1162,
+      "medianOutputBytes": 228
+    },
+    "parallelWarm": {
+      "samples": [
+        {
+          "milliseconds": 1058,
+          "outputBytes": 211
+        },
+        {
+          "milliseconds": 1039,
+          "outputBytes": 210
+        },
+        {
+          "milliseconds": 1083,
+          "outputBytes": 213
+        }
+      ],
+      "medianMilliseconds": 1058,
+      "medianOutputBytes": 211
+    },
+    "docsWarm": {
+      "samples": [
+        {
+          "milliseconds": 160,
+          "outputBytes": 163
+        },
+        {
+          "milliseconds": 159,
+          "outputBytes": 163
+        },
+        {
+          "milliseconds": 157,
+          "outputBytes": 163
+        }
+      ],
+      "medianMilliseconds": 159,
+      "medianOutputBytes": 163
+    }
+  }
+}

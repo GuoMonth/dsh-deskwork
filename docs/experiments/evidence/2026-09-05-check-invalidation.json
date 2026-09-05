@@ -1,0 +1,11 @@
+{
+  "control": "Change an imported return type from string to number without editing its consumer, after warming caches",
+  "toolResults": {
+    "format": true,
+    "docs": true,
+    "types": false,
+    "lint": false,
+    "tests": true
+  },
+  "nonzeroExit": 1
+}

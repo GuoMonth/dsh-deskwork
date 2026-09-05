@@ -32,6 +32,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:fresh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: check-diagnostics
+          path: .artifacts/check-latest.json
+          if-no-files-found: warn
+          retention-days: 7
 
   electron-experiment:
     if: github.event_name == 'workflow_dispatch' && inputs.run_electron_experiment

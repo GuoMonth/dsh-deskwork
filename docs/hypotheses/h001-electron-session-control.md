@@ -25,3 +25,5 @@
 ## 设计线索
 
 [WebContentsView](https://www.electronjs.org/docs/latest/api/web-contents-view)、[session](https://www.electronjs.org/docs/latest/api/session)、[Debugger](https://www.electronjs.org/docs/latest/api/debugger)。这些是待实测接口说明，不是本假设的验证结果。
+
+补充：[host 隔离与检查成本验证](../experiments/2026-09-05-ai-feedback-loop.md)，与首轮 Chromium 模式证据分别保留。
