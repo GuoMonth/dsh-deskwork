@@ -1,0 +1,49 @@
+{
+  "hypothesis": "H-001",
+  "executedAt": "2026-09-05T11:01:01.591Z",
+  "platform": "linux",
+  "architecture": "x64",
+  "kernel": "7.0.0-28-generic",
+  "nodeVersion": "v24.18.0",
+  "isolation": "host",
+  "result": "supported-within-fixture-scope",
+  "reports": [
+    {
+      "phase": "seed",
+      "isolation": "host",
+      "chromiumSandboxDisabled": true,
+      "electronVersion": "44.2.0",
+      "chromiumVersion": "152.0.7977.76",
+      "observations": {
+        "configuredTabIds": ["procurement", "inventory", "isolated-account"],
+        "distinctPageTargets": 3,
+        "initialSessionStatuses": [401, 401, 401],
+        "authenticatedSessionStatuses": [200, 200, 401],
+        "clickCounts": [1, 0, 0],
+        "nodeExposure": ["undefined/undefined", "undefined/undefined", "undefined/undefined"]
+      }
+    },
+    {
+      "phase": "restore",
+      "isolation": "host",
+      "chromiumSandboxDisabled": true,
+      "electronVersion": "44.2.0",
+      "chromiumVersion": "152.0.7977.76",
+      "observations": {
+        "configuredTabIds": ["procurement", "inventory", "isolated-account"],
+        "distinctPageTargets": 3,
+        "initialSessionStatuses": [200, 200, 401],
+        "authenticatedSessionStatuses": [200, 200, 401],
+        "clickCounts": [1, 0, 0],
+        "nodeExposure": ["undefined/undefined", "undefined/undefined", "undefined/undefined"]
+      }
+    }
+  ],
+  "provenance": {
+    "sourceCommit": "848c895",
+    "command": "npm run experiment:electron-session",
+    "lockfileSha256": "6341814c2d7600dfa0afac2d102a6242c8f3ad773902a070c4a5cd143c3aa51c",
+    "sandboxHelper": "Restored unprivileged file from the verified Electron archive; no symlink, chown, or chmod adaptation",
+    "hostIsolationBasis": "Development account declared isolated by project owner; not independently assessed by this experiment"
+  }
+}

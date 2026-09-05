@@ -1,0 +1,62 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_electron_experiment:
+        description: Run the real Electron session experiment on Linux
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run check:fresh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: check-diagnostics
+          path: .artifacts/check-latest.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  electron-experiment:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_electron_experiment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64
+      - run: npm run experiment:prepare
+      - run: npm run experiment:electron-session
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: electron-session-evidence
+          path: .artifacts/electron-session-control/latest.json
+          if-no-files-found: warn
