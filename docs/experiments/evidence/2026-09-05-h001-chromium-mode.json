@@ -1,0 +1,7 @@
+{
+  "sourceCommit": "848c895ea57a0d084a1c9fe0fb65d80d0ad56cb8",
+  "isolation": "chromium",
+  "result": "failed",
+  "reason": "Stock helper is not root/4755 on this host; no automatic fallback to host mode",
+  "command": "npm run experiment:electron-session:chromium"
+}
