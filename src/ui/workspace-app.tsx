@@ -14,6 +14,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
   const [error, setError] = useState('');
   const [settings, setSettings] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek-v4-flash');
   const browserRegion = useRef<HTMLDivElement>(null);
@@ -72,6 +73,31 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
       window.removeEventListener('keydown', keydown);
     };
   }, []);
+  useEffect((): (() => void) | undefined => {
+    if (!settings && !commandOpen) return;
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    if (!dialog) return;
+    const previousFocus = document.activeElement;
+    dialog.querySelector<HTMLElement>('input, button')?.focus();
+    const trapFocus = (event: KeyboardEvent): void => {
+      if (event.key !== 'Tab') return;
+      const elements = [...dialog.querySelectorAll<HTMLElement>('input, button:not(:disabled)')];
+      const first = elements[0];
+      const last = elements.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    dialog.addEventListener('keydown', trapFocus);
+    return () => {
+      dialog.removeEventListener('keydown', trapFocus);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [settings, commandOpen]);
   useEffect((): (() => void) | undefined => {
     const region = browserRegion.current;
     if (!region || !selectedTab) return;
@@ -617,21 +643,31 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
             aria-label="命令面板"
           >
             <h2>你想做什么？</h2>
+            <input
+              aria-label="搜索命令"
+              placeholder="搜索命令…"
+              value={commandQuery}
+              onChange={(event) => {
+                setCommandQuery(event.target.value);
+              }}
+            />
             {[
               ['切换到 Copilot', 'copilot'],
               ['切换到 Agent', 'agent'],
-            ].map(([label, value]) => (
-              <button
-                key={value}
-                onClick={() => {
-                  setMode(value === 'agent' ? 'agent' : 'copilot');
-                  setCommandOpen(false);
-                }}
-              >
-                <Icon name="grid" />
-                {label}
-              </button>
-            ))}
+            ]
+              .filter(([label]) => label?.toLowerCase().includes(commandQuery.toLowerCase()))
+              .map(([label, value]) => (
+                <button
+                  key={value}
+                  onClick={() => {
+                    setMode(value === 'agent' ? 'agent' : 'copilot');
+                    setCommandOpen(false);
+                  }}
+                >
+                  <Icon name="grid" />
+                  {label}
+                </button>
+              ))}
             <button
               onClick={() => {
                 setCommandOpen(false);

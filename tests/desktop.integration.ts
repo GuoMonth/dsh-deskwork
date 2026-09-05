@@ -29,6 +29,13 @@ await test(
         .toBe(true);
       const shell = application.windows().find((entry) => entry.url().startsWith('file:'));
       assert.ok(shell);
+      assert.equal(
+        await shell.evaluate(async () => {
+          if (!window.deskwork) throw new Error('No desktop bridge');
+          return (await window.deskwork.snapshot()).preview;
+        }),
+        false,
+      );
       await expect(shell.getByRole('heading', { name: '今天，有什么需要处理？' })).toBeVisible();
       const page = application.windows().find((entry) => entry.url().includes('/products'));
       assert.ok(page);

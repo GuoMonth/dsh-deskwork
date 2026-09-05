@@ -220,13 +220,20 @@ async function main(): Promise<void> {
       preview: false,
     };
   }
+  let streamPublishTimer: ReturnType<typeof setTimeout> | undefined;
   function publish(): void {
+    clearTimeout(streamPublishTimer);
+    streamPublishTimer = undefined;
     if (!window.isDestroyed() && !window.webContents.isDestroyed())
       window.webContents.send('deskwork:state', snapshot());
+  }
+  function publishStream(): void {
+    streamPublishTimer ??= setTimeout(publish, 80);
   }
   const tools = await startToolServer(async (request) => {
     if (controller.state.status !== 'running' || !controller.state.target)
       throw new Error('任务工具已撤销或正在等待确认');
+    controller.state.metrics.toolCalls++;
     switch (request.name) {
       case 'observe_page': {
         const target = controller.state.target;
@@ -333,7 +340,7 @@ async function main(): Promise<void> {
                   const existing = messages.find((message) => message.id === id);
                   if (existing) existing.text += chunk.data.chunk.text;
                   else messages.push({ id, role: 'assistant', text: chunk.data.chunk.text });
-                  publish();
+                  publishStream();
                 }
               }
               if (event.data.event.type === 'assistant/message') {
@@ -464,6 +471,13 @@ async function main(): Promise<void> {
             mode: 0o600,
             flush: true,
           });
+          messages.push({
+            id: randomUUID(),
+            role: 'assistant',
+            text: `Deskwork 已保存并回读核对：${JSON.stringify(controller.state.result)}`,
+          });
+          await store.save(controller.state, messages);
+          publish();
         }
         break;
       case 'stop':
