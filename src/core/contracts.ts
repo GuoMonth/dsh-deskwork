@@ -52,6 +52,8 @@ export const observationSchema = z
     title: z.string(),
     text: z.string(),
     elements: z.array(elementSchema),
+    // Optional only for persisted observations from earlier previews.
+    focusedRef: z.string().nullable().optional(),
   })
   .strict();
 export type PageObservation = z.infer<typeof observationSchema>;

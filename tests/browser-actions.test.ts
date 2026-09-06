@@ -79,3 +79,7 @@ await test('configuration and action boundaries reject scripts, embedded credent
     false,
   );
 });
+await test('keyboard shortcuts cannot bypass review of controls with unknown side effects', () => {
+  for (const key of ['Tab', 'Escape', 'ArrowUp', 'ArrowDown', 'Enter', 'Space'] as const)
+    assert.equal(actionNeedsConfirmation(observation, proposal({ kind: 'key', key })), true);
+});

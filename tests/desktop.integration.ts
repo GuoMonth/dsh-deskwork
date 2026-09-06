@@ -224,6 +224,44 @@ await test(
       await expect(shell.getByText('已暂停 · 可以接手', { exact: true })).toBeVisible();
       await expect(shell.getByRole('button', { name: '确认并执行' })).toHaveCount(0);
       assert.equal(second.writes(), 1);
+      // Expired identity invalidates a pending confirmation without requiring a page click.
+      await shell
+        .getByRole('textbox', { name: '告诉 DSH 你的目标' })
+        .fill('Update Settings to Deskwork verified change');
+      await shell.getByRole('button', { name: '发送任务' }).click();
+      await expect(shell.getByRole('button', { name: '确认并执行' })).toBeVisible({
+        timeout: 30000,
+      });
+      const pending = await shell.evaluate(async () => window.deskwork?.snapshot());
+      const expired = pending?.contexts.find((entry) => entry.siteId === pending.activeSiteId);
+      assert.ok(expired?.task.confirmation);
+      const staleCommand = {
+        type: 'confirm' as const,
+        siteId: expired.siteId,
+        confirmationId: expired.task.confirmation.id,
+      };
+      await application.evaluate(async ({ webContents }, origin) => {
+        const contents = webContents
+          .getAllWebContents()
+          .find((entry) => entry.getURL().startsWith(origin));
+        if (!contents) throw new Error('No website');
+        await contents.session.cookies.remove(origin, 'identity');
+      }, second.origin);
+      await expect(shell.getByText('已暂停 · 可以接手', { exact: true })).toBeVisible();
+      await expect(shell.getByRole('button', { name: '确认并执行' })).toHaveCount(0);
+      const staleError = await shell.evaluate(async (command) => {
+        if (!window.deskwork) throw new Error('No bridge');
+        try {
+          await window.deskwork.command(command);
+          return '';
+        } catch (error: unknown) {
+          return String(error);
+        }
+      }, staleCommand);
+      assert.match(staleError, /确认已失效/);
+      assert.equal(second.writes(), 1);
+      await shell.getByRole('button', { name: '刷新网站' }).click();
+      await expect(liveSecond.getByText('登录演示账号')).toBeVisible();
       first.reset();
       second.reset();
       await writeFile(
@@ -237,6 +275,7 @@ await test(
             platform: process.platform,
             architecture: process.arch,
             restoredContexts: restored.contexts.length,
+            expiredIdentityRevokedConfirmation: true,
           },
           null,
           2,

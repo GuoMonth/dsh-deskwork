@@ -36,7 +36,8 @@ const collectExpression = `(() => {
     const name = element.getAttribute('aria-label') || (element.labels && [...element.labels].map(label => label.innerText).join(' ')) || element.getAttribute('placeholder') || element.innerText || element.getAttribute('title') || '';
     return { ref: 'e' + index, tag: element.tagName.toLowerCase(), role: element.getAttribute('role') || '', name: name.trim().slice(0, 200), value: type === 'password' ? '' : String(element.value || '').slice(0, 2000), type, href: element instanceof HTMLAnchorElement ? element.href : '', disabled: Boolean(element.disabled) || element.getAttribute('aria-disabled') === 'true' || String(element.value || '').length > 2000, ...(element instanceof HTMLSelectElement ? { options: [...element.options].slice(0, 100).map(option => ({ label: option.text, value: option.value, disabled: option.disabled })) } : {}) };
   });
-  return { url: location.href, title: document.title, text: document.body.innerText.slice(0, 14000), elements };
+  const focusedIndex = nodes.slice(0, 160).indexOf(document.activeElement);
+  return { url: location.href, title: document.title, text: document.body.innerText.slice(0, 14000), elements, focusedRef: focusedIndex < 0 ? null : 'e' + focusedIndex };
 })()`;
 const dangerous =
   /保存|提交|删除|确认|审批|付款|支付|取消订单|退出|注销|save|submit|delete|confirm|approve|pay|sign.?out|logout/i;
@@ -49,7 +50,8 @@ export function actionNeedsConfirmation(
   if (action.kind === 'scroll') return false;
   if (action.kind === 'navigate')
     return dangerous.test(action.url) || Boolean(new URL(action.url).search);
-  if (action.kind === 'key') return !['Tab', 'Escape', 'ArrowUp', 'ArrowDown'].includes(action.key);
+  // Tab can trigger blur/autosave; arrow keys can change and save a selection.
+  if (action.kind === 'key') return true;
   const element = observation.elements.find((entry) => entry.ref === action.ref);
   if (!element || element.disabled || element.type === 'password')
     throw new Error('元素不可操作，请用户在页面中接手');
@@ -115,22 +117,25 @@ export class ElectronBrowser implements BrowserAdapter {
       return;
     }
     if (action.kind === 'key') {
+      const focused = current.elements.find((element) => element.ref === current.focusedRef);
+      if (!focused || focused.disabled || focused.type === 'password')
+        throw new Error('键盘目标不可确认，请用户在页面中接手');
       if (!valid()) throw new Error('任务已停止');
       handle.automating = true;
-      handle.contents.sendInputEvent({
-        type: 'keyDown',
-        keyCode: action.key === 'Space' ? 'Space' : action.key,
-      });
-      handle.contents.sendInputEvent({ type: 'keyUp', keyCode: action.key });
-      await evaluate(handle.contents, 'true');
-      handle.automating = false;
+      try {
+        handle.contents.sendInputEvent({ type: 'keyDown', keyCode: action.key });
+        handle.contents.sendInputEvent({ type: 'keyUp', keyCode: action.key });
+        await evaluate(handle.contents, 'true');
+      } finally {
+        handle.automating = false;
+      }
       return;
     }
     if (!valid()) throw new Error('任务已停止');
     const result = await evaluate(
       handle.contents,
       `(() => {
-      const expected = ${JSON.stringify({ url: current.url, title: current.title, text: current.text, elements: current.elements })};
+      const expected = ${JSON.stringify({ url: current.url, title: current.title, text: current.text, elements: current.elements, focusedRef: current.focusedRef })};
       if (JSON.stringify(${collectExpression}) !== JSON.stringify(expected)) throw Error('Page changed before action');
       const action = ${JSON.stringify(action)};
       if (action.kind === 'scroll') { window.scrollBy(0, (action.direction === 'down' ? 1 : -1) * Math.round(innerHeight * 0.75)); return true; }
