@@ -6,11 +6,13 @@ An AI desktop workspace for ERP and business operations, powered by DeepSeek Har
 
 [English](./README.en.md) · [文档导航](./docs/README.md) · [设计说明](./docs/design/workspace.md) · [路线图](./docs/roadmap.md) · [参与贡献](./CONTRIBUTING.md) · [MIT License](./LICENSE)
 
-DSH Deskwork 计划将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用户在熟悉的 ERP 和其他业务系统中，通过对话查询信息、操作页面、调用业务接口和完成工作流。
+DSH Deskwork 将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用户在熟悉的 ERP 和其他业务系统中，通过对话查询信息、操作页面、调用业务接口和完成工作流。
 
 产品交互借鉴 VS Code / Cursor 的工作台：业务页面与 AI 并排协作，也可以切换为专注任务的 Agent 对话。面向已有业务系统，尽量降低系统改造和员工使用成本。
 
-> **项目状态：产品设计与仓库初始化。** 当前包含开发规范与隔离技术实验，尚无可运行产品、安装包或已集成的 DSH 运行时。下文描述的是目标能力，实施进度见[路线图](./docs/roadmap.md)。
+> **项目状态：通用 MVP 已实现，预览验收中。** 从空工作台添加网址，得到固定标签、独立对话与浏览器身份。已有真实 DSH＋Electron 双站点确认和回读测试；真实 DeepSeek、已登录网站操作及用户 Mac 验收待完成。森果仅是可选测试样例。范围见 [M1 规格](./docs/specs/m1-configurable-workspace.md)，证据和兼容限制见 [本轮验证](./docs/experiments/2026-09-06-configurable-mvp.md)。
+
+运行 `npm run dev` 查看交互预览，`npm start` 打开桌面客户端。安装、连接与测试说明见[预览指南](./docs/preview.md)。
 
 ## 两种工作模式
 
@@ -35,7 +37,7 @@ DSH Deskwork 计划将 **DeepSeek Harness（DSH）打包进桌面工作台**，�
 
 ### Agent：以任务和对话为中心
 
-主界面不展示业务页面，用户直接交代任务。Agent 有两条可组合的执行路径：
+M1 的轻量 Agent 与 Copilot 使用同一浏览器会话，只把对话扩展为主区域，随时可「查看页面」。后续再增加两条可组合的执行路径：
 
 | 路径                  | 连接方式                                           | 适用情况                           |
 | --------------------- | -------------------------------------------------- | ---------------------------------- |
@@ -72,10 +74,11 @@ flowchart TD
 - **核对与整理**：“对比订单和入库记录，列出数量不一致的条目。”
 - **MCP 业务任务**：“用我配置的库存工具，查询这些商品的可用库存。”
 
-第一阶段聚焦一个 ERP、一条可验证的业务流程，把登录、执行、接手和结果核对串起来，再扩展系统覆盖范围。
+M1 聚焦配置、原样浏览与通用操作闭环。不同网站通过网址接入，不要求先开发连接器。两个结构不同的测试站点验证相同工具的可用性，森果是可选真实样例；测试场景不定义产品模块。
 
 ## 设计原则
 
+- **配置即接入**：一个网址对应一个固定入口，保留网站原有页面与业务结构。
 - **用户掌握身份和权限**：登录由用户完成，执行范围绑定选定系统与账户。
 - **协作与自主执行连续**：切换界面保留任务上下文，并明确当前连接与身份。
 - **工具有明确边界**：页面内容和接口返回是业务数据，不能自行扩大 Agent 的权限。
@@ -95,7 +98,7 @@ AI 负责实现、测试、实验和日常维护，人聚焦产品规格、必�
 | [贡献指南](./CONTRIBUTING.md)           | 环境准备与统一检查入口             |
 | [假设登记](./docs/hypotheses/README.md) | 候选技术需要证明的事项             |
 
-Electron + DSH + Browser Harness 是候选组合。实验代码位于 `experiments/`，不代表产品架构已确定；具体结论见[实验记录](./docs/experiments/README.md)。
+M1 使用 Electron + DSH + 宿主 CDP 适配器，Browser Harness 保留为独立验证候选。通用产品边界见 [ADR-0005](./docs/decisions/0005-configurable-workspace-scope.md)，已有运行时与分发选择见 [ADR-0004](./docs/decisions/0004-m1-desktop-integration.md)，结论边界见[实验记录](./docs/experiments/README.md)。
 
 ## License
 

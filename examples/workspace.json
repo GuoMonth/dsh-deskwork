@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "我的工作台",
+  "sites": [
+    {
+      "id": "example-senguo",
+      "name": "森果（可选测试样例）",
+      "url": "https://center.senguo.cc/#/main/shopList",
+      "sessionId": "example-senguo"
+    }
+  ]
+}
