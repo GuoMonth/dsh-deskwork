@@ -23,10 +23,13 @@ export function TaskCard({
   if (task.status === 'idle') return null;
   const change = task.confirmation;
   const action = change?.proposal.action;
-  const element =
+  const targetRef =
     action && 'ref' in action
-      ? change.observation.elements.find((entry) => entry.ref === action.ref)
-      : undefined;
+      ? action.ref
+      : action?.kind === 'key'
+        ? change?.observation.focusedRef
+        : undefined;
+  const element = change?.observation.elements.find((entry) => entry.ref === targetRef);
   return (
     <section className={`task-card state-${task.status}`} aria-label="任务状态">
       <div className="task-card-heading">
@@ -42,6 +45,7 @@ export function TaskCard({
           <strong>{change.proposal.summary}</strong>
           {change.proposal.expectedText ? <p>预期结果：{change.proposal.expectedText}</p> : null}
           {element ? <p>目标：{element.name || element.tag}</p> : null}
+          {action?.kind === 'key' ? <p>按键：{action.key}</p> : null}
           {action && 'value' in action ? (
             <>
               <div className="change-value before">

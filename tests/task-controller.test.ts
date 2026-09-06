@@ -91,6 +91,21 @@ await test('page changes invalidate confirmation before dispatch', async () => {
   assert.equal(env.writes(), 0);
   assert.equal(env.controller.state.confirmation, null);
 });
+await test('stale confirmation cannot discard an earlier action that still needs verification', async () => {
+  const env = setup();
+  await env.controller.confirm(await propose(env.controller));
+  const pending = env.controller.state.pendingAction;
+  assert.ok(pending);
+  await env.controller.propose(pending.proposal);
+  const next = env.controller.state.confirmation;
+  assert.ok(next);
+  env.change();
+  await assert.rejects(env.controller.confirm(next.id), /变化/);
+  assert.equal(env.controller.state.status, 'verifying');
+  await assert.rejects(env.controller.start(target, 'Unrelated task'), /核对/);
+  assert.equal(env.controller.state.pendingAction?.id, pending.id);
+  assert.equal(env.writes(), 1);
+});
 await test('stop revokes confirmations and prevents later actions', async () => {
   const env = setup();
   const id = await propose(env.controller);

@@ -102,8 +102,10 @@ export class TaskController {
         current.revision !== confirmation.observation.revision
       ) {
         this.state.confirmation = null;
-        this.state.status = 'paused';
-        this.state.detail = '页面或输入已变化，请重新观察并确认';
+        this.state.status = this.state.requiresVerification ? 'verifying' : 'paused';
+        this.state.detail = this.state.requiresVerification
+          ? '页面或输入已变化；先核对已发出的操作，旧确认不会执行'
+          : '页面或输入已变化，请重新观察并确认';
         await this.save();
         throw new Error(this.state.detail);
       }
