@@ -1,5 +1,7 @@
 # M1 集成验证 · 2026-09-05
 
+> 历史证据：以下为原资料工具／合成 ERP 切片的实测记录。2026-09-06 的 [范围纠偏](../decisions/0005-configurable-workspace-scope.md) 已取消森果字段适配的交付要求；本记录不证明新的通用浏览器 M1 通过。保留原结果与未验证项用于追溯。
+
 源码身份：本记录所在提交的 `src/`、`tests/` 与 `experiments/browser-harness-electron.integration.ts`；依赖以该提交的 package-lock 为准。
 
 环境：Linux x64，Node 24.18.0、Electron 44.2.0、DSH CLI 0.1.2-rc.1。桌面测试在 Xvfb 中显式使用 `--no-sandbox`，范围为本地合成 ERP。产品保持默认 sandbox。

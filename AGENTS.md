@@ -4,16 +4,18 @@ AI owns code, tests, experiments, documentation maintenance, commits, and PR upd
 
 ## Load only the context this task needs
 
-| Task                               | Read                                                                                                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Code or tooling                    | [Engineering](docs/standards/engineering.md); [types](docs/standards/typescript.md) when crossing a type boundary                                                               |
-| Experiment or integration          | Relevant entry in [hypotheses](docs/hypotheses/README.md), then [verification](docs/standards/verification.md)                                                                  |
-| Product or architecture            | [Principles](docs/principles/product.md), relevant [design](docs/design/workspace.md) or [decision](docs/decisions/README.md)                                                   |
-| M1 desktop or UI                   | [M1 specification](docs/specs/m1-senguo-workspace.md), [visual principles](docs/design/visual-system.md), [integration boundary](docs/decisions/0004-m1-desktop-integration.md) |
-| Documentation only                 | Relevant document and [navigation](docs/README.md); no full repository read                                                                                                     |
-| Performance or resource bottleneck | [Performance escalation](docs/decisions/0003-performance-escalation.md), then the relevant measured evidence                                                                    |
+| Task                               | Read                                                                                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code or tooling                    | [Engineering](docs/standards/engineering.md); [types](docs/standards/typescript.md) when crossing a type boundary                                                                       |
+| Experiment or integration          | Relevant entry in [hypotheses](docs/hypotheses/README.md), then [verification](docs/standards/verification.md)                                                                          |
+| Product or architecture            | [Principles](docs/principles/product.md), relevant [design](docs/design/workspace.md) or [decision](docs/decisions/README.md)                                                           |
+| M1 desktop or UI                   | [M1 specification](docs/specs/m1-configurable-workspace.md), [visual principles](docs/design/visual-system.md), [scope correction](docs/decisions/0005-configurable-workspace-scope.md) |
+| Documentation only                 | Relevant document and [navigation](docs/README.md); no full repository read                                                                                                             |
+| Performance or resource bottleneck | [Performance escalation](docs/decisions/0003-performance-escalation.md), then the relevant measured evidence                                                                            |
 
 ## Execute
+
+- M1 is a configurable website workbench. Test ERP brands, objects, and selectors must not become shell navigation or required generic task fields. Read the current specification before reusing the earlier fixture-specific implementation. The scope revision is pending human review; do not treat old preview evidence as acceptance of the new M1.
 
 - Search narrowly with `rg`; batch independent reads/checks and reuse prior results. Do not repeatedly dump whole files or poll unchanged work.
 - Establish observable acceptance criteria before implementation. Use failing behavioral tests for changed contracts; use executable assertions for exploratory experiments, then retain useful regressions.

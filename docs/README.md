@@ -1,6 +1,6 @@
 # 文档导航
 
-M1 入口：[规格](specs/m1-senguo-workspace.md)、[视觉与交互](design/visual-system.md)、[预览使用](preview.md)、[集成证据](experiments/2026-09-05-m1-integration.md)。
+M1 范围纠偏待审阅；现有代码尚未对齐。入口：[规格](specs/m1-configurable-workspace.md)、[视觉与交互](design/visual-system.md)、[现有预览限制](preview.md)、[历史集成证据](experiments/2026-09-05-m1-integration.md)、[范围决策](decisions/0005-configurable-workspace-scope.md)、[执行计划](roadmap.md)。
 
 大部分文档面向 AI 执行与按需检索；人主要阅读产品规格、架构选择与结论。文档记录「为什么、约束、选择和证据」；类型、命名、实现与测试表达「现在如何工作」。不维护逐函数解释或已实现功能的平行文档。
 
