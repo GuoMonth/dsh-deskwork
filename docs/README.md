@@ -1,5 +1,7 @@
 # 文档导航
 
+M1 通用实现与预览验收中。入口：[规格](specs/m1-configurable-workspace.md)、[视觉与交互](design/visual-system.md)、[预览使用与限制](preview.md)、[本轮验证](experiments/2026-09-06-configurable-mvp.md)、[范围决策](decisions/0005-configurable-workspace-scope.md)、[执行计划](roadmap.md)。
+
 大部分文档面向 AI 执行与按需检索；人主要阅读产品规格、架构选择与结论。文档记录「为什么、约束、选择和证据」；类型、命名、实现与测试表达「现在如何工作」。不维护逐函数解释或已实现功能的平行文档。
 
 | 目录                                  | 内容                         | 更新时机             |
