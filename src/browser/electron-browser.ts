@@ -1,15 +1,21 @@
+import { createHash } from 'node:crypto';
 import type { WebContents } from 'electron';
 import { z } from 'zod';
-import { recordSchema } from '../core/contracts.ts';
-import type { BusinessRecord, RecordBrowser, TaskTarget } from '../core/contracts.ts';
-import type { RecordProfile } from './record-profile.ts';
+import { observationSchema } from '../core/contracts.ts';
+import type {
+  ActionProposal,
+  BrowserAdapter,
+  BrowserPage,
+  PageObservation,
+  TaskTarget,
+} from '../core/contracts.ts';
 
 const evaluationSchema = z.object({
   result: z.object({ value: z.unknown() }),
   exceptionDetails: z.unknown().optional(),
 });
 export async function evaluate(contents: WebContents, expression: string): Promise<unknown> {
-  if (contents.isDestroyed()) throw new Error('业务页面已关闭');
+  if (contents.isDestroyed()) throw new Error('页面已关闭');
   if (!contents.debugger.isAttached()) contents.debugger.attach('1.3');
   const raw: unknown = await contents.debugger.sendCommand('Runtime.evaluate', {
     expression,
@@ -18,94 +24,145 @@ export async function evaluate(contents: WebContents, expression: string): Promi
     timeout: 10000,
   });
   const response = evaluationSchema.parse(raw);
-  if (response.exceptionDetails) throw new Error('页面结构或状态不匹配，请重新核对业务页面');
+  if (response.exceptionDetails) throw new Error('页面操作未完成，请重新观察或接手');
   return response.result.value;
 }
-
-// This expression is application-owned. Model content is never evaluated as JavaScript.
-function recordExpression(profile: RecordProfile): string {
-  return `(() => {
-    const profile = ${JSON.stringify(profile)};
-    if (location.origin !== profile.origin || !location.pathname.startsWith(profile.pathPrefix)) throw Error('Wrong page');
-    const one = (selector) => { const nodes = document.querySelectorAll(selector); if(nodes.length !== 1) throw Error('Selector mismatch'); return nodes[0]; };
-    const text = (selector) => one(selector).textContent.trim();
-    const field = one(profile.selectors.value);
-    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) || field.type === 'password' || field.disabled || field.readOnly) throw Error('Field not editable');
-    const result = { shopId: text(profile.selectors.shop), objectId: text(profile.selectors.object), name: text(profile.selectors.name), field: profile.fieldName, value: field.value, pageRevision: text(profile.selectors.revision) };
-    if(result.shopId !== profile.shopId || result.pageRevision !== profile.pageRevision) throw Error('Profile expired');
-    return result;
-  })()`;
+// Application-owned expressions only; no scripts, selectors, or executable code from the model.
+const collectExpression = `(() => {
+  const visible = element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+  const nodes = [...document.querySelectorAll('a,button,input,textarea,select,[role="button"],[role="link"],[contenteditable="true"]')].filter(visible);
+  const elements = nodes.slice(0, 160).map((element, index) => {
+    const type = element.getAttribute('type') || '';
+    const name = element.getAttribute('aria-label') || (element.labels && [...element.labels].map(label => label.innerText).join(' ')) || element.getAttribute('placeholder') || element.innerText || element.getAttribute('title') || '';
+    return { ref: 'e' + index, tag: element.tagName.toLowerCase(), role: element.getAttribute('role') || '', name: name.trim().slice(0, 200), value: type === 'password' ? '' : String(element.value || '').slice(0, 2000), type, href: element instanceof HTMLAnchorElement ? element.href : '', disabled: Boolean(element.disabled) || element.getAttribute('aria-disabled') === 'true' || String(element.value || '').length > 2000, ...(element instanceof HTMLSelectElement ? { options: [...element.options].slice(0, 100).map(option => ({ label: option.text, value: option.value, disabled: option.disabled })) } : {}) };
+  });
+  return { url: location.href, title: document.title, text: document.body.innerText.slice(0, 14000), elements };
+})()`;
+const dangerous =
+  /保存|提交|删除|确认|审批|付款|支付|取消订单|退出|注销|save|submit|delete|confirm|approve|pay|sign.?out|logout/i;
+export function actionNeedsConfirmation(
+  observation: PageObservation,
+  proposal: ActionProposal,
+): boolean {
+  if (proposal.risk === 'consequential') return true;
+  const action = proposal.action;
+  if (action.kind === 'scroll') return false;
+  if (action.kind === 'navigate')
+    return dangerous.test(action.url) || Boolean(new URL(action.url).search);
+  if (action.kind === 'key') return !['Tab', 'Escape', 'ArrowUp', 'ArrowDown'].includes(action.key);
+  const element = observation.elements.find((entry) => entry.ref === action.ref);
+  if (!element || element.disabled || element.type === 'password')
+    throw new Error('元素不可操作，请用户在页面中接手');
+  // Unknown controls and edits may autosave. Only plain, non-action links bypass review.
+  if (action.kind === 'click' && element.tag === 'a' && /^https?:/.test(element.href))
+    return dangerous.test(element.name + element.href) || Boolean(new URL(element.href).search);
+  return true;
 }
-
-export class ElectronRecordBrowser implements RecordBrowser {
-  private readonly resolve: (target: TaskTarget) => WebContents;
-  private readonly profiles: ReadonlyMap<string, RecordProfile>;
+export interface PageHandle {
+  contents: WebContents;
+  page: BrowserPage;
+  epoch: number;
+  automating?: boolean;
+}
+export class ElectronBrowser implements BrowserAdapter {
+  private readonly resolve: (target: TaskTarget, pageId?: string) => PageHandle;
+  private readonly list: (target: TaskTarget) => BrowserPage[];
+  private readonly select: (target: TaskTarget, pageId: string) => void;
   constructor(
-    resolve: (target: TaskTarget) => WebContents,
-    profiles: ReadonlyMap<string, RecordProfile>,
+    resolve: (target: TaskTarget, pageId?: string) => PageHandle,
+    list: (target: TaskTarget) => BrowserPage[],
+    select: (target: TaskTarget, pageId: string) => void,
   ) {
     this.resolve = resolve;
-    this.profiles = profiles;
+    this.list = list;
+    this.select = select;
   }
-
-  async read(
-    target: TaskTarget,
-    objectId: string,
-    source: 'page' | 'server' = 'page',
-  ): Promise<BusinessRecord> {
-    const profile = this.profile(target);
-    const contents = this.resolve(target);
-    if (source === 'server') {
-      // A local input value is not proof that the server accepted the write.
-      await new Promise<void>((resolve) => setTimeout(resolve, 350));
-      await contents.loadURL(contents.getURL());
+  pages(target: TaskTarget): BrowserPage[] {
+    return this.list(target);
+  }
+  selectPage(target: TaskTarget, pageId: string): void {
+    this.select(target, pageId);
+  }
+  needsConfirmation(observation: PageObservation, proposal: ActionProposal): boolean {
+    return actionNeedsConfirmation(observation, proposal);
+  }
+  async observe(target: TaskTarget, pageId?: string): Promise<PageObservation> {
+    const handle = this.resolve(target, pageId);
+    const raw = await evaluate(handle.contents, collectExpression);
+    const observation = observationSchema.parse({
+      ...z.record(z.string(), z.unknown()).parse(raw),
+      pageId: handle.page.id,
+      revision: 'pending',
+    });
+    observation.revision = createHash('sha256')
+      .update(JSON.stringify({ observation, epoch: handle.epoch }))
+      .digest('hex');
+    return observation;
+  }
+  async readback(target: TaskTarget, pageId: string): Promise<PageObservation> {
+    const handle = this.resolve(target, pageId);
+    await handle.contents.loadURL(handle.contents.getURL());
+    return this.observe(target, pageId);
+  }
+  async execute(target: TaskTarget, proposal: ActionProposal, valid: () => boolean): Promise<void> {
+    const current = await this.observe(target, proposal.pageId);
+    if (!valid() || current.revision !== proposal.revision) throw new Error('页面或任务已变化');
+    const handle = this.resolve(target, proposal.pageId);
+    const action = proposal.action;
+    if (action.kind === 'navigate') {
+      if (!valid()) throw new Error('任务已停止');
+      await handle.contents.loadURL(action.url);
+      return;
     }
-    const record = recordSchema.parse(await evaluate(contents, recordExpression(profile)));
-    if (record.objectId !== objectId) throw new Error('当前商品与任务对象不同，请打开指定商品资料');
-    return record;
-  }
-
-  async write(target: TaskTarget, expected: BusinessRecord, value: string): Promise<void> {
-    const profile = this.profile(target);
-    const contents = this.resolve(target);
+    if (action.kind === 'key') {
+      if (!valid()) throw new Error('任务已停止');
+      handle.automating = true;
+      handle.contents.sendInputEvent({
+        type: 'keyDown',
+        keyCode: action.key === 'Space' ? 'Space' : action.key,
+      });
+      handle.contents.sendInputEvent({ type: 'keyUp', keyCode: action.key });
+      await evaluate(handle.contents, 'true');
+      handle.automating = false;
+      return;
+    }
+    if (!valid()) throw new Error('任务已停止');
     const result = await evaluate(
-      contents,
+      handle.contents,
       `(() => {
-      const current = ${recordExpression(profile)};
-      const expected = ${JSON.stringify(expected)};
-      if (JSON.stringify(current) !== JSON.stringify(expected)) throw Error('Record changed');
-      const field = document.querySelector(${JSON.stringify(profile.selectors.value)});
-      const button = document.querySelector(${JSON.stringify(profile.selectors.save)});
-      if (!button || button.disabled) throw Error('Save unavailable');
-      const prototype = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(field, ${JSON.stringify(value)});
-      field.dispatchEvent(new Event('input', { bubbles: true }));
-      field.dispatchEvent(new Event('change', { bubbles: true }));
-      button.click();
+      const expected = ${JSON.stringify({ url: current.url, title: current.title, text: current.text, elements: current.elements })};
+      if (JSON.stringify(${collectExpression}) !== JSON.stringify(expected)) throw Error('Page changed before action');
+      const action = ${JSON.stringify(action)};
+      if (action.kind === 'scroll') { window.scrollBy(0, (action.direction === 'down' ? 1 : -1) * Math.round(innerHeight * 0.75)); return true; }
+      const nodes = [...document.querySelectorAll('a,button,input,textarea,select,[role="button"],[role="link"],[contenteditable="true"]')].filter(element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
+      const element = nodes[Number(action.ref.slice(1))];
+      if (!/^e[0-9]+$/.test(action.ref) || !element || element.disabled || element.type === 'password') throw Error('Unavailable element');
+      element.scrollIntoView({ block: 'center' });
+      if (action.kind === 'click') element.click();
+      else if (action.kind === 'fill') {
+        if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) || element.readOnly || ['file','password','hidden','checkbox','radio','submit'].includes(element.type)) throw Error('Unsupported field');
+        const prototype = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, action.value);
+        element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (action.kind === 'select') {
+        if (!(element instanceof HTMLSelectElement) || ![...element.options].some(option => option.value === action.value)) throw Error('Unsupported option');
+        element.value = action.value; element.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       return true;
     })()`,
     );
-    if (result !== true) throw new Error('未确认保存操作');
+    if (result !== true) throw new Error('页面没有确认动作执行');
   }
-
-  async observe(target: TaskTarget): Promise<string> {
-    const value = await evaluate(
-      this.resolve(target),
-      `(() => {
-      const clone = document.body.cloneNode(true);
-      clone.querySelectorAll('script,style,input,textarea,[contenteditable], [hidden]').forEach(node => node.remove());
-      return JSON.stringify({ title: document.title, origin: location.origin, path: location.pathname + location.hash, text: clone.textContent.replace(/\\s+/g, ' ').slice(0, 14000) });
-    })()`,
-    );
-    return z.string().parse(value);
-  }
-
-  private profile(target: TaskTarget): RecordProfile {
-    const profile = this.profiles.get(target.profileId);
-    if (!profile)
-      throw new Error(
-        '此页面尚未完成字段适配。请先登录测试店铺并完成基础资料勘察；当前仅可读取页面。',
-      );
-    return profile;
+  async screenshot(target: TaskTarget, pageId: string): Promise<string> {
+    const handle = this.resolve(target, pageId);
+    const observation = await this.observe(target, pageId);
+    // Login screenshots could expose credentials; leave authentication to the user.
+    if (observation.elements.some((element) => element.type === 'password'))
+      throw new Error('登录页面请由用户操作，不发送截图');
+    const capture = await handle.contents.capturePage();
+    return capture
+      .resize({ width: Math.min(1280, capture.getSize().width) })
+      .toJPEG(70)
+      .toString('base64');
   }
 }

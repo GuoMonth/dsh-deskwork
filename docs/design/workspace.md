@@ -1,6 +1,6 @@
 # DSH Deskwork 设计说明
 
-状态：通用产品边界已确认；[M1 纠偏规格](../specs/m1-configurable-workspace.md)待范围审阅。本文维护概念与长期方向，技术结论以决策和实验为准。
+状态：[M1 通用规格](../specs/m1-configurable-workspace.md)已获用户批准并实现，真实使用验收中。本文维护概念与长期方向，技术结论以决策和实验为准。
 
 ## 产品边界
 

@@ -1,5 +1,7 @@
 # 实验记录
 
+- [通用工作台 MVP](2026-09-06-configurable-mvp.md)：配置式双站点、真实 DSH／Electron 工具链、确认与回读边界，真实模型和用户 Mac 待验收。
+
 - [M1 集成验证](2026-09-05-m1-integration.md)：Browser Harness 范围、发布版 DSH 工具桥、真实 Electron 夹具闭环。
 
 源码位于根目录 `experiments/`，与产品实现隔离。每份结果记录注明假设、日期、代码身份、工具版本、命令、观察与局限。后续结果追加记录，不覆盖旧结论。
