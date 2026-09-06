@@ -7,17 +7,26 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect } from '@playwright/test';
 import { z } from 'zod';
+import { startWebsite } from '../tests/fixtures/websites.ts';
 
 await test(
   'Browser Harness observes the Electron page and also exposes the privileged shell target',
   { timeout: 40000 },
   async () => {
     const directory = await mkdtemp(join(tmpdir(), 'deskwork-bh-'));
+    const fixture = await startWebsite('directory');
+    await writeFile(
+      join(directory, 'workspace.json'),
+      JSON.stringify({
+        version: 2,
+        name: 'Harness experiment',
+        sites: [{ id: 'fixture', sessionId: 'fixture', name: 'Fixture', url: fixture.origin }],
+      }),
+    );
     const python = resolve('.artifacts/browser-harness-env/bin/python');
     const application = await electron.launch({
       args: [
         resolve('.'),
-        '--fixture',
         `--profile-directory=${directory}`,
         '--remote-debugging-port=19338',
         '--no-sandbox',
@@ -54,7 +63,7 @@ await test(
       const tabs = z
         .array(z.object({ targetId: z.string(), url: z.string() }).loose())
         .parse(JSON.parse(raw));
-      const erp = tabs.find((tab) => tab.url.includes('/products'));
+      const erp = tabs.find((tab) => tab.url.startsWith(fixture.origin));
       assert.ok(erp);
       const shellExposed = tabs.some(
         (tab) => tab.url.startsWith('file:') && tab.url.includes('/dist/ui/'),
@@ -63,7 +72,7 @@ await test(
       const title = await run(
         `from browser_harness import helpers as h; h.switch_tab(${JSON.stringify(erp.targetId)}); print(h.js("document.title"))`,
       );
-      assert.ok(title.includes('ERP'));
+      assert.ok(title.includes('Directory fixture'));
       await mkdir('.artifacts/browser-harness', { recursive: true });
       await writeFile(
         '.artifacts/browser-harness/result.json',
@@ -94,6 +103,7 @@ await test(
         });
       }
       await application.close();
+      await fixture.close();
       await rm(directory, { recursive: true, force: true });
     }
   },

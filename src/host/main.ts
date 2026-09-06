@@ -1,24 +1,16 @@
-import { app, BrowserWindow, WebContentsView, ipcMain, safeStorage, Menu } from 'electron';
-import type { IpcMainInvokeEvent, WebContents } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron';
+import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
-import { commandSchema, defaultWorkspace, idleTask, workspaceSchema } from '../core/contracts.ts';
-import type {
-  BusinessRecord,
-  ChatMessage,
-  Site,
-  TaskTarget,
-  WorkspaceSnapshot,
-} from '../core/contracts.ts';
-import { SkillLedger } from '../core/skill-ledger.ts';
+import { commandSchema, idleTask, workspaceSchema } from '../core/contracts.ts';
+import type { EntryContext, Site, WorkspaceSnapshot } from '../core/contracts.ts';
 import { TaskController } from '../core/task-controller.ts';
-import { ElectronRecordBrowser } from '../browser/electron-browser.ts';
-import { fixtureProfile, recordProfileSchema } from '../browser/record-profile.ts';
+import { ElectronBrowser } from '../browser/electron-browser.ts';
 import { StateStore } from './state-store.ts';
-import { startErpFixture } from './erp-fixture.ts';
+import { Pages } from './pages.ts';
 import { startToolServer } from '../runtime/tool-server.ts';
 import { DshRuntime } from '../runtime/dsh-runtime.ts';
 
@@ -26,50 +18,41 @@ const profileArgument = process.argv.find((argument) =>
   argument.startsWith('--profile-directory='),
 );
 if (profileArgument) app.setPath('userData', profileArgument.slice('--profile-directory='.length));
-const fixtureMode = process.argv.includes('--fixture');
-const fixtureAgent = process.argv.includes('--fixture-agent');
-if (fixtureAgent && !fixtureMode)
-  throw new Error('Fixture agent requires an explicit local fixture');
-
 async function main(): Promise<void> {
   await app.whenReady();
   const directory = app.getPath('userData');
   await mkdir(directory, { recursive: true, mode: 0o700 });
-  const fixture = fixtureMode
-    ? await startErpFixture(directory, Number(process.env['DESKWORK_FIXTURE_PORT'] ?? 0))
-    : undefined;
-  let workspace = defaultWorkspace;
-  try {
-    workspace = workspaceSchema.parse(
-      JSON.parse(await readFile(join(directory, 'workspace.json'), 'utf8')),
-    );
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
-  }
-  if (fixture)
-    workspace = {
-      version: 1,
-      name: '本地验证工作区',
-      sites: [
-        {
-          id: 'fixture',
-          name: '本地 ERP · 测试店铺',
-          url: `${fixture.origin}/products`,
-          sessionId: 'fixture',
-          profileId: 'fixture',
-        },
-      ],
-    };
-  const profiles = new Map<string, z.infer<typeof recordProfileSchema>>();
-  if (fixture) profiles.set('fixture', fixtureProfile(fixture.origin));
-  try {
-    const raw: unknown = JSON.parse(
-      await readFile(join(directory, 'record-profiles.json'), 'utf8'),
-    );
-    for (const profile of z.array(recordProfileSchema).parse(raw))
-      profiles.set(profile.id, profile);
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+  const store = new StateStore(directory);
+  let workspace = await store.loadWorkspace();
+  const saved = await store.load();
+  let activeSiteId = workspace.sites[0]?.id ?? '';
+  let closing = false;
+  let runtime: DshRuntime | undefined;
+  let runtimeGeneration = 0;
+  let model = 'deepseek-v4-flash';
+  let apiKey = '';
+  let configured = false;
+  const testModelArgument = process.argv.find((argument) =>
+    argument.startsWith('--test-model-url='),
+  );
+  const testModelURL = testModelArgument?.slice('--test-model-url='.length);
+  if (testModelURL) {
+    if (new URL(testModelURL).hostname !== '127.0.0.1') throw new Error('测试模型仅允许本机端点');
+    apiKey = 'fixture-key-not-a-secret';
+    configured = true;
+  } else {
+    try {
+      const settings = z
+        .object({ model: z.string(), encryptedKey: z.string() })
+        .strict()
+        .parse(JSON.parse(await readFile(join(directory, 'model.json'), 'utf8')));
+      apiKey = safeStorage.decryptString(Buffer.from(settings.encryptedKey, 'base64'));
+      model = settings.model;
+      configured = true;
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
+        console.error('模型设置无法读取，请在设置中重新配置。');
+    }
   }
   const shellPath = join(app.getAppPath(), 'dist/ui/index.html');
   const window = new BrowserWindow({
@@ -99,175 +82,127 @@ async function main(): Promise<void> {
   window.webContents.on('will-navigate', (event) => {
     event.preventDefault();
   });
-  const views = new Map<string, WebContentsView>();
-  let visibleTab = workspace.sites[0]?.id ?? '';
-  let latestBounds = { x: 204, y: 182, width: 800, height: 734 };
-  let browserVisible = true;
-  const resolve = (target: TaskTarget): WebContents => {
-    const site = workspace.sites.find((entry) => entry.id === target.tabId);
-    const view = views.get(target.tabId);
-    if (
-      !view ||
-      !site ||
-      site.sessionId !== target.sessionId ||
-      site.profileId !== target.profileId
-    )
-      throw new Error('任务目标会话不匹配');
-    return view.webContents;
-  };
-  const layout = (): void => {
-    const bounds = window.getContentBounds();
-    for (const [id, view] of views) {
-      view.setVisible(browserVisible && id === visibleTab);
-      if (id === visibleTab)
-        view.setBounds({
-          x: latestBounds.x,
-          y: latestBounds.y,
-          width: Math.max(0, Math.min(latestBounds.width, bounds.width - latestBounds.x)),
-          height: Math.max(0, Math.min(latestBounds.height, bounds.height - latestBounds.y)),
-        });
-    }
-  };
-  const addView = (site: Site): void => {
-    const view = new WebContentsView({
-      webPreferences: {
-        partition: `persist:deskwork-${site.sessionId}`,
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    });
-    views.set(site.id, view);
-    window.contentView.addChildView(view);
-    view.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => {
-      callback(false);
-    });
-    view.webContents.session.setPermissionCheckHandler(() => false);
-    view.webContents.on('will-navigate', (event, url) => {
-      if (!['https:', 'http:'].includes(new URL(url).protocol)) event.preventDefault();
-    });
-    view.webContents.setWindowOpenHandler(({ url }) => {
-      if (['https:', 'http:'].includes(new URL(url).protocol) && workspace.sites.length < 12) {
-        const popup = { ...site, id: `popup-${randomUUID()}`, name: `${site.name} · 新页面`, url };
-        workspace = { ...workspace, sites: [...workspace.sites, popup] };
-        addView(popup);
-        publish();
-      }
-      return { action: 'deny' };
-    });
-    void view.webContents.loadURL(site.url).catch((error: unknown) => {
-      console.error(
-        'Business page load failed:',
-        error instanceof Error ? error.message : 'unknown',
-      );
-    });
-    layout();
-  };
-  const store = new StateStore(directory);
-  const saved = await store.load();
-  let messages: ChatMessage[] = saved?.messages ?? [];
-  let configured = fixtureAgent;
-  let runtime: DshRuntime | undefined;
-  let runtimeGeneration = 0;
-  let model = 'deepseek-v4-flash';
-  let apiKey = '';
-  const settingsSchema = z.object({ model: z.string(), encryptedKey: z.string() }).strict();
-  try {
-    const settings = settingsSchema.parse(
-      JSON.parse(await readFile(join(directory, 'model.json'), 'utf8')),
+  const contexts = new Map<string, EntryContext>();
+  const controllers = new Map<string, TaskController>();
+  let streamPublishTimer: ReturnType<typeof setTimeout> | undefined;
+  function runningSite(): string | null {
+    return (
+      [...controllers].find(
+        ([, controller]) =>
+          controller.isBusy() ||
+          ['running', 'waiting-user', 'verifying'].includes(controller.state.status),
+      )?.[0] ?? null
     );
-    apiKey = safeStorage.decryptString(Buffer.from(settings.encryptedKey, 'base64'));
-    model = settings.model;
-    configured = true;
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
-      console.error('Stored model configuration unavailable; configure again.');
   }
-  let ledger = new SkillLedger();
-  try {
-    ledger = new SkillLedger(JSON.parse(await readFile(join(directory, 'skills.json'), 'utf8')));
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
-  }
-  const browser = new ElectronRecordBrowser(resolve, profiles);
-  const recordBrowser = {
-    read: async (
-      target: TaskTarget,
-      objectId: string,
-      source?: 'page' | 'server',
-    ): Promise<BusinessRecord> => {
-      const record = await browser.read(target, objectId, source);
-      controller.state.metrics.skillReused ||= ledger.canReuse(target, record);
-      return record;
-    },
-    write: (target: TaskTarget, record: BusinessRecord, value: string): Promise<void> =>
-      browser.write(target, record, value),
-  };
-  const controller = new TaskController(
-    recordBrowser,
-    async (state) => {
-      await store.save(state, messages);
-      publish();
-    },
-    saved?.task,
-  );
   function snapshot(): WorkspaceSnapshot {
     return {
       workspace,
-      task: controller.state,
-      messages,
+      contexts: [...contexts.values()],
+      pages: pages.all(),
+      activeSiteId,
+      runningSiteId: runningSite(),
       runtimeConfigured: configured,
       preview: false,
     };
   }
-  let streamPublishTimer: ReturnType<typeof setTimeout> | undefined;
   function publish(): void {
     clearTimeout(streamPublishTimer);
     streamPublishTimer = undefined;
-    if (!window.isDestroyed() && !window.webContents.isDestroyed())
-      window.webContents.send('deskwork:state', snapshot());
+    if (!window.isDestroyed()) window.webContents.send('deskwork:state', snapshot());
   }
   function publishStream(): void {
     streamPublishTimer ??= setTimeout(publish, 80);
   }
-  const tools = await startToolServer(async (request) => {
-    if (controller.state.status !== 'running' || !controller.state.target)
-      throw new Error('任务工具已撤销或正在等待确认');
-    controller.state.metrics.toolCalls++;
-    switch (request.name) {
-      case 'observe_page': {
-        const target = controller.state.target;
-        const taskId = controller.state.id;
-        const result = await browser.observe(target);
-        if (controller.state.id !== taskId || !['running'].includes(controller.state.status))
-          throw new Error('任务已停止');
-        await controller.step('已观察当前业务页面');
-        return { page: result };
-      }
-      case 'read_record':
-        return controller.read(request.arguments.objectId);
-      case 'propose_record_change':
-        await controller.propose(request.arguments.objectId, request.arguments.nextValue);
-        return { status: 'waiting-for-human-confirmation', saved: false };
+  async function persist(): Promise<void> {
+    await store.save([...contexts.values()]);
+    publish();
+  }
+  const pages = new Pages(window, publish, (siteId) => {
+    if (closing) return;
+    const controller = controllers.get(siteId);
+    if (
+      controller &&
+      (controller.isBusy() ||
+        ['running', 'waiting-user', 'verifying'].includes(controller.state.status))
+    ) {
+      void controller
+        .stop()
+        .then(stopRuntime)
+        .catch((error: unknown) => {
+          console.error(error);
+        });
     }
   });
-  const stopRuntime = async (): Promise<void> => {
+  const browser = new ElectronBrowser(
+    (target, pageId) => pages.resolve(target, pageId),
+    (target) => pages.list(target),
+    (target, pageId) => {
+      pages.select(target, pageId);
+    },
+  );
+  function addContext(site: Site, restored?: EntryContext): void {
+    const context = restored ?? { siteId: site.id, task: idleTask(), messages: [] };
+    contexts.set(site.id, context);
+    const controller = new TaskController(
+      browser,
+      async (state) => {
+        context.task = state;
+        await persist();
+      },
+      context.task,
+    );
+    context.task = controller.state;
+    controllers.set(site.id, controller);
+  }
+  for (const site of workspace.sites) {
+    addContext(
+      site,
+      saved.find((context) => context.siteId === site.id),
+    );
+    pages.add(site);
+  }
+  pages.setActiveSite(activeSiteId);
+  const tools = await startToolServer(async (request) => {
+    const siteId = runningSite();
+    const controller = siteId ? controllers.get(siteId) : undefined;
+    if (!controller || controller.state.status !== 'running')
+      throw new Error('任务工具已暂停或正在等待确认');
+    controller.state.metrics.toolCalls++;
+    switch (request.name) {
+      case 'observe_page':
+        return controller.observe(request.arguments.pageId).finally(publish);
+      case 'request_takeover':
+        await controller.stop();
+        controller.state.detail = request.arguments.reason;
+        await controller.save();
+        return { status: 'waiting-for-user-takeover' };
+      case 'verify_result':
+        return controller.verify().finally(publish);
+      case 'act_on_page':
+        return controller.propose(request.arguments).finally(publish);
+      case 'list_pages':
+        return { pages: browser.pages(controller.target()) };
+      case 'select_page':
+        browser.selectPage(controller.target(), request.arguments.pageId);
+        return { selected: request.arguments.pageId };
+      case 'capture_page':
+        return { image: await browser.screenshot(controller.target(), request.arguments.pageId) };
+    }
+  });
+  async function stopRuntime(): Promise<void> {
     runtimeGeneration++;
     tools.revoke();
     const previous = runtime;
     runtime = undefined;
     await previous?.close();
-  };
-  const launchRuntime = async (text: string): Promise<void> => {
-    if (fixtureAgent) {
-      await controller.read('SG-1001');
-      if (/修改|备注|更新/.test(text))
-        await controller.propose('SG-1001', '优选果，到货后优先检查品质');
-      else await controller.finish('夹具查询完成');
-      return;
-    }
+  }
+  async function launchRuntime(siteId: string, text: string): Promise<void> {
+    const controller = controllers.get(siteId);
+    const context = contexts.get(siteId);
+    if (!controller || !context) throw new Error('网站入口不存在');
+    const messages = context.messages;
     if (!apiKey) {
-      await controller.fail('请在设置中配置 DeepSeek API 密钥后继续');
+      await controller.fail('请在设置中配置 DeepSeek 模型与密钥');
       return;
     }
     if (!runtime) {
@@ -279,16 +214,17 @@ async function main(): Promise<void> {
         executable: process.execPath,
         cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
         mcpPath: join(runtimeRoot, 'dist/runtime/mcp-server.mjs'),
-        dataDirectory: join(directory, 'runtime'),
+        dataDirectory: join(directory, 'runtime', siteId),
         apiKey,
         model,
+        ...(testModelURL ? { baseURL: testModelURL } : {}),
         toolEndpoint: tools.endpoint,
         toolToken: tools.token,
         recoveryContext: [
           ...messages,
           {
             role: 'assistant',
-            text: `已核对的业务事实：${JSON.stringify({ target: controller.state.target, result: controller.state.result, writeVerified: controller.state.writeVerified })}`,
+            text: `宿主状态：${JSON.stringify({ target: controller.state.target, requiresVerification: controller.state.requiresVerification, detail: controller.state.detail })}`,
           },
         ],
         onNotification: (method, raw): void => {
@@ -336,7 +272,7 @@ async function main(): Promise<void> {
                   chunk.data.chunk.type === 'text-delta' &&
                   chunk.data.chunk.text
                 ) {
-                  const id = `dsh-${controller.state.id}-${String(chunk.data.step)}`;
+                  const id = `dsh-${String(generation)}-${controller.state.id}-${String(chunk.data.step)}`;
                   const existing = messages.find((message) => message.id === id);
                   if (existing) existing.text += chunk.data.chunk.text;
                   else messages.push({ id, role: 'assistant', text: chunk.data.chunk.text });
@@ -359,11 +295,11 @@ async function main(): Promise<void> {
                     .filter((block) => block.type === 'text')
                     .map((block) => block.text ?? '')
                     .join('\n');
-                  const id = `dsh-${controller.state.id}-${String(message.data.step)}`;
+                  const id = `dsh-${String(generation)}-${controller.state.id}-${String(message.data.step)}`;
                   const existing = messages.find((entry) => entry.id === id);
                   if (existing) existing.text = text;
                   else if (text) messages.push({ id, role: 'assistant', text });
-                  await store.save(controller.state, messages);
+                  await persist();
                   publish();
                 }
               }
@@ -385,10 +321,33 @@ async function main(): Promise<void> {
         },
       });
     }
-    const context = controller.state.target;
-    await runtime.prompt(controller.state.id, `任务绑定：${JSON.stringify(context)}\n${text}`);
-  };
-
+    await runtime.prompt(
+      controller.state.id,
+      `任务网站：${workspace.sites.find((site) => site.id === siteId)?.url ?? ''}\n${text}`,
+    );
+  }
+  function controllerFor(siteId: string): TaskController {
+    const controller = controllers.get(siteId);
+    if (!controller) throw new Error('网站入口不存在');
+    return controller;
+  }
+  function requireNoOtherTask(siteId?: string): void {
+    const other = runningSite();
+    if (other && other !== siteId) throw new Error('另一个网站的任务尚未结束，请先停止或核对结果');
+  }
+  function requireEditable(siteId: string): void {
+    const controller = controllerFor(siteId);
+    if (
+      controller.isBusy() ||
+      ['running', 'waiting-user', 'verifying'].includes(controller.state.status)
+    )
+      throw new Error('请先停止该入口任务并核对结果，再修改或移除');
+  }
+  function launch(siteId: string, text: string): void {
+    void launchRuntime(siteId, text).catch((error: unknown) => {
+      void controllerFor(siteId).fail(error instanceof Error ? error.message : '模型连接失败');
+    });
+  }
   function requireShell(event: IpcMainInvokeEvent): void {
     if (
       event.sender !== window.webContents ||
@@ -401,129 +360,205 @@ async function main(): Promise<void> {
     requireShell(event);
     return snapshot();
   });
+  let commandBusy = false;
   ipcMain.handle('deskwork:command', async (event, raw: unknown) => {
     requireShell(event);
     const command = commandSchema.parse(raw);
-    switch (command.type) {
-      case 'layout':
-        if (!views.has(command.tabId)) throw new Error('Unknown tab');
-        visibleTab = command.tabId;
-        latestBounds = command.bounds;
-        browserVisible = command.visible;
-        layout();
-        break;
-      case 'reload': {
-        const view = views.get(command.tabId);
-        if (!view) throw new Error('Unknown tab');
-        view.webContents.reload();
-        break;
-      }
-      case 'settings':
-        if (['running', 'waiting-user', 'verifying'].includes(controller.state.status))
-          throw new Error('请先停止当前任务再更换模型配置');
-        if (
-          !safeStorage.isEncryptionAvailable() ||
-          (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text')
-        )
-          throw new Error('系统安全存储不可用，无法保存密钥');
-        await stopRuntime();
-        await writeFile(
-          join(directory, 'model.json'),
-          JSON.stringify({
-            model: command.model,
-            encryptedKey: safeStorage.encryptString(command.apiKey).toString('base64'),
-          }),
-          { mode: 0o600 },
-        );
-        apiKey = command.apiKey;
-        model = command.model;
-        configured = true;
-        publish();
-        break;
-      case 'send': {
-        if (['running', 'waiting-user', 'verifying'].includes(controller.state.status))
-          throw new Error('当前会话已有任务');
-        const site = workspace.sites.find((entry) => entry.id === command.tabId);
-        if (!site) throw new Error('Unknown tab');
-        await stopRuntime();
-        await controller.start(
-          { tabId: site.id, sessionId: site.sessionId, profileId: site.profileId },
-          command.text,
-        );
-        messages.push({ id: randomUUID(), role: 'user', text: command.text });
-        await store.save(controller.state, messages);
-        publish();
-        void launchRuntime(command.text).catch((error: unknown) => {
-          void controller.fail(error instanceof Error ? error.message : 'DSH 连接失败');
-        });
-        break;
-      }
-      case 'confirm':
-        await controller.confirm(command.confirmationId);
-        await stopRuntime();
-        if (controller.state.writeVerified && controller.state.result && controller.state.target) {
-          const entries = ledger.verified(
-            controller.state.target,
-            controller.state.result,
-            controller.state.metrics,
-          );
-          await writeFile(join(directory, 'skills.json'), JSON.stringify(entries), {
-            mode: 0o600,
-            flush: true,
-          });
-          messages.push({
+    if (command.type === 'layout') {
+      pages.setLayout(activeSiteId, command.visible, command.bounds);
+      return;
+    }
+    if (command.type === 'select-site') {
+      controllerFor(command.siteId);
+      activeSiteId = command.siteId;
+      pages.setActiveSite(activeSiteId);
+      publish();
+      return;
+    }
+    if (command.type === 'stop') {
+      requireNoOtherTask(command.siteId);
+      await controllerFor(command.siteId).stop();
+      await stopRuntime();
+      return;
+    }
+    if (commandBusy) throw new Error('正在完成上一步，请稍后再试');
+    commandBusy = true;
+    try {
+      switch (command.type) {
+        case 'add-site': {
+          if (workspace.sites.length >= 24) throw new Error('MVP 最多配置 24 个网站');
+          const site: Site = {
             id: randomUUID(),
-            role: 'assistant',
-            text: `Deskwork 已保存并回读核对：${JSON.stringify(controller.state.result)}`,
+            name: command.name.trim() || new URL(command.url).hostname,
+            url: command.url,
+            sessionId: randomUUID(),
+          };
+          const updated = workspaceSchema.parse({
+            ...workspace,
+            sites: [...workspace.sites, site],
           });
-          await store.save(controller.state, messages);
-          publish();
+          await store.saveWorkspace(updated);
+          workspace = updated;
+          addContext(site);
+          pages.add(site);
+          activeSiteId = site.id;
+          pages.setActiveSite(activeSiteId);
+          await persist();
+          break;
         }
-        break;
-      case 'stop':
-        await controller.stop();
-        await stopRuntime();
-        break;
-      case 'resume':
-        await controller.resume();
-        if (controller.state.status === 'running') {
+        case 'edit-site': {
+          requireEditable(command.siteId);
+          const site = workspace.sites.find((entry) => entry.id === command.siteId);
+          if (!site) throw new Error('网站不存在');
+          const updated = {
+            ...site,
+            url: command.url,
+            name: command.name.trim() || new URL(command.url).hostname,
+          };
+          const next = workspaceSchema.parse({
+            ...workspace,
+            sites: workspace.sites.map((entry) => (entry.id === site.id ? updated : entry)),
+          });
+          await store.saveWorkspace(next);
+          workspace = next;
+          if (site.url !== updated.url) {
+            const context = contexts.get(site.id);
+            if (context) await store.archiveContext(context);
+            addContext(updated);
+          }
+          await pages.remove(site.id);
+          pages.add(updated);
+          pages.setActiveSite(activeSiteId);
+          await persist();
+          break;
+        }
+        case 'remove-site': {
+          requireEditable(command.siteId);
+          const context = contexts.get(command.siteId);
+          if (context) await store.archiveContext(context);
+          const next = {
+            ...workspace,
+            sites: workspace.sites.filter((site) => site.id !== command.siteId),
+          };
+          await store.saveWorkspace(next);
+          workspace = next;
+          await pages.remove(command.siteId);
+          contexts.delete(command.siteId);
+          controllers.delete(command.siteId);
+          if (activeSiteId === command.siteId) activeSiteId = workspace.sites[0]?.id ?? '';
+          pages.setActiveSite(activeSiteId);
+          await persist();
+          break;
+        }
+        case 'select-page': {
+          const site = workspace.sites.find((entry) => entry.id === activeSiteId);
+          if (!site) throw new Error('没有选中网站');
+          const controller = controllerFor(site.id);
+          if (['running', 'waiting-user'].includes(controller.state.status)) {
+            await controller.stop();
+            await stopRuntime();
+          }
+          pages.select({ tabId: site.id, sessionId: site.sessionId }, command.pageId);
+          break;
+        }
+        case 'close-page':
+          pages.closePopup(command.pageId);
+          break;
+        case 'reload':
+          await pages.reload(command.siteId);
+          break;
+        case 'settings': {
+          requireNoOtherTask();
+          if (
+            !safeStorage.isEncryptionAvailable() ||
+            (process.platform === 'linux' &&
+              safeStorage.getSelectedStorageBackend() === 'basic_text')
+          )
+            throw new Error('系统安全存储不可用');
           await stopRuntime();
-          void launchRuntime(
-            `恢复任务。先重新观察页面并核对身份，不能复用旧确认。原目标：${controller.state.title}`,
-          ).catch((error: unknown) => {
-            void controller.fail(error instanceof Error ? error.message : '恢复失败');
-          });
+          await writeFile(
+            join(directory, 'model.json'),
+            JSON.stringify({
+              model: command.model,
+              encryptedKey: safeStorage.encryptString(command.apiKey).toString('base64'),
+            }),
+            { mode: 0o600 },
+          );
+          apiKey = command.apiKey;
+          model = command.model;
+          configured = true;
+          publish();
+          break;
         }
-        break;
-      case 'new-task':
-        if (['running', 'waiting-user', 'verifying'].includes(controller.state.status))
-          throw new Error('请先结束当前任务');
-        await stopRuntime();
-        controller.state = idleTask();
-        messages = [];
-        await store.save(controller.state, messages);
-        publish();
-        break;
+        case 'send': {
+          requireNoOtherTask(command.tabId);
+          const controller = controllerFor(command.tabId);
+          const site = workspace.sites.find((entry) => entry.id === command.tabId);
+          const context = contexts.get(command.tabId);
+          if (!site || !context) throw new Error('入口不存在');
+          if (!configured) throw new Error('请先配置 DeepSeek 模型与密钥');
+          await stopRuntime();
+          await controller.start({ tabId: site.id, sessionId: site.sessionId }, command.text);
+          context.messages.push({ id: randomUUID(), role: 'user', text: command.text });
+          await persist();
+          launch(site.id, command.text);
+          break;
+        }
+        case 'confirm': {
+          requireNoOtherTask(command.siteId);
+          const controller = controllerFor(command.siteId);
+          await stopRuntime();
+          await controller.confirm(command.confirmationId);
+          if (controller.state.status === 'running')
+            launch(
+              command.siteId,
+              `宿主已执行用户确认动作：${JSON.stringify(controller.state.pendingAction?.proposal)}。重新观察页面，继续原任务，不要重复上一动作；如果刚刚是提交，请先 verify_result。`,
+            );
+          break;
+        }
+        case 'resume': {
+          requireNoOtherTask(command.siteId);
+          const controller = controllerFor(command.siteId);
+          await stopRuntime();
+          await controller.resume();
+          if (controller.state.status === 'running')
+            launch(
+              command.siteId,
+              `恢复任务，先重新观察；旧确认失效。原目标：${controller.state.title}`,
+            );
+          break;
+        }
+        case 'resolve-result':
+          await controllerFor(command.siteId).resolveResult(command.outcome);
+          await stopRuntime();
+          break;
+        case 'new-task': {
+          requireEditable(command.siteId);
+          const context = contexts.get(command.siteId);
+          const site = workspace.sites.find((entry) => entry.id === command.siteId);
+          if (!context || !site) throw new Error('入口不存在');
+          await store.archiveContext(context);
+          addContext(site);
+          await persist();
+          break;
+        }
+      }
+    } finally {
+      commandBusy = false;
+      publish();
     }
   });
-  for (const site of workspace.sites) addView(site);
-  window.on('resize', layout);
-  let closing = false;
   window.on('close', (event) => {
     if (closing) return;
     event.preventDefault();
     closing = true;
     const cleanup = async (): Promise<void> => {
-      if (['running', 'waiting-user', 'verifying'].includes(controller.state.status))
-        await controller.stop();
+      for (const controller of controllers.values())
+        if (['running', 'waiting-user'].includes(controller.state.status)) await controller.stop();
       await stopRuntime();
       await tools.close();
-      for (const view of views.values()) {
-        await view.webContents.session.cookies.flushStore();
-        view.webContents.session.flushStorageData();
-        view.webContents.close();
-      }
-      await fixture?.close();
+      await persist();
+      await pages.close();
       window.destroy();
       app.quit();
     };
@@ -534,7 +569,6 @@ async function main(): Promise<void> {
   });
   await window.loadFile(shellPath);
 }
-
 void main().catch((error: unknown) => {
   console.error(error);
   app.exit(1);

@@ -1,341 +1,534 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, ReactElement } from 'react';
-import type { DeskworkBridge, WorkspaceCommand, WorkspaceSnapshot } from '../core/contracts.ts';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
+import type {
+  DeskworkBridge,
+  Site,
+  WorkspaceCommand,
+  WorkspaceSnapshot,
+} from '../core/contracts.ts';
+import { idleTask } from '../core/contracts.ts';
 import { Icon } from './icon.tsx';
 import { TaskCard } from './task-card.tsx';
 
+type DialogState =
+  { kind: 'site'; site?: Site } | { kind: 'settings' } | { kind: 'commands' } | null;
+function Dialog({
+  title,
+  close,
+  children,
+}: {
+  title: string;
+  close: () => void;
+  children: ReactNode;
+}): ReactElement {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    const previous = document.activeElement;
+    element?.showModal();
+    return (): void => {
+      element?.close();
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="modal"
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+      aria-label={title}
+    >
+      <div className="modal-heading">
+        <h2>{title}</h2>
+        <button className="icon-button" aria-label="关闭对话框" onClick={close}>
+          <Icon name="close" />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  );
+}
+function SiteForm({
+  site,
+  save,
+  remove,
+}: {
+  site?: Site;
+  save: (url: string, name: string) => Promise<void>;
+  remove: (() => Promise<void>) | undefined;
+}): ReactElement {
+  const [url, setUrl] = useState(site?.url ?? '');
+  const [name, setName] = useState(site?.name ?? '');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  function run(action: () => Promise<void>): void {
+    setBusy(true);
+    setError('');
+    void action()
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        run(() => save(url.trim(), name.trim()));
+      }}
+    >
+      <p className="muted">把每天使用的网站放进工作台。登录仍在原网站中完成。</p>
+      <label>
+        网站网址
+        <input
+          type="url"
+          value={url}
+          onChange={(event) => {
+            setUrl(event.target.value);
+          }}
+          placeholder="https://your-workplace.example"
+          required
+          autoFocus
+        />
+      </label>
+      <label>
+        名称 <span className="muted">（可选）</span>
+        <input
+          value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+          placeholder="例如：我的业务系统"
+          maxLength={100}
+        />
+      </label>
+      {error ? <p role="alert">{error}</p> : null}
+      <button className="primary full" disabled={busy} type="submit">
+        {site ? '保存网站设置' : '添加网站'}
+      </button>
+      {remove ? (
+        <button
+          type="button"
+          className="danger full"
+          disabled={busy}
+          onClick={() => {
+            run(remove);
+          }}
+        >
+          移除此入口（保留网站数据）
+        </button>
+      ) : null}
+    </form>
+  );
+}
+function ModelForm({
+  bridge,
+  preview,
+  done,
+}: {
+  bridge: DeskworkBridge;
+  preview: boolean;
+  done: () => void;
+}): ReactElement {
+  const [key, setKey] = useState('');
+  const [model, setModel] = useState('deepseek-v4-flash');
+  const [error, setError] = useState('');
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void bridge
+          .command({ type: 'settings', apiKey: key, model })
+          .then(done)
+          .catch((reason: unknown) => {
+            setError(String(reason));
+          });
+      }}
+    >
+      <p className="muted">
+        {preview
+          ? '交互预览不连接模型，请勿输入真实密钥。'
+          : '密钥保存在本机系统安全存储，仅供 DSH 使用。'}
+      </p>
+      <label>
+        模型名称
+        <input
+          value={model}
+          onChange={(event) => {
+            setModel(event.target.value);
+          }}
+          required
+        />
+      </label>
+      <label>
+        API 密钥
+        <input
+          type="password"
+          value={key}
+          onChange={(event) => {
+            setKey(event.target.value);
+          }}
+          autoComplete="off"
+          required
+        />
+      </label>
+      {error ? <p role="alert">{error}</p> : null}
+      <button className="primary full">保存模型配置</button>
+    </form>
+  );
+}
 export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactElement {
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>();
   const [mode, setMode] = useState<'copilot' | 'agent'>('copilot');
   const [sidebar, setSidebar] = useState(true);
   const [panelWidth, setPanelWidth] = useState(400);
-  const [tabId, setTabId] = useState('');
-  const [prompt, setPrompt] = useState('');
+  const [dragging, setDragging] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
   const [error, setError] = useState('');
-  const [settings, setSettings] = useState(false);
-  const [commandOpen, setCommandOpen] = useState(false);
-  const [commandQuery, setCommandQuery] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('deepseek-v4-flash');
-  const browserRegion = useRef<HTMLDivElement>(null);
-  const conversationEnd = useRef<HTMLDivElement>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const viewport = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const selectedTab = tabId || snapshot?.workspace.sites[0]?.id || '';
+  const conversation = useRef<HTMLDivElement>(null);
+  const report = useCallback((reason: unknown) => {
+    setError(reason instanceof Error ? reason.message : String(reason));
+  }, []);
   const sendCommand = useCallback(
-    (command: WorkspaceCommand): void => {
+    (command: WorkspaceCommand) => {
       setError('');
-      void bridge.command(command).catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : '操作失败，请重试');
-      });
+      void bridge.command(command).catch(report);
     },
-    [bridge],
+    [bridge, report],
   );
-
-  useEffect((): (() => void) => {
-    let active = true;
-    const unsubscribe = bridge.subscribe((value) => {
-      if (active) setSnapshot(value);
+  useEffect(() => {
+    let alive = true;
+    const unsubscribe = bridge.subscribe((state) => {
+      if (alive) setSnapshot(state);
     });
     void bridge
       .snapshot()
-      .then((value) => {
-        if (active) setSnapshot(value);
+      .then((state) => {
+        if (alive) setSnapshot(state);
       })
-      .catch((reason: unknown) => {
-        setError(String(reason));
-      });
-    return () => {
-      active = false;
+      .catch(report);
+    return (): void => {
+      alive = false;
       unsubscribe();
     };
-  }, [bridge]);
-  useEffect((): (() => void) => {
-    const keydown = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'p') {
-        event.preventDefault();
-        setCommandOpen((value) => !value);
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
+  }, [bridge, report]);
+  const site = snapshot?.workspace.sites.find((entry) => entry.id === snapshot.activeSiteId);
+  const context = snapshot?.contexts.find((entry) => entry.siteId === site?.id);
+  const task = context?.task ?? idleTask();
+  const prompt = site ? (drafts[site.id] ?? '') : '';
+  const modalOpen = dialog !== null;
+  const hasSite = Boolean(site);
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return;
+    const update = (): void => {
+      const rect = element.getBoundingClientRect();
+      void bridge
+        .command({
+          type: 'layout',
+          visible: hasSite && mode === 'copilot' && !modalOpen && !dragging,
+          bounds: {
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          },
+        })
+        .catch(report);
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    update();
+    return (): void => {
+      observer.disconnect();
+    };
+  }, [bridge, report, mode, modalOpen, dragging, hasSite, snapshot?.activeSiteId]);
+  useEffect(() => {
+    conversation.current?.scrollTo({ top: conversation.current.scrollHeight, behavior: 'instant' });
+  }, [context?.messages.length, context?.messages.at(-1)?.text, task.status]);
+  useEffect(() => {
+    const key = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key.toLowerCase() === 'b') {
         event.preventDefault();
         setSidebar((value) => !value);
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'l') {
+      if (event.key.toLowerCase() === 'l') {
         event.preventDefault();
         input.current?.focus();
       }
-      if (event.key === 'Escape') {
-        setCommandOpen(false);
-        setSettings(false);
+      if (event.key.toLowerCase() === 'p' && event.shiftKey) {
+        event.preventDefault();
+        setDialog({ kind: 'commands' });
       }
     };
-    window.addEventListener('keydown', keydown);
-    return () => {
-      window.removeEventListener('keydown', keydown);
+    window.addEventListener('keydown', key);
+    return (): void => {
+      window.removeEventListener('keydown', key);
     };
   }, []);
-  useEffect((): (() => void) | undefined => {
-    if (!settings && !commandOpen) return;
-    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
-    if (!dialog) return;
-    const previousFocus = document.activeElement;
-    dialog.querySelector<HTMLElement>('input, button')?.focus();
-    const trapFocus = (event: KeyboardEvent): void => {
-      if (event.key !== 'Tab') return;
-      const elements = [...dialog.querySelectorAll<HTMLElement>('input, button:not(:disabled)')];
-      const first = elements[0];
-      const last = elements.at(-1);
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    };
-    dialog.addEventListener('keydown', trapFocus);
-    return () => {
-      dialog.removeEventListener('keydown', trapFocus);
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
-    };
-  }, [settings, commandOpen]);
-  useEffect((): (() => void) | undefined => {
-    const region = browserRegion.current;
-    if (!region || !selectedTab) return;
-    const update = (): void => {
-      const bounds = region.getBoundingClientRect();
-      sendCommand({
-        type: 'layout',
-        tabId: selectedTab,
-        visible: mode === 'copilot' && !settings && !commandOpen,
-        bounds: {
-          x: Math.round(bounds.x),
-          y: Math.round(bounds.y),
-          width: Math.round(bounds.width),
-          height: Math.round(bounds.height),
-        },
-      });
-    };
-    const observer = new ResizeObserver(update);
-    observer.observe(region);
-    update();
-    return () => {
-      observer.disconnect();
-    };
-  }, [
-    mode,
-    sidebar,
-    panelWidth,
-    selectedTab,
-    settings,
-    commandOpen,
-    sendCommand,
-    snapshot?.preview,
-  ]);
-  useEffect(() => {
-    conversationEnd.current?.scrollIntoView({ block: 'nearest' });
-  }, [snapshot?.messages.length, snapshot?.task.status]);
-
   if (!snapshot)
     return (
-      <div className="startup">正在打开 Deskwork…{error ? <p role="alert">{error}</p> : null}</div>
+      <main className="loading">
+        正在打开 Deskwork…{error ? <p role="alert">{error}</p> : null}
+      </main>
     );
-  const { task, messages } = snapshot;
-  const busy = ['running', 'waiting-user', 'verifying'].includes(task.status);
-  const activeSite = snapshot.workspace.sites.find((site) => site.id === selectedTab);
-  const submit = (): void => {
-    if (!prompt.trim() || busy) return;
-    sendCommand({ type: 'send', text: prompt, tabId: selectedTab });
-    setPrompt('');
-  };
-  const style = {
-    '--panel-width': `${String(panelWidth)}px`,
-    '--sidebar-width': sidebar ? '204px' : '58px',
-  } as CSSProperties;
-
+  const busy = Boolean(snapshot.runningSiteId);
+  function submit(): void {
+    if (!site || !prompt.trim() || busy) return;
+    const text = prompt;
+    setError('');
+    void bridge
+      .command({ type: 'send', tabId: site.id, text })
+      .then(() => {
+        setDrafts((values) => ({ ...values, [site.id]: '' }));
+      })
+      .catch(report);
+  }
+  function setPrompt(value: string): void {
+    if (site) setDrafts((values) => ({ ...values, [site.id]: value }));
+  }
+  const ownPages = snapshot.pages.filter((page) => page.siteId === site?.id);
   return (
-    <div className={`workspace mode-${mode}`} style={style}>
+    <div
+      className="workspace"
+      style={
+        {
+          '--sidebar-width': sidebar ? '204px' : '0px',
+          '--panel-width': `${String(panelWidth)}px`,
+        } as CSSProperties
+      }
+    >
       <header className="titlebar">
-        <div className="window-controls-space" />
+        <span className="window-controls-space" />
         <button
           className="icon-button"
-          aria-label="切换侧栏"
+          aria-label="折叠工作区导航"
           onClick={() => {
-            setSidebar(!sidebar);
+            setSidebar((value) => !value);
           }}
         >
           <Icon name="sidebar" />
         </button>
-        <span className="workspace-title">{snapshot.workspace.name}</span>
+        <span className="workspace-title">DSH Deskwork</span>
         <button
           className="command-trigger"
           onClick={() => {
-            setCommandOpen(true);
+            setDialog({ kind: 'commands' });
           }}
         >
-          <Icon name="search" size={15} />
-          <span>搜索任务或执行命令</span>
-          <kbd>⌘ ⇧ P</kbd>
+          <Icon name="search" size={14} />
+          搜索命令<kbd>⌘ ⇧ P</kbd>
         </button>
-        <span className="preview-label">
-          {snapshot.preview ? '交互预览 · 合成数据' : 'M1 PREVIEW'}
-        </span>
+        {snapshot.preview ? <span className="preview-label">交互预览</span> : null}
       </header>
       <div className="workbench">
-        <aside className={`sidebar ${sidebar ? '' : 'collapsed'}`}>
-          <div className="brand">
-            <span className="brand-mark">
-              d<span>•</span>
-            </span>
-            {sidebar ? (
-              <span>
-                Deskwork<small>让业务，简单发生</small>
+        {sidebar ? (
+          <aside className="sidebar">
+            <div className="brand">
+              <span className="brand-mark">
+                D<span>·</span>
               </span>
-            ) : null}
-          </div>
-          <button
-            className="new-task"
-            title="新建任务"
-            onClick={() => {
-              sendCommand({ type: 'new-task' });
-            }}
-            disabled={busy}
-          >
-            <Icon name="plus" />
-            {sidebar ? '新建任务' : null}
-          </button>
-          <nav aria-label="工作区导航">
-            {sidebar ? <div className="section-label">工作空间</div> : null}
-            <button
-              className="navigation-item active"
-              title="业务工作台"
-              onClick={() => {
-                setMode('copilot');
-              }}
-            >
-              <Icon name="grid" />
-              {sidebar ? (
-                <>
-                  <span>业务工作台</span>
-                  <span className="count">{snapshot.workspace.sites.length}</span>
-                </>
-              ) : null}
-            </button>
-            <button
-              className="navigation-item"
-              title="Agent 对话"
-              onClick={() => {
-                setMode('agent');
-              }}
-            >
-              <Icon name="chat" />
-              {sidebar ? <span>Agent 对话</span> : null}
-            </button>
-          </nav>
-          {sidebar ? (
-            <div className="task-history">
-              <div className="section-label">当前任务</div>
-              {task.title ? (
+              <div>
+                Deskwork<small>你的 AI 工作台</small>
+              </div>
+            </div>
+            <div className="section-label">
+              工作区 <span>{snapshot.workspace.sites.length}</span>
+            </div>
+            <nav aria-label="网站导航">
+              {snapshot.workspace.sites.map((entry) => (
                 <button
+                  key={entry.id}
+                  className={`nav-entry ${site?.id === entry.id ? 'selected' : ''}`}
                   onClick={() => {
-                    input.current?.focus();
+                    sendCommand({ type: 'select-site', siteId: entry.id });
                   }}
                 >
-                  <Icon name="clock" size={15} />
-                  <span>{task.title}</span>
+                  <Icon name="link" size={16} />
+                  <span>{entry.name}</span>
+                  {snapshot.runningSiteId === entry.id ? <span className="status-dot" /> : null}
                 </button>
-              ) : (
-                <p>每一件事，从一句话开始。</p>
-              )}
-            </div>
-          ) : null}
-          <div className="sidebar-bottom">
+              ))}
+            </nav>
             <button
-              className="navigation-item"
-              title="模型设置"
+              className="add-entry"
               onClick={() => {
-                setSettings(true);
+                setDialog({ kind: 'site' });
               }}
             >
-              <Icon name="settings" />
-              {sidebar ? '设置与连接' : null}
+              <Icon name="plus" size={16} />
+              添加网站
             </button>
-            {sidebar ? (
-              <div className="local-status">
-                <span className="status-dot" />
-                登录会话保存在本机
-              </div>
-            ) : null}
-          </div>
-        </aside>
-        <main className="main-workspace">
+            <div className="sidebar-bottom">
+              <p>
+                网站照常使用
+                <br />让 AI 协助完成工作
+              </p>
+              <button
+                onClick={() => {
+                  setDialog({ kind: 'settings' });
+                }}
+              >
+                <Icon name="settings" />
+                模型设置
+              </button>
+            </div>
+          </aside>
+        ) : null}
+        <main className="main-area">
           <div className="workspace-toolbar">
-            <div className="breadcrumb">
-              <span>工作台</span>
-              <Icon name="chevron" size={13} />
-              <strong>森果档口批发</strong>
+            <div>
+              <span className="eyebrow">工作台</span>
+              <strong>{site?.name ?? '把工作放在一起'}</strong>
             </div>
             <div className="mode-switch" aria-label="工作模式">
               <button
                 aria-pressed={mode === 'copilot'}
+                className={mode === 'copilot' ? 'active' : ''}
                 onClick={() => {
                   setMode('copilot');
                 }}
               >
-                <Icon name="sidebar" size={14} />
                 Copilot
               </button>
               <button
                 aria-pressed={mode === 'agent'}
+                className={mode === 'agent' ? 'active' : ''}
                 onClick={() => {
                   setMode('agent');
                 }}
               >
-                <Icon name="sparkle" size={14} />
                 Agent
               </button>
             </div>
           </div>
-          <div className="panels">
-            <section className="browser-panel" aria-label="业务页面">
-              <div className="tab-strip" role="tablist" aria-label="业务标签">
-                {snapshot.workspace.sites.map((site) => (
+          <div className="tabs" role="tablist" aria-label="固定网站标签">
+            {snapshot.workspace.sites.map((entry) => (
+              <button
+                role="tab"
+                aria-selected={site?.id === entry.id}
+                className={site?.id === entry.id ? 'active' : ''}
+                key={entry.id}
+                onClick={() => {
+                  sendCommand({ type: 'select-site', siteId: entry.id });
+                }}
+              >
+                <span className="site-glyph" aria-hidden="true">
+                  {entry.name.slice(0, 1).toUpperCase()}
+                </span>
+                {entry.name}
+              </button>
+            ))}
+            <button
+              aria-label="添加固定网站"
+              onClick={() => {
+                setDialog({ kind: 'site' });
+              }}
+            >
+              <Icon name="plus" size={16} />
+            </button>
+          </div>
+          <div className={`content-area mode-${mode}`}>
+            <section
+              className="browser-area"
+              style={mode === 'agent' ? { flex: '0 0 0', width: 0, overflow: 'hidden' } : undefined}
+              aria-label="网站页面"
+            >
+              {site ? (
+                <div className="addressbar">
+                  <Icon name="link" size={14} />
+                  <span>{site.url}</span>
                   <button
-                    role="tab"
-                    key={site.id}
-                    aria-selected={selectedTab === site.id}
+                    className="icon-button"
+                    aria-label="刷新网站"
                     onClick={() => {
-                      setTabId(site.id);
+                      sendCommand({ type: 'reload', siteId: site.id });
                     }}
                   >
-                    <span className="site-mark">森</span>
-                    {site.name}
+                    <Icon name="refresh" size={15} />
                   </button>
-                ))}
-              </div>
-              <div className="address-bar">
-                <button
-                  className="icon-button"
-                  aria-label="刷新业务页面"
-                  onClick={() => {
-                    sendCommand({ type: 'reload', tabId: selectedTab });
-                  }}
-                >
-                  <Icon name="refresh" size={15} />
-                </button>
-                <Icon name="lock" size={12} />
-                <span>{activeSite ? new URL(activeSite.url).hostname : ''}</span>
-                <span className="session-label">独立业务会话</span>
-              </div>
-              <div className="browser-region" ref={browserRegion}>
-                {snapshot.preview ? (
-                  <PreviewBusiness />
-                ) : (
-                  <div className="browser-placeholder">
-                    <Icon name="link" size={28} />
-                    <p>正在打开业务页面</p>
-                    <small>请在页面中自行登录，DSH 将使用同一会话。</small>
+                  <button
+                    className="icon-button"
+                    aria-label="网站设置"
+                    onClick={() => {
+                      setDialog({ kind: 'site', site });
+                    }}
+                  >
+                    <Icon name="settings" size={15} />
+                  </button>
+                </div>
+              ) : null}
+              {ownPages.some((page) => page.popup) ? (
+                <div className="page-list">
+                  {ownPages.map((page) => (
+                    <span key={page.id}>
+                      <button
+                        onClick={() => {
+                          sendCommand({ type: 'select-page', pageId: page.id });
+                        }}
+                      >
+                        {page.title || '页面'}
+                      </button>
+                      {page.popup ? (
+                        <button
+                          aria-label={`关闭 ${page.title}`}
+                          onClick={() => {
+                            sendCommand({ type: 'close-page', pageId: page.id });
+                          }}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div ref={viewport} className="browser-viewport">
+                {!site ? (
+                  <div className="empty-workspace">
+                    <span className="empty-icon">
+                      <Icon name="grid" size={30} />
+                    </span>
+                    <span className="eyebrow">从你熟悉的网站开始</span>
+                    <h1>你的工作，一个入口。</h1>
+                    <p>
+                      添加每天使用的网站，照常登录。
+                      <br />
+                      页面在这里，AI 在身边。
+                    </p>
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setDialog({ kind: 'site' });
+                      }}
+                    >
+                      <Icon name="plus" />
+                      添加第一个网站
+                    </button>
+                    <div className="empty-guide">
+                      <span>01 添加网址</span>
+                      <span>02 登录网站</span>
+                      <span>03 开始对话</span>
+                    </div>
                   </div>
-                )}
+                ) : snapshot.preview ? (
+                  <div className="page-placeholder">
+                    <Icon name="link" size={32} />
+                    <h2>{site.name}</h2>
+                    <p>{site.url}</p>
+                    <p>桌面客户端会在此原样打开网站</p>
+                    <small>此处仅预览工作台布局</small>
+                  </div>
+                ) : null}
               </div>
             </section>
             {mode === 'copilot' ? (
@@ -356,149 +549,147 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 }}
                 onPointerDown={(event) => {
                   event.currentTarget.setPointerCapture(event.pointerId);
+                  setDragging(true);
                 }}
                 onPointerMove={(event) => {
                   if (event.currentTarget.hasPointerCapture(event.pointerId))
-                    setPanelWidth(Math.max(340, Math.min(600, window.innerWidth - event.clientX)));
+                    setPanelWidth(Math.min(600, Math.max(340, window.innerWidth - event.clientX)));
                 }}
                 onPointerUp={(event) => {
                   event.currentTarget.releasePointerCapture(event.pointerId);
+                  setDragging(false);
+                }}
+                onLostPointerCapture={() => {
+                  setDragging(false);
                 }}
               />
             ) : null}
-            <section className="assistant-panel" aria-label="DSH 对话">
-              <div className="assistant-header">
-                <span className="assistant-symbol">
-                  <Icon name="sparkle" size={16} />
+            <section className="ai-panel" aria-label="DSH 对话">
+              <header className="ai-heading">
+                <span>
+                  <Icon name="sparkle" />
+                  DSH {mode === 'agent' ? 'Agent' : 'Copilot'}
                 </span>
-                <strong>DSH 助手</strong>
-                <span className="assistant-caption">你的业务搭档</span>
-                {mode === 'agent' ? (
+                <div>
+                  {mode === 'agent' ? (
+                    <button
+                      onClick={() => {
+                        setMode('copilot');
+                      }}
+                    >
+                      查看页面
+                    </button>
+                  ) : null}
                   <button
-                    className="text-button"
+                    className="icon-button"
+                    aria-label="新建任务"
+                    disabled={!site || (busy && snapshot.runningSiteId === site.id)}
                     onClick={() => {
-                      setMode('copilot');
+                      if (site) sendCommand({ type: 'new-task', siteId: site.id });
                     }}
                   >
-                    查看页面
+                    <Icon name="plus" />
                   </button>
-                ) : null}
-              </div>
-              <div className="bound-context">
+                </div>
+              </header>
+              <div className="task-context">
                 <Icon name="link" size={13} />
-                <span>
-                  {task.target
-                    ? snapshot.workspace.sites.find((site) => site.id === task.target?.tabId)?.name
-                    : activeSite?.name}
-                </span>
-                <span className="context-tag">{task.target ? '任务已绑定' : '当前页面'}</span>
+                {site?.name ?? '尚未添加网站'}
+                <span>{site ? '独立对话' : '配置后即可开始'}</span>
               </div>
-              <div className="conversation" aria-live="polite">
-                {messages.length === 0 ? (
-                  <div className="welcome">
-                    <div className="welcome-symbol">
-                      <Icon name="sparkle" size={26} />
-                    </div>
-                    <span className="eyebrow">少一些操作，多一些完成</span>
-                    <h1>今天，有什么需要处理？</h1>
+              <div className="conversation" ref={conversation}>
+                {!context?.messages.length ? (
+                  <div className="chat-welcome">
+                    <span className="agent-emblem">
+                      <Icon name="sparkle" size={24} />
+                    </span>
+                    <h2>今天，有什么需要处理？</h2>
                     <p>
-                      打开熟悉的业务系统，告诉我你的目标。
+                      告诉我你的目标，
                       <br />
-                      我会协助查询、整理，并准备好下一步。
+                      我会在当前网站中协助你完成。
                     </p>
-                    <div className="suggestions">
-                      <button
-                        onClick={() => {
-                          setPrompt('帮我查看当前页面的商品资料');
-                          input.current?.focus();
-                        }}
-                      >
-                        <Icon name="search" size={16} />
-                        <span>查看当前商品资料</span>
-                        <Icon name="chevron" size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setPrompt('帮我修改商品备注，保存前让我确认');
-                          input.current?.focus();
-                        }}
-                      >
-                        <Icon name="check" size={16} />
-                        <span>准备一项资料修改</span>
-                        <Icon name="chevron" size={14} />
-                      </button>
-                    </div>
-                    <div className="welcome-note">
-                      <Icon name="lock" size={13} />
-                      保存前，你始终可以核对与接手
-                    </div>
+                    {site ? (
+                      <div className="suggestions">
+                        {['看看当前页面有哪些信息', '帮我查找需要处理的事项'].map((text) => (
+                          <button
+                            key={text}
+                            onClick={() => {
+                              setPrompt(text);
+                              input.current?.focus();
+                            }}
+                          >
+                            <Icon name="chevron" size={14} />
+                            {text}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <article key={message.id} className={`message message-${message.role}`}>
-                      <div className="message-label">
-                        {message.role === 'user' ? (
-                          '你'
-                        ) : (
-                          <>
-                            <Icon name="sparkle" size={14} />
-                            DSH
-                          </>
-                        )}
-                      </div>
+                  context.messages.map((message) => (
+                    <article key={message.id} className={`message ${message.role}`}>
+                      <small>{message.role === 'user' ? '你' : 'DSH'}</small>
                       <p>{message.text}</p>
                     </article>
                   ))
                 )}
                 <TaskCard
                   task={task}
-                  confirm={(confirmationId) => {
-                    sendCommand({ type: 'confirm', confirmationId });
+                  confirm={(id) => {
+                    if (site) sendCommand({ type: 'confirm', siteId: site.id, confirmationId: id });
+                  }}
+                  resolve={(outcome) => {
+                    if (site) sendCommand({ type: 'resolve-result', siteId: site.id, outcome });
                   }}
                 />
+              </div>
+              <div className="conversation-bottom">
                 {error ? (
                   <div className="error-banner" role="alert">
                     {error}
-                  </div>
-                ) : null}
-                <div ref={conversationEnd} />
-              </div>
-              <div className="composer-area">
-                {busy ? (
-                  <div className="execution-controls">
-                    <span>
-                      <span className="status-dot pulsing" />
-                      {task.status === 'waiting-user' ? '等待确认' : '任务进行中'}
-                    </span>
-                    {task.status === 'verifying' ? (
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          sendCommand({ type: 'resume' });
-                        }}
-                      >
-                        重新核对结果
-                      </button>
-                    ) : null}
                     <button
-                      className="text-button"
+                      aria-label="关闭错误"
                       onClick={() => {
-                        sendCommand({ type: 'stop' });
+                        setError('');
                       }}
                     >
-                      <Icon name="stop" size={12} />
-                      停止并接手
+                      ×
                     </button>
                   </div>
-                ) : ['paused', 'failed'].includes(task.status) ? (
+                ) : null}
+                {snapshot.runningSiteId && snapshot.runningSiteId !== site?.id ? (
+                  <p className="muted">
+                    另一个网站的任务尚未结束。
+                    <button
+                      onClick={() => {
+                        if (snapshot.runningSiteId)
+                          sendCommand({ type: 'select-site', siteId: snapshot.runningSiteId });
+                      }}
+                    >
+                      查看任务
+                    </button>
+                  </p>
+                ) : null}
+                {site && ['running', 'waiting-user'].includes(task.status) ? (
+                  <button
+                    className="stop-button"
+                    onClick={() => {
+                      sendCommand({ type: 'stop', siteId: site.id });
+                    }}
+                  >
+                    <Icon name="stop" size={14} />
+                    停止并接手
+                  </button>
+                ) : null}
+                {site && ['paused', 'failed', 'verifying'].includes(task.status) ? (
                   <button
                     className="resume-button"
                     onClick={() => {
-                      sendCommand({ type: 'resume' });
+                      sendCommand({ type: 'resume', siteId: site.id });
                     }}
                   >
-                    重新观察并继续
-                    <Icon name="chevron" size={14} />
+                    {task.status === 'verifying' ? '重新读取结果' : '重新观察并继续'}
                   </button>
                 ) : null}
                 <form
@@ -510,10 +701,10 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 >
                   <textarea
                     ref={input}
-                    aria-label="告诉 DSH 你的业务目标"
-                    placeholder="告诉我你想完成的业务…"
+                    aria-label="告诉 DSH 你的目标"
+                    placeholder={site ? '告诉我你想完成什么…' : '添加网站后开始对话'}
                     value={prompt}
-                    disabled={busy}
+                    disabled={!site || busy}
                     onChange={(event) => {
                       setPrompt(event.target.value);
                     }}
@@ -533,26 +724,23 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                       type="button"
                       className="model-button"
                       onClick={() => {
-                        setSettings(true);
+                        setDialog({ kind: 'settings' });
                       }}
                     >
                       <span className="status-dot" />
-                      DeepSeek
-                      <small>{snapshot.runtimeConfigured ? '已连接配置' : '配置模型'}</small>
+                      DeepSeek <small>{snapshot.runtimeConfigured ? '已配置' : '配置模型'}</small>
                     </button>
                     <button
                       className="send-button"
                       type="submit"
                       aria-label="发送任务"
-                      disabled={!prompt.trim() || busy}
+                      disabled={!site || !prompt.trim() || busy}
                     >
                       <Icon name="arrow" size={17} />
                     </button>
                   </div>
                 </form>
-                <p className="composer-hint">
-                  Enter 发送 · Shift Enter 换行<span>DSH Deskwork</span>
-                </p>
+                <p className="composer-hint">Enter 发送 · Shift Enter 换行</p>
               </div>
             </section>
           </div>
@@ -561,189 +749,93 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
       <footer className="statusbar">
         <span>
           <span className="status-dot" />
-          本地工作区
+          本地工作台
         </span>
         <span>
-          {snapshot.preview ? '界面预览不连接真实 ERP 或模型' : '业务浏览器 · 身份与任务明确绑定'}
+          {snapshot.preview ? '交互预览 · 不连接网站或模型' : '网站保持原样 · 任务绑定当前入口'}
         </span>
-        <span>Deskwork 0.1.0</span>
+        <span>DSH Deskwork</span>
       </footer>
-      {settings ? (
-        <div className="modal-backdrop">
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="settings-title"
-          >
-            <div className="modal-heading">
-              <h2 id="settings-title">连接 DeepSeek</h2>
-              <button
-                className="icon-button"
-                aria-label="关闭设置"
-                onClick={() => {
-                  setSettings(false);
-                }}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-            <p className="muted">API 密钥由本机安全存储保存，仅供 DSH 运行时使用。</p>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void bridge
-                  .command({ type: 'settings', apiKey, model })
-                  .then(() => {
-                    setApiKey('');
-                    setSettings(false);
-                  })
-                  .catch((reason: unknown) => {
-                    setError(String(reason));
-                  });
+      {dialog ? (
+        <Dialog
+          title={
+            dialog.kind === 'site'
+              ? dialog.site
+                ? '网站设置'
+                : '添加网站'
+              : dialog.kind === 'settings'
+                ? '连接 DeepSeek'
+                : '命令入口'
+          }
+          close={() => {
+            setDialog(null);
+          }}
+        >
+          {dialog.kind === 'site' ? (
+            <SiteForm
+              {...(dialog.site ? { site: dialog.site } : {})}
+              save={async (url, name) => {
+                await bridge.command(
+                  dialog.site
+                    ? { type: 'edit-site', siteId: dialog.site.id, url, name }
+                    : { type: 'add-site', url, name },
+                );
+                setDialog(null);
               }}
-            >
-              <label>
-                模型名称
-                <input
-                  value={model}
-                  onChange={(event) => {
-                    setModel(event.target.value);
-                  }}
-                  required
-                />
-              </label>
-              <label>
-                API 密钥
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(event) => {
-                    setApiKey(event.target.value);
-                  }}
-                  autoComplete="off"
-                  required
-                />
-              </label>
-              {snapshot.preview ? <p className="muted">这是交互预览，请勿输入真实密钥。</p> : null}
-              {error ? <p role="alert">{error}</p> : null}
-              <button className="primary full" type="submit">
-                保存连接配置
-              </button>
-            </form>
-          </section>
-        </div>
-      ) : null}
-      {commandOpen ? (
-        <div className="modal-backdrop">
-          <section
-            className="modal command-palette"
-            role="dialog"
-            aria-modal="true"
-            aria-label="命令面板"
-          >
-            <h2>你想做什么？</h2>
-            <input
-              aria-label="搜索命令"
-              placeholder="搜索命令…"
-              value={commandQuery}
-              onChange={(event) => {
-                setCommandQuery(event.target.value);
+              remove={
+                dialog.site
+                  ? async (): Promise<void> => {
+                      if (dialog.site)
+                        await bridge.command({ type: 'remove-site', siteId: dialog.site.id });
+                      setDialog(null);
+                    }
+                  : undefined
+              }
+            />
+          ) : dialog.kind === 'settings' ? (
+            <ModelForm
+              bridge={bridge}
+              preview={snapshot.preview}
+              done={() => {
+                setDialog(null);
               }}
             />
-            {[
-              ['切换到 Copilot', 'copilot'],
-              ['切换到 Agent', 'agent'],
-            ]
-              .filter(([label]) => label?.toLowerCase().includes(commandQuery.toLowerCase()))
-              .map(([label, value]) => (
-                <button
-                  key={value}
-                  onClick={() => {
-                    setMode(value === 'agent' ? 'agent' : 'copilot');
-                    setCommandOpen(false);
-                  }}
-                >
-                  <Icon name="grid" />
-                  {label}
-                </button>
-              ))}
-            <button
-              onClick={() => {
-                setCommandOpen(false);
-                setSettings(true);
-              }}
-            >
-              <Icon name="settings" />
-              设置模型连接
-            </button>
-            <button
-              onClick={() => {
-                setCommandOpen(false);
-              }}
-            >
-              <Icon name="close" />
-              关闭命令面板
-            </button>
-          </section>
-        </div>
+          ) : (
+            <div className="command-list">
+              <button
+                onClick={() => {
+                  setDialog({ kind: 'site' });
+                }}
+              >
+                添加网站
+              </button>
+              <button
+                onClick={() => {
+                  setMode('copilot');
+                  setDialog(null);
+                }}
+              >
+                切换到 Copilot
+              </button>
+              <button
+                onClick={() => {
+                  setMode('agent');
+                  setDialog(null);
+                }}
+              >
+                切换到 Agent
+              </button>
+              <button
+                onClick={() => {
+                  setDialog({ kind: 'settings' });
+                }}
+              >
+                设置模型连接
+              </button>
+            </div>
+          )}
+        </Dialog>
       ) : null}
-    </div>
-  );
-}
-
-function PreviewBusiness(): ReactElement {
-  return (
-    <div className="preview-business">
-      <div className="erp-demo-header">
-        <span className="erp-logo">森果</span>
-        <strong>档口批发</strong>
-        <span>演示档口</span>
-      </div>
-      <div className="erp-demo-body">
-        <nav>
-          <strong>业务管理</strong>
-          <span>经营概览</span>
-          <span>销售开单</span>
-          <span>采购入库</span>
-          <span className="selected">商品资料</span>
-          <span>客户管理</span>
-          <span>库存查询</span>
-        </nav>
-        <div className="erp-product">
-          <div className="erp-breadcrumb">基础资料 / 商品资料</div>
-          <h2>商品资料</h2>
-          <p>管理档口商品，让每一笔生意清清楚楚。</p>
-          <div className="erp-search">
-            搜索商品名称或编号 <Icon name="search" size={15} />
-          </div>
-          <div className="erp-table">
-            <div className="erp-table-row heading">
-              <span>商品名称</span>
-              <span>编号</span>
-              <span>状态</span>
-            </div>
-            <div className="erp-table-row">
-              <strong>山东红富士苹果</strong>
-              <span>SG-1001</span>
-              <span className="erp-active">在售</span>
-            </div>
-          </div>
-          <div className="erp-record">
-            <div className="erp-record-title">
-              <span className="product-monogram">果</span>
-              <div>
-                <strong>山东红富士苹果</strong>
-                <small>商品编号 SG-1001</small>
-              </div>
-            </div>
-            <label>商品备注</label>
-            <div className="erp-field">优选果，常温存放</div>
-            <small>仅用于展示工作台与业务页面的关系</small>
-          </div>
-          <div className="synthetic-label">合成 ERP 页面 · 非森果真实界面</div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ An AI desktop workspace for ERP and business operations, powered by DeepSeek Har
 
 DSH Deskwork aims to package **DeepSeek Harness (DSH) into a desktop workspace** for people working with existing ERP and business applications. Its workbench takes inspiration from VS Code and Cursor, with business pages alongside an AI assistant and a dedicated Agent conversation mode.
 
-> **Status: M1 scope correction under review.** Users configure website URLs, get one fixed entry per URL, and use DSH alongside the original pages. The draft contains reusable desktop/runtime foundations, but also Senguo-specific copy, a synthetic ERP preview, and record-specific tools that still need removal or replacement. Senguo is a test example, not the product structure. See the [M1 specification](./docs/specs/m1-configurable-workspace.md), [roadmap](./docs/roadmap.md), and [current preview limitations](./docs/preview.md).
+> **Status: configurable MVP implemented; preview acceptance in progress.** Add URLs to an empty workspace to get fixed entries, independent conversations, and persistent browser identities. Real DSH and Electron pass a two-site confirmation/readback flow with a controlled model. Live DeepSeek, authenticated website tasks, and user Mac acceptance remain pending. Senguo is only an optional test example. See the [M1 specification](./docs/specs/m1-configurable-workspace.md), [verification evidence](./docs/experiments/2026-09-06-configurable-mvp.md), and [preview guide](./docs/preview.md).
 
 Use `npm run dev` for the explicitly synthetic design preview, or `npm start` for the desktop app.
 

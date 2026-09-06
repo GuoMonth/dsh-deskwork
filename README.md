@@ -10,7 +10,7 @@ DSH Deskwork 将 **DeepSeek Harness（DSH）打包进桌面工作台**，让用�
 
 产品交互借鉴 VS Code / Cursor 的工作台：业务页面与 AI 并排协作，也可以切换为专注任务的 Agent 对话。面向已有业务系统，尽量降低系统改造和员工使用成本。
 
-> **项目状态：M1 范围纠偏审阅中。** 目标是用户配置几个网址，就打开几个固定入口，在原网站旁使用 DSH。现有草稿已有桌面和运行时基础，但仍包含待移除的森果文案、合成业务预览及专属字段工具，不能视为通用 M1 已完成。森果仅为测试样例。范围与验收见 [M1 规格](./docs/specs/m1-configurable-workspace.md)，执行计划见 [Roadmap](./docs/roadmap.md)。
+> **项目状态：通用 MVP 已实现，预览验收中。** 从空工作台添加网址，得到固定标签、独立对话与浏览器身份。已有真实 DSH＋Electron 双站点确认和回读测试；真实 DeepSeek、已登录网站操作及用户 Mac 验收待完成。森果仅是可选测试样例。范围见 [M1 规格](./docs/specs/m1-configurable-workspace.md)，证据和兼容限制见 [本轮验证](./docs/experiments/2026-09-06-configurable-mvp.md)。
 
 运行 `npm run dev` 查看交互预览，`npm start` 打开桌面客户端。安装、连接与测试说明见[预览指南](./docs/preview.md)。
 

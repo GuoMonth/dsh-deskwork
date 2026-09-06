@@ -1,143 +1,148 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { TaskController } from '../src/core/task-controller.ts';
-import type { BusinessRecord, RecordBrowser } from '../src/core/contracts.ts';
-
-const record: BusinessRecord = {
-  shopId: 'test-shop',
-  objectId: 'fruit-1',
-  name: '测试苹果',
-  field: '备注',
-  value: '原值',
-  pageRevision: 'v1',
+import type { BrowserAdapter, PageObservation, TaskState } from '../src/core/contracts.ts';
+const target = { tabId: 'one', sessionId: 'session-one' };
+const initial: PageObservation = {
+  pageId: 'page-one',
+  revision: 'r1',
+  url: 'https://example.test/',
+  title: 'Example',
+  text: 'Original',
+  elements: [],
 };
-
-function fixture(): {
+function setup(): {
   controller: TaskController;
-  writes: string[];
-  persisted: string[];
-  changeIdentity: () => void;
-  loseResponse: () => void;
+  browser: BrowserAdapter;
+  writes: () => number;
+  saved: () => TaskState | undefined;
+  change: () => void;
+  lose: () => void;
+  showResult: (text: string) => void;
 } {
-  let current = { ...record };
-  let responseLost = false;
-  const writes: string[] = [];
-  const persisted: string[] = [];
-  const browser: RecordBrowser = {
-    read: () => Promise.resolve(current),
-    write: (_target, expected, value) => {
-      assert.equal(current.value, expected.value);
-      writes.push(value);
-      current = { ...current, value };
-      if (responseLost) return Promise.reject(new Error('Response lost'));
+  let observation = structuredClone(initial);
+  let writes = 0;
+  let loseResponse = false;
+  let saved: TaskState | undefined;
+  const browser: BrowserAdapter = {
+    observe: () => Promise.resolve(structuredClone(observation)),
+    needsConfirmation: () => true,
+    readback: () => Promise.resolve(structuredClone(observation)),
+    execute: (_target, _proposal, valid) => {
+      assert.equal(saved?.pendingAction !== null, true, 'intent persisted before dispatch');
+      assert.ok(valid());
+      writes++;
+      if (loseResponse) return Promise.reject(new Error('response lost'));
       return Promise.resolve();
     },
+    pages: () => [],
+    selectPage: () => undefined,
+    screenshot: () => Promise.resolve(''),
   };
   const controller = new TaskController(browser, (state) => {
-    persisted.push(state.status);
+    saved = structuredClone(state);
     return Promise.resolve();
   });
   return {
     controller,
-    writes,
-    persisted,
-    changeIdentity: (): void => {
-      current = { ...current, shopId: 'other-shop' };
+    browser,
+    writes: (): number => writes,
+    saved: (): TaskState | undefined => saved,
+    change: (): void => {
+      observation = { ...observation, revision: 'r2' };
     },
-    loseResponse: (): void => {
-      responseLost = true;
+    showResult: (text: string): void => {
+      observation = { ...observation, text };
+    },
+    lose: (): void => {
+      loseResponse = true;
     },
   };
 }
-
-await test('confirmation binds a change; durable write intent precedes save and result is read back', async () => {
-  const { controller, writes, persisted } = fixture();
-  await controller.start({ tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' }, '修改备注');
-  await controller.propose('fruit-1', '新值');
-  assert.deepEqual(writes, []);
-  const confirmation = controller.state.confirmation;
-  assert.ok(confirmation);
-  await controller.confirm(confirmation.id);
-  assert.deepEqual(writes, ['新值']);
-  assert.equal(controller.state.status, 'succeeded');
-  assert.ok(persisted.includes('verifying'));
-  await assert.rejects(controller.confirm(confirmation.id));
+async function propose(controller: TaskController): Promise<string> {
+  await controller.start(target, 'Update page');
+  await controller.propose({
+    pageId: 'page-one',
+    revision: 'r1',
+    action: { kind: 'click', ref: 'element-one' },
+    summary: 'Submit updated form',
+    expectedText: 'Stored: changed',
+    risk: 'consequential',
+  });
+  const id = controller.state.confirmation?.id;
+  assert.ok(id);
+  return id;
+}
+await test('generic action requires confirmation; writes persist intent and cannot be declared verified by model text', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  assert.equal(env.writes(), 0);
+  await env.controller.confirm(id);
+  assert.equal(env.writes(), 1);
+  await env.controller.finish('Saved successfully');
+  assert.equal(env.controller.state.status, 'verifying');
+  assert.equal(env.controller.state.requiresVerification, true);
 });
-
-await test('identity changes invalidate confirmation without writing', async () => {
-  const { controller, writes, changeIdentity } = fixture();
-  await controller.start({ tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' }, '修改备注');
-  await controller.propose('fruit-1', '新值');
-  const confirmation = controller.state.confirmation;
-  assert.ok(confirmation);
-  changeIdentity();
-  await controller.confirm(confirmation.id);
-  assert.deepEqual(writes, []);
-  assert.equal(controller.state.status, 'paused');
+await test('page changes invalidate confirmation before dispatch', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  env.change();
+  await assert.rejects(env.controller.confirm(id), /变化|失效/);
+  assert.equal(env.writes(), 0);
+  assert.equal(env.controller.state.confirmation, null);
 });
-
-await test('lost save response is resolved by reading, never by repeating the write', async () => {
-  const { controller, writes, loseResponse } = fixture();
-  await controller.start({ tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' }, '修改备注');
-  await controller.propose('fruit-1', '新值');
-  const confirmation = controller.state.confirmation;
-  assert.ok(confirmation);
-  loseResponse();
-  await controller.confirm(confirmation.id);
-  assert.equal(controller.state.status, 'succeeded');
-  assert.equal(writes.length, 1);
+await test('stop revokes confirmations and prevents later actions', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  await env.controller.stop();
+  await assert.rejects(env.controller.confirm(id));
+  assert.equal(env.writes(), 0);
 });
-
-await test('stop revokes pending confirmation and does not silently move the task', async () => {
-  const { controller, writes } = fixture();
-  const target = { tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' };
-  await controller.start(target, '修改备注');
-  await assert.rejects(controller.start({ ...target, tabId: 'other' }, 'another task'));
-  await controller.propose('fruit-1', '新值');
-  const confirmation = controller.state.confirmation;
-  assert.ok(confirmation);
-  await controller.stop();
-  await assert.rejects(controller.confirm(confirmation.id));
-  assert.equal(controller.state.target?.tabId, 'erp');
-  assert.deepEqual(writes, []);
-});
-
-await test('an updated form with a failed save is never accepted as server verification', async () => {
-  let draft = record.value;
-  const controller = new TaskController(
-    {
-      read: (_target, _objectId, source): Promise<BusinessRecord> =>
-        Promise.resolve({ ...record, value: source === 'server' ? record.value : draft }),
-      write: (_target, _record, value): Promise<void> => {
-        draft = value;
-        return Promise.reject(new Error('Save rejected'));
-      },
-    },
-    () => Promise.resolve(),
-  );
-  await controller.start({ tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' }, '修改');
-  await controller.propose('fruit-1', '未保存的新值');
-  assert.ok(controller.state.confirmation);
-  await controller.confirm(controller.state.confirmation.id);
-  assert.equal(controller.state.status, 'verifying');
-  assert.equal(controller.state.writeVerified, false);
-  assert.equal(controller.state.result?.value, record.value);
-});
-
-await test('restored write intent is verified without dispatching another save', async () => {
-  const { controller } = fixture();
-  await controller.start({ tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' }, '修改');
-  await controller.propose('fruit-1', '已保存');
-  const restored = new TaskController(
-    {
-      read: (): Promise<BusinessRecord> => Promise.resolve({ ...record, value: '已保存' }),
-      write: (): Promise<void> => {
-        assert.fail('Recovery must never save');
-      },
-    },
-    () => Promise.resolve(),
-    { ...structuredClone(controller.state), status: 'verifying' },
-  );
+await test('response loss and restart retain uncertain outcome without replay', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  env.lose();
+  await env.controller.confirm(id);
+  assert.equal(env.controller.state.status, 'verifying');
+  const saved = env.saved();
+  assert.ok(saved);
+  const restored = new TaskController(env.browser, () => Promise.resolve(), saved);
   await restored.resume();
-  assert.equal(restored.state.writeVerified, true);
+  assert.equal(env.writes(), 1);
+  assert.equal(restored.state.status, 'verifying');
+});
+
+await test('only a new expected result after independent readback can verify a write', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  await env.controller.confirm(id);
+  assert.equal((await env.controller.verify()).verified, false);
+  env.showResult('Stored: changed');
+  assert.equal((await env.controller.verify()).verified, true);
+  await env.controller.finish('Done');
+  assert.equal(env.controller.state.status, 'succeeded');
+});
+await test('local input changes cannot substitute for refreshed server evidence', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  await env.controller.confirm(id);
+  env.controller.state.result = {
+    ...initial,
+    elements: [
+      {
+        ref: 'e0',
+        tag: 'input',
+        role: '',
+        name: 'Value',
+        value: 'Stored: changed',
+        type: 'text',
+        href: '',
+        disabled: false,
+      },
+    ],
+  };
+  assert.equal((await env.controller.verify()).verified, false);
+  await env.controller.finish('The model claimed success');
+  assert.equal(env.controller.state.status, 'verifying');
+  assert.equal(env.writes(), 1);
 });

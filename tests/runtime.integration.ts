@@ -32,11 +32,18 @@ await test(
         const parsed = z
           .object({ tools: z.array(z.object({ function: z.object({ name: z.string() }) })) })
           .parse(JSON.parse(body));
-        assert.deepEqual(parsed.tools.map((tool) => tool.function.name).sort(), [
-          'mcp__deskwork__observe_page',
-          'mcp__deskwork__propose_record_change',
-          'mcp__deskwork__read_record',
-        ]);
+        assert.deepEqual(
+          parsed.tools.map((tool) => tool.function.name).sort(),
+          [
+            'mcp__deskwork__observe_page',
+            'mcp__deskwork__list_pages',
+            'mcp__deskwork__select_page',
+            'mcp__deskwork__act_on_page',
+            'mcp__deskwork__capture_page',
+            'mcp__deskwork__verify_result',
+            'mcp__deskwork__request_takeover',
+          ].sort(),
+        );
         requests++;
         if (requests === 3)
           restoredContext =

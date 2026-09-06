@@ -27,7 +27,7 @@
     "dev": "npm run tokens:generate && vite",
     "build": "node scripts/build.ts",
     "start": "npm run build && electron .",
-    "start:fixture": "npm run build && electron . --fixture",
+    "start:fixture": "npm run build && node scripts/start-fixture.ts",
     "test:desktop": "npm run build && node --test tests/desktop.integration.ts",
     "test:runtime": "npm run build && node --test tests/runtime.integration.ts",
     "package:mac": "npm run build && electron-builder --mac zip --arm64 --publish never",

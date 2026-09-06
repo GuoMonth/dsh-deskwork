@@ -15,7 +15,7 @@ AI owns code, tests, experiments, documentation maintenance, commits, and PR upd
 
 ## Execute
 
-- M1 is a configurable website workbench. Test ERP brands, objects, and selectors must not become shell navigation or required generic task fields. Read the current specification before reusing the earlier fixture-specific implementation. The scope revision is pending human review; do not treat old preview evidence as acceptance of the new M1.
+- M1 is a configurable website workbench. Test ERP brands, objects, and selectors must not become shell navigation or required generic task fields. Read the current specification before reusing the earlier fixture-specific implementation. The user approved the configurable MVP implementation plan on 2026-09-06. Per-entry conversations, one globally active task, and critical-action confirmation are the accepted defaults. Do not treat old fixture evidence as acceptance of the new M1.
 
 - Search narrowly with `rg`; batch independent reads/checks and reuse prior results. Do not repeatedly dump whole files or poll unchanged work.
 - Establish observable acceptance criteria before implementation. Use failing behavioral tests for changed contracts; use executable assertions for exploratory experiments, then retain useful regressions.

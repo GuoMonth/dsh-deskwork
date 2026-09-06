@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SkillLedger } from '../src/core/skill-ledger.ts';
+import { SkillLedger } from '../experiments/legacy-record-slice/skill-ledger.ts';
 
 await test('verified skills survive serialization and invalidate on account, field or page changes', () => {
   const target = { tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' };
