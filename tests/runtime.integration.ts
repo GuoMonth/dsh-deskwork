@@ -36,6 +36,8 @@ await test(
         assert.deepEqual(
           parsed.tools.map((tool) => tool.function.name).sort(),
           [
+            'skill',
+            'deskwork_developer_docs',
             'mcp__deskwork__observe_page',
             'mcp__deskwork__list_pages',
             'mcp__deskwork__select_page',

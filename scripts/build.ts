@@ -1,3 +1,4 @@
+import './build-devkit.ts';
 import './build-plugins.ts';
 import { build as bundle } from 'esbuild';
 import { build as buildUi } from 'vite';

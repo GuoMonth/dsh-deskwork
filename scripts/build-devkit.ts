@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, rm, cp } from 'node:fs/promises';
 import { build } from 'esbuild';
 
 await rm('packages/plugin-sdk/lib', { recursive: true, force: true });
@@ -23,4 +23,11 @@ await build({
   format: 'esm',
   target: 'node24',
 });
+await mkdir('dist/runtime/devkit', { recursive: true });
+for (const entry of ['lib', 'docs', 'skills', 'templates', 'README.md', 'package.json']) {
+  await cp(`packages/plugin-devkit/${entry}`, `dist/runtime/devkit/${entry}`, {
+    recursive: true,
+    force: true,
+  });
+}
 console.log('Public SDK and offline plugin development kit built.');

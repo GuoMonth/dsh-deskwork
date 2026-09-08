@@ -2,11 +2,11 @@ import type { PageObservation } from '../../../packages/plugin-sdk/src/index.ts'
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-skill';
 import type {} from '@deepseek-ai/dsh-tools';
-import { PluginBrowserClient } from '../../../packages/plugin-sdk/src/index.ts';
+import type {} from '../../../packages/plugin-sdk/src/dsh.ts';
 import { z } from 'zod';
 
 export const name = 'senguo-query';
-export const inject = ['tools', 'skills'];
+export const inject = ['tools', 'skills', 'deskworkBrowser'];
 export const knowledge = `# 森果收支类别查询
 适用：用户自行登录的 pf.senguo.cc 档口批发 PC 后台，对账中心 → 其他收支页面 /manage/#/main/home/tab/takenote。
 页面关系：商户中心选择「档口批发」店铺 → 对账中心 → 其他收支 → 类别筛选 → 可见类别选项。旧 /cashierdesk/flow.html 不作为直达入口。
@@ -37,18 +37,19 @@ export function apply(ctx: Context): void {
       },
       async execute(args, exec) {
         z.object({}).strict().parse(args);
-        const browser = new PluginBrowserClient('@guomonth/dsh-senguo-query', exec.signal);
+        const browser = ctx.deskworkBrowser.connect('@guomonth/dsh-senguo-query', exec.signal);
         let page = await browser.observe();
         const url = new URL(page.url);
         if (url.hostname !== 'pf.senguo.cc' || !url.pathname.startsWith('/manage/'))
           throw new Error('请先登录并打开森果档口批发 PC 后台，再调用此查询工具。');
         if (!url.hash.startsWith('#/main/home/tab/takenote')) {
-          await browser.act(
+          const navigation = await browser.act(
             page,
             { kind: 'navigate', url: 'https://pf.senguo.cc/manage/#/main/home/tab/takenote' },
             'read',
             '打开其他收支查询页面',
           );
+          if (navigation.status !== 'executed-observe-again') return JSON.stringify(navigation);
           page = await browser.observe();
         }
         for (
@@ -85,12 +86,13 @@ export function apply(ctx: Context): void {
             url: page.url,
             title: page.title,
           });
-        await browser.act(
+        const expansion = await browser.act(
           page,
           { kind: 'click', ref: filter.ref },
           'read',
           '展开收支类别筛选，读取选项',
         );
+        if (expansion.status !== 'executed-observe-again') return JSON.stringify(expansion);
         page = await browser.observe();
         return categoryEvidence(page);
       },

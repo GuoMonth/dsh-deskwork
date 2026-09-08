@@ -6,7 +6,7 @@
 
 第三方 AI 通过随包指南和公开 SDK，在独立项目完成标准 DSH 插件的创建、验证、安装与发布。沿用既有市场，不新增包协议、ZIP 路线或兼容层。用户继续主动安装并信任本地扩展。
 
-Deskwork 负责浏览器会话、执行与确认；业务插件负责领域知识、适用条件和流程。当前采用已有 Electron CDP，Browser Harness 具体上游实现不作为这一轮前置依赖。公共服务后续以 DSH 依赖注入提供，SDK 负责强类型客户端。
+Deskwork 负责浏览器会话、执行与确认；业务插件负责领域知识、适用条件和流程。当前采用已有 Electron CDP，Browser Harness 具体上游实现不作为这一轮前置依赖。公共服务以 DSH 依赖注入提供，SDK 负责强类型客户端。
 
 文档、DSH 开发 Skill、MCP stdio 共用一份内容。指南只解释设计约束、开发流程和必要取舍；精确接口由类型和 Schema 表达。按需加载，不把开发文档放进普通业务任务上下文。无需 RAG、图数据库、常驻文档服务或独立文档插件管理界面。
 
@@ -18,7 +18,7 @@ Deskwork 负责浏览器会话、执行与确认；业务插件负责领域知�
 | 2. 连接与执行能力 | 内置 DSH 浏览器服务、开发入口绑定、调试连接、结构化暂停状态 | 外部 AI 通过公开接口调试目标页面；停止、确认、失效反馈可操作           |
 | 3. 第三方开发闭环 | 独立参考插件、发布说明和用户开发入口                        | AI 仅靠公开套件完成第二个小插件并安装执行，宿主无业务改动              |
 
-阶段一提供可安装的 DSH 开发模块；默认预装、开发模式发现和外部浏览器连接随阶段二交付。不会把目录和接口占位标成完整能力。现有 SDK 的 `act` 在等待确认时结束工具，自动续跑未实现；第一版生成模板只做页面观察。
+阶段一骨架已随 PR #19 合并。阶段二已实现随包开发 Skill、`deskworkBrowser` 服务和用户明确开启的 MCP 开发连接；SDK 返回结构化确认暂停结果。开发连接独占自动任务位置，绑定目标并沿用宿主确认／停止／核对。重启不恢复连接，外部 MCP 不能替用户确认或重放旧动作。自动续跑工具函数栈仍不在本轮范围。
 
 ## 验收
 
@@ -32,3 +32,5 @@ Deskwork 负责浏览器会话、执行与确认；业务插件负责领域知�
 对外开发入口：[Plugin Devkit](../../packages/plugin-devkit/README.md)。长期选择见 [ADR-0007](../decisions/0007-ai-plugin-development-kit.md)。执行状态以 GitHub Epic 和子任务为准；M2 市场收录与用户 Mac 反馈继续单独跟踪。
 
 阶段任务：[骨架 #16](https://github.com/GuoMonth/dsh-deskwork/issues/16)、[开发连接 #17](https://github.com/GuoMonth/dsh-deskwork/issues/17)、[第三方闭环 #18](https://github.com/GuoMonth/dsh-deskwork/issues/18)。阶段一证据见 [本轮记录](../experiments/2026-09-08-plugin-devkit-foundation.md)。
+
+阶段二证据见 [开发连接验证](../experiments/2026-09-08-development-connection.md)。

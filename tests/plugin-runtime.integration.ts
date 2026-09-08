@@ -10,10 +10,25 @@ import { PluginManager } from '../src/host/plugin-manager.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
-await test(
-  'installed standard plugin: real DSH loads native skill and runs a bounded query',
-  { timeout: 45000 },
-  async () => {
+for (const scenario of [
+  {
+    label: 'installed browser service plugin',
+    skill: 'senguo-query',
+    tool: 'senguo_query_categories',
+    arguments: '{}',
+    evidence: '货款',
+    install: true,
+  },
+  {
+    label: 'bundled development guide without installed plugins',
+    skill: 'develop-deskwork-plugin',
+    tool: 'deskwork_developer_docs',
+    arguments: '{"id":"contract"}',
+    evidence: '动作与确认',
+    install: false,
+  },
+])
+  await test(scenario.label, { timeout: 45000 }, async () => {
     const directory = await mkdtemp(join(tmpdir(), 'deskwork-native-plugin-'));
     const calls: string[] = [];
     let modelCalls = 0;
@@ -66,10 +81,10 @@ await test(
             ),
           })
           .parse(JSON.parse(body));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === 'senguo_query_categories'));
+        assert.ok(parsed.tools.some((tool) => tool.function.name === scenario.tool));
         assert.ok(parsed.tools.some((tool) => tool.function.name === 'skill'));
         modelCalls++;
-        const name = modelCalls === 1 ? 'skill' : 'senguo_query_categories';
+        const name = modelCalls === 1 ? 'skill' : scenario.tool;
         const delta =
           modelCalls < 3
             ? {
@@ -81,14 +96,17 @@ await test(
                     type: 'function',
                     function: {
                       name,
-                      arguments: modelCalls === 1 ? '{"name":"senguo-query"}' : '{}',
+                      arguments:
+                        modelCalls === 1
+                          ? JSON.stringify({ name: scenario.skill })
+                          : scenario.arguments,
                     },
                   },
                 ],
               }
             : { role: 'assistant', content: '已读取类别选项。' };
         if (modelCalls === 3) {
-          assert.ok(body.includes('货款'));
+          assert.ok(body.includes(scenario.evidence));
           complete?.();
         }
         response.writeHead(200, { 'content-type': 'text/event-stream' });
@@ -121,7 +139,7 @@ await test(
     let runtime: DshRuntime | undefined;
     try {
       await manager.load();
-      await manager.install(`file:${resolve('plugins/senguo-query')}`);
+      if (scenario.install) await manager.install(`file:${resolve('plugins/senguo-query')}`);
       const dataDirectory = join(directory, 'runtime');
       const plugins = await manager.prepareRuntime(dataDirectory, 'site-a');
       runtime = new DshRuntime({
@@ -147,7 +165,10 @@ await test(
           timer.unref();
         }),
       ]);
-      assert.deepEqual(calls, ['observe_page', 'plugin_action', 'observe_page']);
+      assert.deepEqual(
+        calls,
+        scenario.install ? ['observe_page', 'plugin_action', 'observe_page'] : [],
+      );
       assert.equal(modelCalls, 3);
     } finally {
       await runtime?.close();
@@ -160,5 +181,4 @@ await test(
       });
       await rm(directory, { recursive: true, force: true });
     }
-  },
-);
+  });

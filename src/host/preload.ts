@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { developmentStateSchema } from '../core/development-contracts.ts';
+import { identifier } from '../core/contracts.ts';
 import {
   pluginStateSchema,
   marketPluginSchema,
@@ -9,6 +11,17 @@ import { commandSchema, snapshotSchema } from '../core/contracts.ts';
 import type { DeskworkBridge, WorkspaceCommand, WorkspaceSnapshot } from '../core/contracts.ts';
 
 const bridge: DeskworkBridge = {
+  development: {
+    state: async () =>
+      developmentStateSchema.parse(await ipcRenderer.invoke('deskwork:development-state')),
+    start: async (siteId) =>
+      developmentStateSchema.parse(
+        await ipcRenderer.invoke('deskwork:development-start', identifier.parse(siteId)),
+      ),
+    stop: async () => {
+      await ipcRenderer.invoke('deskwork:development-stop');
+    },
+  },
   plugins: {
     state: async () => {
       const raw: unknown = await ipcRenderer.invoke('deskwork:plugins');

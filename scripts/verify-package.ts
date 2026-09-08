@@ -29,6 +29,7 @@ const child = spawn(
     'tests/desktop.integration.ts',
     'tests/plugin-runtime.integration.ts',
     'tests/plugin-desktop.integration.ts',
+    'tests/development-desktop.integration.ts',
   ],
   {
     env: {

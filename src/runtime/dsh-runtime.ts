@@ -2,7 +2,7 @@ import type { InstalledPlugin } from '../core/plugin-contracts.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
@@ -95,13 +95,21 @@ export class DshRuntime {
         ],
       },
     ];
-    if (options.plugins?.length)
-      patch.push({
-        insert: [
-          { id: 'deskwork-skills', name: '@deepseek-ai/dsh-skill' },
-          { id: 'deskwork-skill-tool', name: '@deepseek-ai/dsh-tool-skill' },
-        ],
-      });
+    patch.push({
+      insert: [
+        {
+          id: 'deskwork-browser-service',
+          name: join(dirname(options.mcpPath), 'browser-service.mjs'),
+        },
+        {
+          id: 'deskwork-development-guide',
+          name: join(dirname(options.mcpPath), 'devkit/lib/plugin.js'),
+          inject: ['skills', 'tools'],
+        },
+        { id: 'deskwork-skills', name: '@deepseek-ai/dsh-skill' },
+        { id: 'deskwork-skill-tool', name: '@deepseek-ai/dsh-tool-skill' },
+      ],
+    });
     await writeFile(patchPath, JSON.stringify(patch), { mode: 0o600 });
     this.assertOpen();
     // Cordis resolves out-of-tree plugins through Node internals; Electron needs the explicit flag.
