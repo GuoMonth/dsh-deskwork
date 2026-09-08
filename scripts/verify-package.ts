@@ -1,10 +1,16 @@
 import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { parseArgs } from 'node:util';
+
+const { values } = parseArgs({ options: { app: { type: 'string' } } });
+if (values.app && process.platform !== 'darwin') {
+  throw new Error('--app is only supported for macOS app bundles');
+}
 
 const bundle =
   process.platform === 'darwin'
-    ? resolve('.artifacts/releases/mac-arm64/DSH Deskwork.app/Contents')
+    ? resolve(values.app ?? '.artifacts/releases/mac-arm64/DSH Deskwork.app', 'Contents')
     : resolve('.artifacts/releases/linux-unpacked');
 const executable =
   process.platform === 'darwin' ? join(bundle, 'MacOS/DSH Deskwork') : join(bundle, 'dsh-deskwork');

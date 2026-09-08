@@ -1,10 +1,14 @@
 # 使用 MVP 预览版
 
-Alpha 预览版面向 macOS Apple Silicon，未签名／未公证。安装包及对应验证提交见 [GitHub Releases](https://github.com/GuoMonth/dsh-deskwork/releases)。旧版业务切片安装包不代表当前产品。
+Alpha 预览版面向 macOS Apple Silicon，使用临时签名（ad-hoc），没有 Developer ID 签名和 Apple 公证。安装包及对应验证提交见 [GitHub Releases](https://github.com/GuoMonth/dsh-deskwork/releases)。旧版业务切片安装包不代表当前产品。
 
 ## 安装与配置
 
-下载 Release 中的 macOS arm64 ZIP，解压后将 DSH Deskwork.app 放入 Applications。系统阻止打开未公证应用时，在「隐私与安全性」中允许打开已核对来源的预览包。
+下载 Release 中的 macOS arm64 DMG，打开后将 DSH Deskwork.app 拖入 Applications，再从 Applications 启动。
+
+DMG 提供拖放安装；临时签名用于校验应用包完整性，不能替代 Apple 对开发者身份的验证。首次打开仍可能受到 Gatekeeper 拦截。在核对下载来源和 Release 中的 SHA-256 后，可按 [Apple 指引](https://support.apple.com/en-us/102445)在「隐私与安全性」中允许打开。若提示「已损坏」且无法允许打开，请保留提示与 macOS 版本用于定位，不代表已证明文件损坏或仅缺少签名。
+
+面向正常分发、减少未验证开发者／未公证拦截，需要 Developer ID Application 证书及 Apple 公证；本 Alpha 尚未具备。CI 验证 DMG 挂载、复制后的签名完整性与应用启动，不等于用户 Mac 上 Gatekeeper 放行。
 
 首次启动为空工作台。点击「添加网站」，填写网址，名称可选；添加几个就有几个固定标签。用户直接在原网站登录。点击「模型设置」，填写 DeepSeek 模型名称和 API 密钥；密钥由系统安全存储保存。
 
@@ -31,7 +35,7 @@ npm start               # 真实桌面；从空配置开始
 npm run start:fixture   # 配置两个本地测试网站，模型仍需自行设置
 npm run test:runtime    # 真实 DSH 进程与可控模型
 npm run test:desktop    # 真实 DSH + Electron + 两个配置网站
-npm run package:mac     # macOS arm64 ZIP
+npm run package:mac     # macOS arm64 DMG
 ```
 
 Linux 无显示环境时，桌面测试加 `xvfb-run -a`。夹具手工运行在已授权 host 隔离环境可使用 `npm run start:fixture -- --no-sandbox`。夹具配置与状态使用临时目录，不写入正常用户配置。
