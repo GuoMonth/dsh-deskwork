@@ -1,0 +1,4 @@
+- insert:
+    - id: deskwork-plugin-development
+      name: '@guomonth/deskwork-plugin-devkit'
+      inject: [skills, tools]

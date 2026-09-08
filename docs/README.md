@@ -1,5 +1,7 @@
 # 文档导航
 
+第三方 AI 插件开发从 [Devkit](../packages/plugin-devkit/README.md) 开始；开发计划见 [M3 规格](specs/m3-plugin-development-kit.md)。
+
 M1 alpha.2 已交付并获用户本地使用反馈；[M2 开发计划](specs/m2-dsh-plugins.md)已落实插件功能并进入预览交付。M1 入口：[规格](specs/m1-configurable-workspace.md)、[视觉与交互](design/visual-system.md)、[预览使用与限制](preview.md)、[本轮验证](experiments/2026-09-06-configurable-mvp.md)、[范围决策](decisions/0005-configurable-workspace-scope.md)、[执行计划](roadmap.md)。
 
 大部分文档面向 AI 执行与按需检索；人主要阅读产品规格、架构选择与结论。文档记录「为什么、约束、选择和证据」；类型、命名、实现与测试表达「现在如何工作」。不维护逐函数解释或已实现功能的平行文档。

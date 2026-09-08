@@ -32,6 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:fresh
+      - run: npm run test:devkit
       - uses: actions/upload-artifact@v4
         if: always()
         with:

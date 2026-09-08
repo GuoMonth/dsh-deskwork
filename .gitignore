@@ -28,3 +28,6 @@ Thumbs.db
 .artifacts/
 plugins/*/lib/
 tests/fixtures/query-plugin/lib/
+
+packages/*/lib/
+packages/plugin-devkit/docs/sdk-contracts.txt

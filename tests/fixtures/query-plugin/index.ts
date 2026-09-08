@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-tools';
-import { PluginBrowserClient } from '../../../src/runtime/plugin-browser-client.ts';
+import { PluginBrowserClient } from '../../../packages/plugin-sdk/src/index.ts';
 export const inject = ['tools'];
 export function apply(ctx: Context): void {
   ctx.effect(() =>

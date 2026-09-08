@@ -1,5 +1,7 @@
 # 决策记录
 
+- [0007：AI 插件开发套件](0007-ai-plugin-development-kit.md) — 接受；公开 SDK，文件／Skill／MCP 共用随包指南。
+
 - [0006：DSH 插件生态与可信本地扩展](0006-trusted-dsh-plugins.md) — 接受；M2 以市场安装为主线，取消 ZIP 路线，明确宿主确认边界。
 
 - [0005：配置接入网站，业务知识不进入工作台内核](0005-configurable-workspace-scope.md) — 接受产品边界纠偏；M1 实施范围已获用户批准。
