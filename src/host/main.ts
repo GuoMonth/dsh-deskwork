@@ -1,13 +1,15 @@
+import { DevelopmentSession } from './development-session.ts';
+import type { DevelopmentState } from '../core/development-contracts.ts';
 import { PluginManager } from './plugin-manager.ts';
 import { PluginMarket } from './plugin-market.ts';
 import { pluginCommandSchema } from '../core/plugin-contracts.ts';
 import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { commandSchema, idleTask, workspaceSchema } from '../core/contracts.ts';
+import { commandSchema, idleTask, workspaceSchema, identifier } from '../core/contracts.ts';
 import type { EntryContext, Site, WorkspaceSnapshot } from '../core/contracts.ts';
 import { TaskController } from '../core/task-controller.ts';
 import { ElectronBrowser } from '../browser/electron-browser.ts';
@@ -29,6 +31,9 @@ async function main(): Promise<void> {
   const shellURL = shellLocation(app.getAppPath(), app.isPackaged, developmentUrl);
   const directory = app.getPath('userData');
   await mkdir(directory, { recursive: true, mode: 0o700 });
+  const connectionPath = join(directory, 'development-connection.json');
+  await rm(connectionPath, { force: true });
+  let development: DevelopmentSession | undefined;
   const runtimeRoot = app.isPackaged
     ? join(process.resourcesPath, 'app.asar.unpacked')
     : app.getAppPath();
@@ -130,6 +135,7 @@ async function main(): Promise<void> {
   const controllers = new Map<string, TaskController>();
   let streamPublishTimer: ReturnType<typeof setTimeout> | undefined;
   function runningSite(): string | null {
+    if (development?.active) return development.siteId;
     return (
       [...controllers].find(
         ([, controller]) =>
@@ -255,6 +261,7 @@ async function main(): Promise<void> {
     await previous?.close();
   }
   async function launchRuntime(siteId: string, text: string): Promise<void> {
+    if (development?.active) throw new Error('请先断开外部 AI 开发连接');
     const controller = controllers.get(siteId);
     const context = contexts.get(siteId);
     if (!controller || !context) throw new Error('网站入口不存在');
@@ -397,6 +404,7 @@ async function main(): Promise<void> {
     if (other && other !== siteId) throw new Error('另一个网站的任务尚未结束，请先停止或核对结果');
   }
   function requireEditable(siteId: string): void {
+    if (development?.active && development.siteId === siteId) throw new Error('请先断开开发连接');
     const controller = controllerFor(siteId);
     if (
       controller.isBusy() ||
@@ -420,6 +428,67 @@ async function main(): Promise<void> {
   ipcMain.handle('deskwork:snapshot', (event) => {
     requireShell(event);
     return snapshot();
+  });
+  function developmentState(): DevelopmentState {
+    const connected = development?.active ?? false;
+    return {
+      connected,
+      siteId: connected ? (development?.siteId ?? null) : null,
+      configuration: connected
+        ? JSON.stringify(
+            {
+              mcpServers: {
+                'deskwork-development': {
+                  command: process.execPath,
+                  args: [
+                    join(runtimeRoot, 'dist/runtime/devkit/lib/cli.js'),
+                    'mcp',
+                    '--connection',
+                    connectionPath,
+                  ],
+                  env: { ELECTRON_RUN_AS_NODE: '1' },
+                },
+              },
+            },
+            null,
+            2,
+          )
+        : '',
+    };
+  }
+  ipcMain.handle('deskwork:development-state', (event) => {
+    requireShell(event);
+    return developmentState();
+  });
+  ipcMain.handle('deskwork:development-start', async (event, raw: unknown) => {
+    requireShell(event);
+    const siteId = identifier.parse(raw);
+    requireNoOtherTask();
+    if (commandBusy || plugins.state().busy) throw new Error('请等待当前操作完成');
+    const site = workspace.sites.find((entry) => entry.id === siteId);
+    if (!site) throw new Error('开发网站不存在');
+    commandBusy = true;
+    try {
+      await development?.close();
+      await stopRuntime();
+      const controller = controllerFor(siteId);
+      await controller.start({ tabId: site.id, sessionId: site.sessionId }, '外部 AI 插件开发');
+      development = new DevelopmentSession(controller, browser, connectionPath, publish);
+      try {
+        await development.open();
+      } catch (error: unknown) {
+        await controller.stop();
+        throw error;
+      }
+      return developmentState();
+    } finally {
+      commandBusy = false;
+      publish();
+    }
+  });
+  ipcMain.handle('deskwork:development-stop', async (event) => {
+    requireShell(event);
+    await development?.stop();
   });
   ipcMain.handle('deskwork:plugins', (event) => {
     requireShell(event);
@@ -464,6 +533,7 @@ async function main(): Promise<void> {
       return;
     }
     if (command.type === 'stop') {
+      if (development?.siteId === command.siteId) await development.stop();
       requireNoOtherTask(command.siteId);
       await controllerFor(command.siteId).stop();
       await stopRuntime();
@@ -579,6 +649,7 @@ async function main(): Promise<void> {
           break;
         }
         case 'send': {
+          if (development?.active) throw new Error('请先断开外部 AI 开发连接');
           requireNoOtherTask(command.tabId);
           const controller = controllerFor(command.tabId);
           const site = workspace.sites.find((entry) => entry.id === command.tabId);
@@ -597,7 +668,7 @@ async function main(): Promise<void> {
           const controller = controllerFor(command.siteId);
           await stopRuntime();
           await controller.confirm(command.confirmationId);
-          if (controller.state.status === 'running')
+          if (controller.state.status === 'running' && !development?.active)
             launch(
               command.siteId,
               `宿主已执行用户确认动作：${JSON.stringify(controller.state.pendingAction?.proposal)}。重新观察页面，继续原任务，不要重复上一动作；如果刚刚是提交，请先 verify_result。`,
@@ -609,7 +680,7 @@ async function main(): Promise<void> {
           const controller = controllerFor(command.siteId);
           await stopRuntime();
           await controller.resume();
-          if (controller.state.status === 'running')
+          if (controller.state.status === 'running' && !development?.active)
             launch(
               command.siteId,
               `恢复任务，先重新观察；旧确认失效。原目标：${controller.state.title}`,
@@ -644,6 +715,7 @@ async function main(): Promise<void> {
       for (const controller of controllers.values())
         if (['running', 'waiting-user'].includes(controller.state.status)) await controller.stop();
       await stopRuntime();
+      await development?.close();
       await plugins.close();
       await tools.close();
       await persist();

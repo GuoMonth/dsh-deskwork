@@ -19,6 +19,7 @@ export type {
   ActionProposal,
 } from '../../packages/plugin-sdk/src/contracts.ts';
 import type { PluginBridge } from './plugin-contracts.ts';
+import type { DevelopmentBridge } from './development-contracts.ts';
 import { z } from 'zod';
 
 export const siteSchema = z
@@ -191,6 +192,7 @@ export const commandSchema = z.discriminatedUnion('type', [
 ]);
 export type WorkspaceCommand = z.infer<typeof commandSchema>;
 export interface DeskworkBridge {
+  development: DevelopmentBridge;
   plugins: PluginBridge;
   snapshot(): Promise<WorkspaceSnapshot>;
   command(command: WorkspaceCommand): Promise<void>;

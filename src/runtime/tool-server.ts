@@ -4,12 +4,24 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { toolRequestSchema } from './tool-contract.ts';
 import type { ToolRequest } from './tool-contract.ts';
 
-export async function startToolServer(call: (request: ToolRequest) => Promise<unknown>): Promise<{
+export interface ToolServer {
   endpoint: string;
   readonly token: string;
   revoke: () => void;
   close: () => Promise<void>;
-}> {
+}
+
+export function startToolServer(
+  call: (request: ToolRequest) => Promise<unknown>,
+): Promise<ToolServer> {
+  return startValidatedToolServer((raw) => toolRequestSchema.parse(raw), call);
+}
+
+export async function startValidatedToolServer<T>(
+  parse: (raw: unknown) => T,
+  call: (request: T) => Promise<unknown>,
+  interrupt: (request: T) => boolean = () => false,
+): Promise<ToolServer> {
   let token = randomBytes(32).toString('hex');
   let queue = Promise.resolve();
   const server: Server = createServer((request, response) => {
@@ -37,11 +49,12 @@ export async function startToolServer(call: (request: ToolRequest) => Promise<un
           return;
         }
       }
-      const input = toolRequestSchema.parse(JSON.parse(body));
-      const operation = queue.then(() => {
+      const input = parse(JSON.parse(body));
+      const execute = async (): Promise<unknown> => {
         if (requestToken !== token || response.destroyed) throw new Error('工具调用已撤销');
         return call(input);
-      });
+      };
+      const operation = interrupt(input) ? execute() : queue.then(execute);
       queue = operation.then(
         () => undefined,
         () => undefined,
