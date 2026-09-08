@@ -1,8 +1,8 @@
-import type { PageObservation } from '../../../src/core/contracts.ts';
+import type { PageObservation } from '../../../packages/plugin-sdk/src/index.ts';
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-skill';
 import type {} from '@deepseek-ai/dsh-tools';
-import { PluginBrowserClient } from '../../../src/runtime/plugin-browser-client.ts';
+import { PluginBrowserClient } from '../../../packages/plugin-sdk/src/index.ts';
 import { z } from 'zod';
 
 export const name = 'senguo-query';
