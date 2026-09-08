@@ -408,9 +408,11 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
         ) : null}
         <main className="main-area">
           <div className="workspace-toolbar">
-            <div>
+            <div className="workspace-heading">
               <span className="eyebrow">工作台</span>
-              <strong>{site?.name ?? '把工作放在一起'}</strong>
+              <strong title={site?.name ?? '把工作放在一起'}>
+                {site?.name ?? '把工作放在一起'}
+              </strong>
             </div>
             <div className="mode-switch" aria-label="工作模式">
               <button

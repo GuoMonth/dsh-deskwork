@@ -215,17 +215,28 @@ kbd {
   flex: 1;
 }
 .workspace-toolbar {
-  padding: var(--space-four) var(--space-six);
+  padding: var(--space-one) var(--space-four);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 78px;
+  gap: var(--space-four);
+  height: 48px;
   flex-shrink: 0;
 }
-.workspace-toolbar strong {
-  display: block;
-  font-size: 18px;
-  margin-top: var(--space-one);
+.workspace-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-three);
+  min-width: 0;
+}
+.workspace-heading .eyebrow {
+  flex-shrink: 0;
+}
+.workspace-heading strong {
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .eyebrow {
   color: var(--color-text-muted);
@@ -233,6 +244,8 @@ kbd {
   letter-spacing: 1px;
 }
 .mode-switch {
+  display: flex;
+  flex-shrink: 0;
   padding: var(--space-one);
   background: var(--color-border);
   border-radius: var(--radius-panel);
