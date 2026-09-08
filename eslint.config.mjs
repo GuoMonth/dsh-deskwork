@@ -8,6 +8,7 @@ export default tseslint.config(
       'node_modules/**',
       '.artifacts/**',
       'dist/**',
+      'packages/*/lib/**',
       'plugins/*/lib/**',
       'tests/fixtures/query-plugin/lib/**',
     ],

@@ -34,7 +34,10 @@
     "test:runtime": "npm run build && node --test tests/runtime.integration.ts",
     "package:mac": "npm run build && electron-builder --mac --arm64 --publish never",
     "package:linux": "npm run build && electron-builder --linux dir --publish never",
-    "build:plugins": "node scripts/build-plugins.ts"
+    "build:plugins": "node scripts/build-plugins.ts",
+    "build:devkit": "node scripts/build-devkit.ts",
+    "test:devkit": "npm run build:devkit && node --test tests/plugin-devkit.integration.ts",
+    "pack:devkit": "node scripts/pack-devkit.ts"
   },
   "devDependencies": {
     "@electron/asar": "4.3.0",

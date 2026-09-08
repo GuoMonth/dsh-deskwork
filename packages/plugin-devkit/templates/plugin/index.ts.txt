@@ -1,0 +1,25 @@
+import type { Context } from '@deepseek-ai/cordis';
+import type {} from '@deepseek-ai/dsh-tools';
+import { PluginBrowserClient } from '@guomonth/deskwork-plugin-sdk';
+import { z } from 'zod';
+
+export const name = 'deskwork-example-plugin';
+export const inject = ['tools'];
+
+export function apply(ctx: Context): void {
+  ctx.effect(() => ctx.tools.register({
+    name: 'read_current_page_summary',
+    description: 'Read the current task page title, URL and a bounded visible text excerpt. Does not claim complete business results.',
+    parameters: { type: 'object', properties: {}, additionalProperties: false },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value) }],
+    },
+    async execute(args, exec) {
+      z.object({}).strict().parse(args);
+      const browser = new PluginBrowserClient('deskwork-example-plugin', exec.signal);
+      const page = await browser.observe();
+      return JSON.stringify({ status: 'observed', url: page.url, title: page.title, excerpt: page.text.slice(0, 2000), scope: 'visible text excerpt' });
+    },
+  }));
+}

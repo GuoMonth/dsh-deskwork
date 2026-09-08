@@ -26,6 +26,8 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "vite.config.ts",
-    "plugins/**/*.ts"
-  ]
+    "plugins/**/*.ts",
+    "packages/**/*.ts"
+  ],
+  "exclude": ["packages/*/lib", "packages/plugin-devkit/templates"]
 }
