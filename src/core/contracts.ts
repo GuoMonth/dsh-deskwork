@@ -97,6 +97,7 @@ export const pageSchema = z
     title: z.string(),
     url: z.string(),
     popup: z.boolean(),
+    selected: z.boolean().optional(),
   })
   .strict();
 export type BrowserPage = z.infer<typeof pageSchema>;

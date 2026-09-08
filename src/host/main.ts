@@ -3,7 +3,6 @@ import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { commandSchema, idleTask, workspaceSchema } from '../core/contracts.ts';
 import type { EntryContext, Site, WorkspaceSnapshot } from '../core/contracts.ts';
@@ -13,6 +12,7 @@ import { StateStore } from './state-store.ts';
 import { Pages } from './pages.ts';
 import { startToolServer } from '../runtime/tool-server.ts';
 import { DshRuntime } from '../runtime/dsh-runtime.ts';
+import { shellLocation } from './shell-location.ts';
 
 const profileArgument = process.argv.find((argument) =>
   argument.startsWith('--profile-directory='),
@@ -20,6 +20,10 @@ const profileArgument = process.argv.find((argument) =>
 if (profileArgument) app.setPath('userData', profileArgument.slice('--profile-directory='.length));
 async function main(): Promise<void> {
   await app.whenReady();
+  const developmentUrl = process.argv
+    .find((argument) => argument.startsWith('--dev-server-url='))
+    ?.slice('--dev-server-url='.length);
+  const shellURL = shellLocation(app.getAppPath(), app.isPackaged, developmentUrl);
   const directory = app.getPath('userData');
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const store = new StateStore(directory);
@@ -40,6 +44,10 @@ async function main(): Promise<void> {
     if (new URL(testModelURL).hostname !== '127.0.0.1') throw new Error('测试模型仅允许本机端点');
     apiKey = 'fixture-key-not-a-secret';
     configured = true;
+  } else if (developmentUrl && process.env['DESKWORK_DEVELOPMENT_API_KEY']) {
+    apiKey = process.env['DESKWORK_DEVELOPMENT_API_KEY'];
+    delete process.env['DESKWORK_DEVELOPMENT_API_KEY'];
+    configured = true;
   } else {
     try {
       const settings = z
@@ -54,7 +62,6 @@ async function main(): Promise<void> {
         console.error('模型设置无法读取，请在设置中重新配置。');
     }
   }
-  const shellPath = join(app.getAppPath(), 'dist/ui/index.html');
   const window = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -79,8 +86,8 @@ async function main(): Promise<void> {
     ]),
   );
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  window.webContents.on('will-navigate', (event) => {
-    event.preventDefault();
+  window.webContents.on('will-navigate', (event, url) => {
+    if (url !== shellURL) event.preventDefault();
   });
   const contexts = new Map<string, EntryContext>();
   const controllers = new Map<string, TaskController>();
@@ -352,7 +359,7 @@ async function main(): Promise<void> {
     if (
       event.sender !== window.webContents ||
       event.senderFrame !== window.webContents.mainFrame ||
-      event.senderFrame.url !== pathToFileURL(shellPath).href
+      event.senderFrame.url !== shellURL
     )
       throw new Error('Untrusted IPC sender');
   }
@@ -567,7 +574,7 @@ async function main(): Promise<void> {
       app.exit(1);
     });
   });
-  await window.loadFile(shellPath);
+  await window.loadURL(shellURL);
 }
 void main().catch((error: unknown) => {
   console.error(error);

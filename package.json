@@ -1,6 +1,6 @@
 {
   "name": "dsh-deskwork",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "description": "A local ERP workspace powered by DeepSeek Harness",
   "license": "MIT",
@@ -25,6 +25,7 @@
     "experiment:electron-session:chromium": "node scripts/run-electron-experiment.ts chromium",
     "tokens:generate": "node scripts/generate-tokens.ts",
     "dev": "npm run tokens:generate && vite",
+    "dev:desktop": "node scripts/dev-desktop.ts",
     "build": "node scripts/build.ts",
     "start": "npm run build && electron .",
     "start:fixture": "npm run build && node scripts/start-fixture.ts",
@@ -41,6 +42,7 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
     "electron": "44.2.0",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
