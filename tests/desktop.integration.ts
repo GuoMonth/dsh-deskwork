@@ -37,6 +37,14 @@ await test(
     try {
       let shell = await shellPage();
       await expect(shell.getByRole('heading', { name: '你的工作，一个入口。' })).toBeVisible();
+      await application.evaluate(({ BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0]?.setSize(1366, 768);
+      });
+      assert.equal(
+        await shell.locator('.conversation').evaluate((element) => element.scrollTop),
+        0,
+      );
+      await expect(shell.getByRole('heading', { name: '今天，有什么需要处理？' })).toBeVisible();
       async function add(url: string, name: string): Promise<void> {
         await shell.getByRole('button', { name: '添加固定网站', exact: true }).click();
         await shell.getByLabel('网站网址', { exact: true }).fill(url);
@@ -81,7 +89,9 @@ await test(
       const popup = application.windows().find((entry) => entry.url().endsWith('/popup'));
       assert.ok(popup);
       assert.equal(await popup.evaluate(() => Boolean(window.opener)), true);
+      await expect(shell.locator('.addressbar > span')).toHaveText(first.origin + '/popup');
       await popup.getByRole('button', { name: '关闭页面' }).click();
+      await expect(shell.locator('.addressbar > span')).toHaveText(first.origin + '/');
       await expect(shell.getByRole('tab')).toHaveCount(2);
       const secondPage = application
         .windows()

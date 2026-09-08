@@ -23,14 +23,20 @@ export class Pages {
     this.takeover = takeover;
   }
   all(): BrowserPage[] {
-    return [...this.entries.values()].map((entry) => ({ ...entry.page }));
+    return [...this.entries.values()].map((entry) => ({
+      ...entry.page,
+      selected: this.selected.get(entry.site.id) === entry.page.id,
+    }));
   }
   list(target: TaskTarget): BrowserPage[] {
     return [...this.entries.values()]
       .filter(
         (entry) => entry.site.id === target.tabId && entry.site.sessionId === target.sessionId,
       )
-      .map((entry) => ({ ...entry.page }));
+      .map((entry) => ({
+        ...entry.page,
+        selected: this.selected.get(entry.site.id) === entry.page.id,
+      }));
   }
   resolve(target: TaskTarget, pageId?: string): OwnedPage {
     const id = pageId ?? this.selected.get(target.tabId);
@@ -239,6 +245,6 @@ export class Pages {
     if (!entry) throw new Error('页面已关闭');
     entry.epoch++;
     this.takeover(siteId);
-    await entry.contents.loadURL(entry.contents.getURL());
+    await entry.contents.loadURL(entry.contents.getURL() || entry.page.url || entry.site.url);
   }
 }
