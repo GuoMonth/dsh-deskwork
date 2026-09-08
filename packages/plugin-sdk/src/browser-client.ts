@@ -1,7 +1,11 @@
 import { z } from 'zod';
-import { observationSchema, proposalSchema } from '../core/contracts.ts';
-import type { BrowserAction, PageObservation } from '../core/contracts.ts';
-import { installedPluginSchema } from '../core/plugin-contracts.ts';
+import { observationSchema, proposalSchema } from './contracts.ts';
+import type { BrowserAction, PageObservation } from './contracts.ts';
+const mountedPluginSchema = z.object({
+  name: z.string(),
+  mountName: z.string().min(1),
+  enabled: z.boolean(),
+});
 
 export class PluginBrowserClient {
   private steps = 0;
@@ -11,7 +15,7 @@ export class PluginBrowserClient {
   private readonly token: string;
   constructor(packageName: string, signal: AbortSignal) {
     const plugins = z
-      .array(installedPluginSchema)
+      .array(mountedPluginSchema)
       .parse(JSON.parse(process.env['DESKWORK_PLUGINS'] ?? '[]'));
     const plugin = plugins.find((entry) => entry.name === packageName && entry.enabled);
     if (!plugin) throw new Error('插件未挂载到当前任务');
