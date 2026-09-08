@@ -26,3 +26,5 @@ Thumbs.db
 
 # Experiment outputs and isolated profiles
 .artifacts/
+plugins/*/lib/
+tests/fixtures/query-plugin/lib/

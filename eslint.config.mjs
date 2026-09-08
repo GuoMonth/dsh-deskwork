@@ -3,7 +3,15 @@ import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['node_modules/**', '.artifacts/**', 'dist/**'] },
+  {
+    ignores: [
+      'node_modules/**',
+      '.artifacts/**',
+      'dist/**',
+      'plugins/*/lib/**',
+      'tests/fixtures/query-plugin/lib/**',
+    ],
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     extends: [eslint.configs.recommended, ...tseslint.configs.strictTypeChecked],

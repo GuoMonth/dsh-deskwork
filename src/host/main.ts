@@ -1,3 +1,6 @@
+import { PluginManager } from './plugin-manager.ts';
+import { PluginMarket } from './plugin-market.ts';
+import { pluginCommandSchema } from '../core/plugin-contracts.ts';
 import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -26,6 +29,40 @@ async function main(): Promise<void> {
   const shellURL = shellLocation(app.getAppPath(), app.isPackaged, developmentUrl);
   const directory = app.getPath('userData');
   await mkdir(directory, { recursive: true, mode: 0o700 });
+  const runtimeRoot = app.isPackaged
+    ? join(process.resourcesPath, 'app.asar.unpacked')
+    : app.getAppPath();
+  const plugins = new PluginManager({
+    directory: join(directory, 'plugins'),
+    executable: process.execPath,
+    cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+    pnpmPath: join(runtimeRoot, 'node_modules/pnpm/bin/pnpm.cjs'),
+    validate: async (home, plugin): Promise<void> => {
+      const probeBridge = await startToolServer(() =>
+        Promise.reject(new Error('安装验证没有运行中的网站任务')),
+      );
+      const probe = new DshRuntime({
+        executable: process.execPath,
+        cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+        mcpPath: join(runtimeRoot, 'dist/runtime/mcp-server.mjs'),
+        dataDirectory: home,
+        plugins: [plugin],
+        apiKey: 'installation-probe',
+        model: 'deepseek-v4-flash',
+        toolEndpoint: probeBridge.endpoint,
+        toolToken: probeBridge.token,
+        onNotification: (): void => {},
+      });
+      try {
+        await probe.start();
+      } finally {
+        await probe.close();
+        await probeBridge.close();
+      }
+    },
+  });
+  await plugins.load();
+  const market = new PluginMarket();
   const store = new StateStore(directory);
   let workspace = await store.loadWorkspace();
   const saved = await store.load();
@@ -176,6 +213,20 @@ async function main(): Promise<void> {
       throw new Error('任务工具已暂停或正在等待确认');
     controller.state.metrics.toolCalls++;
     switch (request.name) {
+      case 'plugin_action': {
+        const plugin = plugins
+          .state()
+          .installed.find(
+            (entry) =>
+              entry.enabled &&
+              entry.mountName === request.arguments.mountName &&
+              (!entry.siteIds.length || entry.siteIds.includes(siteId ?? '')),
+          );
+        if (!plugin) throw new Error('插件未挂载到当前任务');
+        return controller
+          .propose(request.arguments.proposal, request.arguments.effect)
+          .finally(publish);
+      }
       case 'observe_page':
         return controller.observe(request.arguments.pageId).finally(publish);
       case 'request_takeover':
@@ -214,9 +265,11 @@ async function main(): Promise<void> {
     }
     if (!runtime) {
       const generation = ++runtimeGeneration;
-      const runtimeRoot = app.isPackaged
-        ? join(process.resourcesPath, 'app.asar.unpacked')
-        : app.getAppPath();
+      const selectedPlugins = await plugins.prepareRuntime(
+        join(directory, 'runtime', siteId),
+        siteId,
+      );
+      if (generation !== runtimeGeneration || controller.state.status !== 'running') return;
       runtime = new DshRuntime({
         executable: process.execPath,
         cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
@@ -227,6 +280,7 @@ async function main(): Promise<void> {
         ...(testModelURL ? { baseURL: testModelURL } : {}),
         toolEndpoint: tools.endpoint,
         toolToken: tools.token,
+        plugins: selectedPlugins,
         recoveryContext: [
           ...messages,
           {
@@ -366,6 +420,33 @@ async function main(): Promise<void> {
   ipcMain.handle('deskwork:snapshot', (event) => {
     requireShell(event);
     return snapshot();
+  });
+  ipcMain.handle('deskwork:plugins', (event) => {
+    requireShell(event);
+    return plugins.state();
+  });
+  ipcMain.handle('deskwork:plugin-search', (event, raw: unknown) => {
+    requireShell(event);
+    return market.search(z.string().max(200).parse(raw));
+  });
+  ipcMain.handle('deskwork:plugin-command', async (event, raw: unknown) => {
+    requireShell(event);
+    const command = pluginCommandSchema.parse(raw);
+    requireNoOtherTask();
+    if (commandBusy || plugins.state().busy) throw new Error('请等待当前操作完成');
+    if (
+      command.action === 'configure' &&
+      command.siteIds.some((id) => !workspace.sites.some((site) => site.id === id))
+    )
+      throw new Error('挂载网站不存在');
+    commandBusy = true;
+    try {
+      await stopRuntime();
+      await plugins.command(command);
+    } finally {
+      commandBusy = false;
+      publish();
+    }
   });
   let commandBusy = false;
   ipcMain.handle('deskwork:command', async (event, raw: unknown) => {
@@ -563,6 +644,7 @@ async function main(): Promise<void> {
       for (const controller of controllers.values())
         if (['running', 'waiting-user'].includes(controller.state.status)) await controller.stop();
       await stopRuntime();
+      await plugins.close();
       await tools.close();
       await persist();
       await pages.close();
