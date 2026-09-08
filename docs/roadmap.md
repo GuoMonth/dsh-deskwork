@@ -1,6 +1,6 @@
 # 路线图
 
-当前阶段：**M1 通用 MVP 已合并，真实模型和已登录页面已通过功能冒烟；业务写入与用户 Mac 验收仍待完成。** 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
+当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；进入 M2 计划审阅。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
 
 ## M1：配置网站，通过对话操作
 
@@ -10,15 +10,15 @@
 | 2    | [通用浏览器 Agent #5](https://github.com/GuoMonth/dsh-deskwork/issues/5) | 同一工具集驱动不同网站，无 ERP 专属字段前置；真实 DSH 与 Electron 串联，确认、接手与异常回归（A3–A5） | 真实进程双站点回归通过；真实模型只读功能已验证 |
 | 3    | [实机与预览交付 #6](https://github.com/GuoMonth/dsh-deskwork/issues/6)   | 真实模型、配置网站与用户 Mac 验收；安装包自带依赖（A6）                                               | 本地发行包通过；macOS 工件与实测状态见 #6      |
 
-已复用基础：Electron 容器、语义 Token、DSH 进程与工具桥、持久化、取消和确认的部分行为测试，以及 macOS 构建路径。新通用工具、双站点与异常回归见 [本轮证据](experiments/2026-09-06-configurable-mvp.md)；后续真实功能验证见 [PC 冒烟记录](experiments/2026-09-08-desktop-smoke.md)；写入与用户 Mac 验收仍需单独记录。
+已复用基础：Electron 容器、语义 Token、DSH 进程与工具桥、持久化、取消和确认的部分行为测试，以及 macOS 构建路径。新通用工具、双站点与异常回归见 [本轮证据](experiments/2026-09-06-configurable-mvp.md)；后续真实功能验证见 [PC 冒烟记录](experiments/2026-09-08-desktop-smoke.md)；用户已反馈本地测试符合预期；具体写入场景的验收仍需单独记录。
 
 已移除或隔离：森果名称／商品入口硬编码、产品预览中的仿 ERP 页面、通用任务对店铺／商品／字段适配的依赖。森果仅保留为可选测试配置，合成 ERP 只用于验证。
 
-## M2：积累和复用经验
+## M2：原生 Skill 资产包与查询提速
 
-在 M1 通用操作可用后，验证本地技能的输入输出、适用条件、复用效果与失效识别。经验按站点和场景保存；先以正确结果、模型／工具调用和耗时证明收益，再考虑自动生成、修复、晋升和回滚。不要求每个新 ERP 先有技能才能打开或操作。
+**计划草案，尚未实施。** 执行跟踪：[M2 Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。 目标、边界、三个实施阶段和验收以 [M2 规格](specs/m2-skill-reuse.md) 为准：先验证 DSH 原生 Skill 与查询确认策略，再完成 ZIP 生命周期和受控只读流程，最后交付外部 AI 制作的菜单域样例及 Apple Silicon Alpha。
 
-经验的分发和启用采用[本地经验资产包](design/experience-packages.md)：ZIP 解包、唯一挂载名注册、挂载／取消挂载、版本升级与替换。该约束来自 2026-09-08 用户反馈；具体格式继续由实验验证。
+复用原生技能注册、按需加载及插件生命周期；Deskwork 管理网站绑定、唯一挂载名、版本固定和写入确认。高能力 AI 在外部沉淀知识，普通模型按需使用。仅做小规模功能与调用开销对比，不建设市场或自动进化平台。验证假设见 [H-009](hypotheses/h009-native-skill-reuse.md)。
 
 ## 后续：扩展执行与交付
 
