@@ -1,6 +1,6 @@
 # 路线图
 
-当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；进入 M2 计划审阅。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
+当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；M2 已确定采用 DSH 插件路线，具体计划待实施。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
 
 ## M1：配置网站，通过对话操作
 
@@ -14,11 +14,17 @@
 
 已移除或隔离：森果名称／商品入口硬编码、产品预览中的仿 ERP 页面、通用任务对店铺／商品／字段适配的依赖。森果仅保留为可选测试配置，合成 ERP 只用于验证。
 
-## M2：原生 Skill 资产包与查询提速
+## M2：DSH 插件工作台与查询提速
 
-**计划草案，尚未实施。** 执行跟踪：[M2 Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。 目标、边界、三个实施阶段和验收以 [M2 规格](specs/m2-skill-reuse.md) 为准：先验证 DSH 原生 Skill 与查询确认策略，再完成 ZIP 生命周期和受控只读流程，最后交付外部 AI 制作的菜单域样例及 Apple Silicon Alpha。
+**路线已接受，尚未实施。** 用户主动安装并信任本地扩展，市场安装纳入主线，ZIP 路线取消。目标与验收以 [M2 规格](specs/m2-dsh-plugins.md) 为准，信任边界见 [ADR-0006](decisions/0006-trusted-dsh-plugins.md)，执行状态统一记录在 [Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。
 
-复用原生技能注册、按需加载及插件生命周期；Deskwork 管理网站绑定、唯一挂载名、版本固定和写入确认。高能力 AI 在外部沉淀知识，普通模型按需使用。仅做小规模功能与调用开销对比，不建设市场或自动进化平台。验证假设见 [H-009](hypotheses/h009-native-skill-reuse.md)。
+| 顺序 | 工作包                                                                           | 退出判据                                                                |
+| ---- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1    | [市场与原生插件 #10](https://github.com/GuoMonth/dsh-deskwork/issues/10)         | 既有市场发现、安装、真实 DSH 加载及启停升级卸载；安装包自带所需运行依赖 |
+| 2    | [网站挂载与连续查询 #11](https://github.com/GuoMonth/dsh-deskwork/issues/11)     | 唯一挂载名、任务边界、通用浏览器接口；查询直行，宿主介导写入确认        |
+| 3    | [发布样例与 arm64 Alpha #12](https://github.com/GuoMonth/dsh-deskwork/issues/12) | 外部制作标准 ERP 插件、公开发布并从市场安装，普通模型复用查询，单一 DMG |
+
+复用插件格式、原生 Skill 和生命周期，不另建市场或数据包协议。高能力 AI 在外部沉淀，普通模型使用；功能确认和调用次数的小样本记录足够。市场 Web 依赖与独立 SDK 运行时的适配先按 [H-009](hypotheses/h009-dsh-plugin-host.md)验证，不宣称全生态已兼容。
 
 ## 后续：扩展执行与交付
 
