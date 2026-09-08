@@ -1,3 +1,4 @@
+import './build-plugins.ts';
 import { build as bundle } from 'esbuild';
 import { build as buildUi } from 'vite';
 import { desktopBuildOptions } from './desktop-build-options.ts';

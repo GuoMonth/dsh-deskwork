@@ -25,6 +25,7 @@
     "experiments/**/*.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "vite.config.ts"
+    "vite.config.ts",
+    "plugins/**/*.ts"
   ]
 }

@@ -1,6 +1,6 @@
 # 路线图
 
-当前阶段：**M1 通用 MVP 已合并，真实模型和已登录页面已通过功能冒烟；业务写入与用户 Mac 验收仍待完成。** 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
+当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；M2 插件功能已实现并通过本地验证，Alpha 工件已发布，市场收录及用户 Mac 反馈待完成。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
 
 ## M1：配置网站，通过对话操作
 
@@ -10,15 +10,21 @@
 | 2    | [通用浏览器 Agent #5](https://github.com/GuoMonth/dsh-deskwork/issues/5) | 同一工具集驱动不同网站，无 ERP 专属字段前置；真实 DSH 与 Electron 串联，确认、接手与异常回归（A3–A5） | 真实进程双站点回归通过；真实模型只读功能已验证 |
 | 3    | [实机与预览交付 #6](https://github.com/GuoMonth/dsh-deskwork/issues/6)   | 真实模型、配置网站与用户 Mac 验收；安装包自带依赖（A6）                                               | 本地发行包通过；macOS 工件与实测状态见 #6      |
 
-已复用基础：Electron 容器、语义 Token、DSH 进程与工具桥、持久化、取消和确认的部分行为测试，以及 macOS 构建路径。新通用工具、双站点与异常回归见 [本轮证据](experiments/2026-09-06-configurable-mvp.md)；后续真实功能验证见 [PC 冒烟记录](experiments/2026-09-08-desktop-smoke.md)；写入与用户 Mac 验收仍需单独记录。
+已复用基础：Electron 容器、语义 Token、DSH 进程与工具桥、持久化、取消和确认的部分行为测试，以及 macOS 构建路径。新通用工具、双站点与异常回归见 [本轮证据](experiments/2026-09-06-configurable-mvp.md)；后续真实功能验证见 [PC 冒烟记录](experiments/2026-09-08-desktop-smoke.md)；用户已反馈本地测试符合预期；具体写入场景的验收仍需单独记录。
 
 已移除或隔离：森果名称／商品入口硬编码、产品预览中的仿 ERP 页面、通用任务对店铺／商品／字段适配的依赖。森果仅保留为可选测试配置，合成 ERP 只用于验证。
 
-## M2：积累和复用经验
+## M2：DSH 插件工作台与查询提速
 
-在 M1 通用操作可用后，验证本地技能的输入输出、适用条件、复用效果与失效识别。经验按站点和场景保存；先以正确结果、模型／工具调用和耗时证明收益，再考虑自动生成、修复、晋升和回滚。不要求每个新 ERP 先有技能才能打开或操作。
+**实现已推进至预览交付：本地原生插件、双结构查询与真实森果只读功能通过，macOS arm64 安装包通过并发布，市场收录和用户 Mac 反馈待完成。** 用户主动安装并信任本地扩展，市场安装纳入主线，ZIP 路线取消。目标与验收以 [M2 规格](specs/m2-dsh-plugins.md) 为准，信任边界见 [ADR-0006](decisions/0006-trusted-dsh-plugins.md)，执行状态统一记录在 [Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。
 
-经验的分发和启用采用[本地经验资产包](design/experience-packages.md)：ZIP 解包、唯一挂载名注册、挂载／取消挂载、版本升级与替换。该约束来自 2026-09-08 用户反馈；具体格式继续由实验验证。
+| 顺序 | 工作包                                                                           | 退出判据                                                                |
+| ---- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1    | [市场与原生插件 #10](https://github.com/GuoMonth/dsh-deskwork/issues/10)         | 热重载客户端完成既有市场安装、真实 DSH 调用与启停升级卸载               |
+| 2    | [网站挂载与连续查询 #11](https://github.com/GuoMonth/dsh-deskwork/issues/11)     | 唯一挂载名、任务边界、通用浏览器接口；查询直行，宿主介导写入确认        |
+| 3    | [发布样例与 arm64 Alpha #12](https://github.com/GuoMonth/dsh-deskwork/issues/12) | 外部制作标准 ERP 插件、公开发布并从市场安装，普通模型复用查询，单一 DMG |
+
+复用插件格式、原生 Skill 和生命周期，不另建市场或数据包协议。高能力 AI 在外部沉淀，普通模型使用；功能确认和调用次数的小样本记录足够。按「装得上 → 用得快 → 发得出」三个大步骤连续推进，[H-009](hypotheses/h009-dsh-plugin-host.md) 的最小验证随实现完成。开源项目不承诺兼容性，不建设兼容矩阵；只记录本轮版本和真实功能结果，最终 DMG 验证集中在第三步。当前结果见 [M2 验证记录](experiments/2026-09-08-m2-plugins.md)。
 
 ## 后续：扩展执行与交付
 

@@ -1,0 +1,38 @@
+{
+  "name": "@guomonth/dsh-senguo-query",
+  "version": "0.1.0-alpha.1",
+  "type": "module",
+  "description": "Senguo menu knowledge and read-only income/expense category discovery for DSH Deskwork",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "senguo",
+    "deskwork"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GuoMonth/dsh-deskwork.git",
+    "directory": "plugins/senguo-query"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-skill": "0.1.2-rc.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

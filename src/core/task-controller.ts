@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { idleTask } from './contracts.ts';
+import { pluginReadActionIsAllowed } from './plugin-action-policy.ts';
 import type {
   ActionProposal,
   BrowserAdapter,
@@ -63,7 +64,10 @@ export class TaskController {
     await this.step('已观察页面：' + observation.title);
     return observation;
   }
-  async propose(proposal: ActionProposal): Promise<{ status: string }> {
+  async propose(
+    proposal: ActionProposal,
+    pluginEffect?: 'read' | 'write' | 'unknown',
+  ): Promise<{ status: string }> {
     if (this.busy || this.state.status !== 'running') throw new Error('任务未运行或正在等待确认');
     this.busy = true;
     const generation = this.generation;
@@ -71,7 +75,12 @@ export class TaskController {
       const observation = await this.browser.observe(this.target(), proposal.pageId);
       if (generation !== this.generation) throw new Error('任务已停止');
       if (observation.revision !== proposal.revision) throw new Error('页面已变化，请重新观察');
-      if (this.browser.needsConfirmation(observation, proposal)) {
+      if (
+        pluginEffect === 'write' ||
+        pluginEffect === 'unknown' ||
+        (this.browser.needsConfirmation(observation, proposal) &&
+          !(pluginEffect === 'read' && pluginReadActionIsAllowed(observation, proposal)))
+      ) {
         this.state.confirmation = { id: randomUUID(), proposal, observation };
         this.state.status = 'waiting-user';
         this.state.detail = '请确认即将执行的操作';
