@@ -2,3 +2,5 @@ node_modules/
 .artifacts/
 package-lock.json
 dist/
+plugins/*/lib/
+tests/fixtures/query-plugin/lib/

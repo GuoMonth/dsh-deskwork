@@ -1,3 +1,4 @@
+import type { PluginBridge } from './plugin-contracts.ts';
 import { z } from 'zod';
 
 export const identifier = z
@@ -236,6 +237,7 @@ export const commandSchema = z.discriminatedUnion('type', [
 ]);
 export type WorkspaceCommand = z.infer<typeof commandSchema>;
 export interface DeskworkBridge {
+  plugins: PluginBridge;
   snapshot(): Promise<WorkspaceSnapshot>;
   command(command: WorkspaceCommand): Promise<void>;
   subscribe(listener: (snapshot: WorkspaceSnapshot) => void): () => void;
