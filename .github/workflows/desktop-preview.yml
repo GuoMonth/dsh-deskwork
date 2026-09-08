@@ -27,6 +27,9 @@ jobs:
       - run: npm run build
       - run: node --test tests/runtime.integration.ts tests/desktop.integration.ts tests/browser-boundary.integration.ts
       - run: npm run package:mac > .artifacts/package-mac.log 2>&1
+        env:
+          # Preview uses ad-hoc signing only; this job receives no signing credentials.
+          CSC_FOR_PULL_REQUEST: 'true'
       - name: Verify DMG installation and packaged runtime
         shell: bash
         run: |
