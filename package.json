@@ -1,6 +1,6 @@
 {
   "name": "dsh-deskwork",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "description": "A local ERP workspace powered by DeepSeek Harness",
   "license": "MIT",

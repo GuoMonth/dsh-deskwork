@@ -1,10 +1,10 @@
 # 使用 MVP 预览版
 
-预览版面向 macOS Apple Silicon，未签名／未公证。安装包及对应验证提交见 [PR #2](https://github.com/GuoMonth/dsh-deskwork/pull/2)。旧版业务切片安装包不代表当前产品。
+Alpha 预览版面向 macOS Apple Silicon，未签名／未公证。安装包及对应验证提交见 [GitHub Releases](https://github.com/GuoMonth/dsh-deskwork/releases)。旧版业务切片安装包不代表当前产品。
 
 ## 安装与配置
 
-下载 PR 中的 macOS 工件，解压其中的应用 ZIP，将 DSH Deskwork.app 放入 Applications。系统阻止打开未公证应用时，在「隐私与安全性」中允许打开已核对来源的预览包。
+下载 Release 中的 macOS arm64 ZIP，解压后将 DSH Deskwork.app 放入 Applications。系统阻止打开未公证应用时，在「隐私与安全性」中允许打开已核对来源的预览包。
 
 首次启动为空工作台。点击「添加网站」，填写网址，名称可选；添加几个就有几个固定标签。用户直接在原网站登录。点击「模型设置」，填写 DeepSeek 模型名称和 API 密钥；密钥由系统安全存储保存。
 
