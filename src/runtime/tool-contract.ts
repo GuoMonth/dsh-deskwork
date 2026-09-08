@@ -47,6 +47,18 @@ export const browserToolDefinitions = [
 export const toolRequestSchema = z.discriminatedUnion('name', [
   z
     .object({
+      name: z.literal('plugin_action'),
+      arguments: z
+        .object({
+          mountName: z.string().min(1),
+          effect: z.enum(['read', 'write', 'unknown']),
+          proposal: proposalSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       name: z.literal('request_takeover'),
       arguments: z.object({ reason: z.string().min(1).max(1000) }).strict(),
     })

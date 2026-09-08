@@ -1,8 +1,27 @@
+import { z } from 'zod';
+import {
+  pluginStateSchema,
+  marketPluginSchema,
+  pluginCommandSchema,
+} from '../core/plugin-contracts.ts';
 import { contextBridge, ipcRenderer } from 'electron';
 import { commandSchema, snapshotSchema } from '../core/contracts.ts';
 import type { DeskworkBridge, WorkspaceCommand, WorkspaceSnapshot } from '../core/contracts.ts';
 
 const bridge: DeskworkBridge = {
+  plugins: {
+    state: async () => {
+      const raw: unknown = await ipcRenderer.invoke('deskwork:plugins');
+      return pluginStateSchema.parse(raw);
+    },
+    search: async (query) => {
+      const raw: unknown = await ipcRenderer.invoke('deskwork:plugin-search', query);
+      return z.array(marketPluginSchema).parse(raw);
+    },
+    command: async (command) => {
+      await ipcRenderer.invoke('deskwork:plugin-command', pluginCommandSchema.parse(command));
+    },
+  },
   snapshot: async (): Promise<WorkspaceSnapshot> => {
     const raw: unknown = await ipcRenderer.invoke('deskwork:snapshot');
     return snapshotSchema.parse(raw);

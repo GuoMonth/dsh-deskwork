@@ -1,3 +1,4 @@
+import { PluginPanel } from './plugin-panel.tsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type {
@@ -11,7 +12,11 @@ import { Icon } from './icon.tsx';
 import { TaskCard } from './task-card.tsx';
 
 type DialogState =
-  { kind: 'site'; site?: Site } | { kind: 'settings' } | { kind: 'commands' } | null;
+  | { kind: 'site'; site?: Site }
+  | { kind: 'settings' }
+  | { kind: 'commands' }
+  | { kind: 'plugins' }
+  | null;
 function Dialog({
   title,
   close,
@@ -378,6 +383,14 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
               添加网站
             </button>
             <div className="sidebar-bottom">
+              <button
+                onClick={() => {
+                  setDialog({ kind: 'plugins' });
+                }}
+              >
+                <Icon name="settings" />
+                插件
+              </button>
               <p>
                 网站照常使用
                 <br />让 AI 协助完成工作
@@ -783,7 +796,9 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 : '添加网站'
               : dialog.kind === 'settings'
                 ? '连接 DeepSeek'
-                : '命令入口'
+                : dialog.kind === 'plugins'
+                  ? '插件'
+                  : '命令入口'
           }
           close={() => {
             setDialog(null);
@@ -810,6 +825,8 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   : undefined
               }
             />
+          ) : dialog.kind === 'plugins' ? (
+            <PluginPanel bridge={bridge.plugins} sites={snapshot.workspace.sites} />
           ) : dialog.kind === 'settings' ? (
             <ModelForm
               bridge={bridge}

@@ -677,3 +677,58 @@ summary {
     scroll-behavior: auto !important;
   }
 }
+
+.modal:has(.plugin-panel) {
+  width: min(780px, 85vw);
+}
+.plugin-panel {
+  max-height: 70vh;
+  overflow: auto;
+  padding: 0 4px;
+}
+.plugin-search,
+.plugin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.plugin-search input {
+  flex: 1;
+}
+.plugin-results {
+  max-height: 230px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.plugin-result,
+.plugin-installed {
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  margin: 8px 0;
+}
+.plugin-result p {
+  margin: 6px 0;
+}
+.plugin-result > span {
+  margin-left: 8px;
+}
+.plugin-panel .plugin-trust {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: normal;
+}
+.plugin-panel .plugin-trust input {
+  width: auto;
+  margin-top: 3px;
+}
+.plugin-source,
+.plugin-error {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.plugin-error {
+  max-height: 140px;
+  overflow: auto;
+}

@@ -23,7 +23,13 @@ await access(executable);
 await access(join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'));
 const child = spawn(
   process.execPath,
-  ['--test', 'tests/runtime.integration.ts', 'tests/desktop.integration.ts'],
+  [
+    '--test',
+    'tests/runtime.integration.ts',
+    'tests/desktop.integration.ts',
+    'tests/plugin-runtime.integration.ts',
+    'tests/plugin-desktop.integration.ts',
+  ],
   {
     env: {
       ...process.env,

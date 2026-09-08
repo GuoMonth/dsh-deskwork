@@ -150,6 +150,11 @@ export function createPreviewBridge(): DeskworkBridge {
     emit();
   }
   return {
+    plugins: {
+      state: () => Promise.resolve({ installed: [], busy: false, progress: '交互预览不安装插件' }),
+      search: () => Promise.resolve([]),
+      command: () => Promise.reject(new Error('请在桌面客户端安装插件')),
+    },
     snapshot: () => Promise.resolve(structuredClone(snapshot)),
     command,
     subscribe: (listener) => {
