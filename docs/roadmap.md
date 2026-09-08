@@ -1,6 +1,6 @@
 # 路线图
 
-当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；M2 插件功能已实现并通过本地验证，推进预览交付。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
+当前阶段：**M1 已发布 alpha.2，用户反馈本地测试效果符合当前预期；M2 插件功能已实现并通过本地验证，Alpha 工件已发布，市场收录及用户 Mac 反馈待完成。** 未逐项验证的真实业务写入仍单独跟踪。 产品定位为用户配置网址的通用工作台。范围和验收的事实来源是 [M1 规格](specs/m1-configurable-workspace.md)，[M1 Epic #3](https://github.com/GuoMonth/dsh-deskwork/issues/3) 及子任务记录执行状态与证据，避免重复维护两套完成清单。
 
 ## M1：配置网站，通过对话操作
 
@@ -16,7 +16,7 @@
 
 ## M2：DSH 插件工作台与查询提速
 
-**实现已推进至预览交付：本地原生插件、双结构查询与真实森果只读功能通过，macOS 工件和市场收录待完成。** 用户主动安装并信任本地扩展，市场安装纳入主线，ZIP 路线取消。目标与验收以 [M2 规格](specs/m2-dsh-plugins.md) 为准，信任边界见 [ADR-0006](decisions/0006-trusted-dsh-plugins.md)，执行状态统一记录在 [Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。
+**实现已推进至预览交付：本地原生插件、双结构查询与真实森果只读功能通过，macOS arm64 安装包通过并发布，市场收录和用户 Mac 反馈待完成。** 用户主动安装并信任本地扩展，市场安装纳入主线，ZIP 路线取消。目标与验收以 [M2 规格](specs/m2-dsh-plugins.md) 为准，信任边界见 [ADR-0006](decisions/0006-trusted-dsh-plugins.md)，执行状态统一记录在 [Epic #9](https://github.com/GuoMonth/dsh-deskwork/issues/9)。
 
 | 顺序 | 工作包                                                                           | 退出判据                                                                |
 | ---- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |

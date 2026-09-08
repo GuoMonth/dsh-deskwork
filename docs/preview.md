@@ -18,7 +18,7 @@ DMG 提供拖放安装；临时签名用于校验应用包完整性，不能替�
 
 在左侧「插件」中搜索 DSH 社区市场，或填入 npm 包名／GitHub Release 插件地址。核对来源并主动信任后安装。已安装插件可修改唯一挂载名、绑定网站、取消挂载、更新或卸载；影响任务的变更前先停止任务。开发时也可安装标准 `file:/` 插件目录，无 ZIP 资产导入。
 
-插件是本地可执行代码。经过 Deskwork 浏览器接口的写入仍需确认；插件自身的文件和网络访问属于安装信任范围。开源预览不承诺兼容性，安装或加载失败会显示错误并保留旧版本。首个样例是[森果收支查询插件](../plugins/senguo-query/README.md)，具体公开工件与市场收录状态见 M2 PR。
+插件是本地可执行代码。经过 Deskwork 浏览器接口的写入仍需确认；插件自身的文件和网络访问属于安装信任范围。开源预览不承诺兼容性，安装或加载失败会显示错误并保留旧版本。首个样例是[森果收支查询插件](../plugins/senguo-query/README.md)，可从[插件 Release](https://github.com/GuoMonth/dsh-deskwork/releases/tag/senguo-query-v0.1.0-alpha.1)复制 `.tgz` 资产下载地址安装。[M2 PR #14](https://github.com/GuoMonth/dsh-deskwork/pull/14)记录市场收录状态，收录前使用公开下载地址。
 
 ## 操作与核对
 
