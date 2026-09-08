@@ -22,6 +22,7 @@ await test(
     });
     let requests = 0;
     let restoredContext = false;
+    let receivedDeskworkPersona = false;
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
         let body = '';
@@ -45,6 +46,15 @@ await test(
           ].sort(),
         );
         requests++;
+        const messages = z
+          .object({ messages: z.array(z.object({ role: z.string(), content: z.unknown() })) })
+          .parse(JSON.parse(body)).messages;
+        receivedDeskworkPersona ||= messages.some(
+          (message) =>
+            message.role === 'system' &&
+            typeof message.content === 'string' &&
+            message.content.includes('你是 DSH Deskwork 网站助手'),
+        );
         if (requests === 3)
           restoredContext =
             body.includes('读取页面，说明结果') && body.includes('已读取测试商品，尚未修改。');
@@ -124,6 +134,11 @@ await test(
       ]);
       assert.deepEqual(calls, ['observe_page']);
       assert.equal(requests, 2);
+      assert.equal(
+        receivedDeskworkPersona,
+        true,
+        'Deskwork instructions must reach the actual model system message',
+      );
       await runtime.close();
       sawRunning = false;
       completed = new Promise<void>((resolve) => {

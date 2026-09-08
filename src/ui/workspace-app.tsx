@@ -194,6 +194,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
   const viewport = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const conversation = useRef<HTMLDivElement>(null);
+  const followMessages = useRef(true);
   const report = useCallback((reason: unknown) => {
     setError(reason instanceof Error ? reason.message : String(reason));
   }, []);
@@ -252,8 +253,15 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
     };
   }, [bridge, report, mode, modalOpen, dragging, hasSite, snapshot?.activeSiteId]);
   useEffect(() => {
-    conversation.current?.scrollTo({ top: conversation.current.scrollHeight, behavior: 'instant' });
-  }, [context?.messages.length, context?.messages.at(-1)?.text, task.status]);
+    followMessages.current = true;
+  }, [site?.id, task.id]);
+  useEffect(() => {
+    if (followMessages.current)
+      conversation.current?.scrollTo({
+        top: context?.messages.length ? conversation.current.scrollHeight : 0,
+        behavior: 'instant',
+      });
+  }, [site?.id, task.id, context?.messages.length, context?.messages.at(-1)?.text, task.status]);
   useEffect(() => {
     const key = (event: KeyboardEvent): void => {
       if (!(event.metaKey || event.ctrlKey)) return;
@@ -297,6 +305,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
     if (site) setDrafts((values) => ({ ...values, [site.id]: value }));
   }
   const ownPages = snapshot.pages.filter((page) => page.siteId === site?.id);
+  const currentPage = ownPages.find((page) => page.selected) ?? ownPages[0];
   return (
     <div
       className="workspace"
@@ -446,7 +455,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
               {site ? (
                 <div className="addressbar">
                   <Icon name="link" size={14} />
-                  <span>{site.url}</span>
+                  <span title={currentPage?.url || site.url}>{currentPage?.url || site.url}</span>
                   <button
                     className="icon-button"
                     aria-label="刷新网站"
@@ -472,6 +481,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   {ownPages.map((page) => (
                     <span key={page.id}>
                       <button
+                        aria-pressed={page.selected ?? false}
                         onClick={() => {
                           sendCommand({ type: 'select-page', pageId: page.id });
                         }}
@@ -597,7 +607,15 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 {site?.name ?? '尚未添加网站'}
                 <span>{site ? '独立对话' : '配置后即可开始'}</span>
               </div>
-              <div className="conversation" ref={conversation}>
+              <div
+                className="conversation"
+                ref={conversation}
+                onScroll={(event) => {
+                  const element = event.currentTarget;
+                  followMessages.current =
+                    element.scrollHeight - element.scrollTop - element.clientHeight < 48;
+                }}
+              >
                 {!context?.messages.length ? (
                   <div className="chat-welcome">
                     <span className="agent-emblem">

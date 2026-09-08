@@ -28,9 +28,13 @@ export async function evaluate(contents: WebContents, expression: string): Promi
   return response.result.value;
 }
 // Application-owned expressions only; no scripts, selectors, or executable code from the model.
+const interactiveNodesExpression = `([...document.querySelectorAll('*')].filter(element => {
+  if (!element.getClientRects().length || getComputedStyle(element).visibility === 'hidden') return false;
+  if (element.matches('a,button,input,textarea,select,[role="button"],[role="link"],[role="tab"],[role="menuitem"],[contenteditable="true"],[tabindex]:not([tabindex="-1"]),[onclick]')) return true;
+  return getComputedStyle(element).cursor === 'pointer' && (!element.parentElement || getComputedStyle(element.parentElement).cursor !== 'pointer');
+}).slice(0, 160))`;
 const collectExpression = `(() => {
-  const visible = element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
-  const nodes = [...document.querySelectorAll('a,button,input,textarea,select,[role="button"],[role="link"],[contenteditable="true"]')].filter(visible);
+  const nodes = ${interactiveNodesExpression};
   const elements = nodes.slice(0, 160).map((element, index) => {
     const type = element.getAttribute('type') || '';
     const name = element.getAttribute('aria-label') || (element.labels && [...element.labels].map(label => label.innerText).join(' ')) || element.getAttribute('placeholder') || element.innerText || element.getAttribute('title') || '';
@@ -139,7 +143,7 @@ export class ElectronBrowser implements BrowserAdapter {
       if (JSON.stringify(${collectExpression}) !== JSON.stringify(expected)) throw Error('Page changed before action');
       const action = ${JSON.stringify(action)};
       if (action.kind === 'scroll') { window.scrollBy(0, (action.direction === 'down' ? 1 : -1) * Math.round(innerHeight * 0.75)); return true; }
-      const nodes = [...document.querySelectorAll('a,button,input,textarea,select,[role="button"],[role="link"],[contenteditable="true"]')].filter(element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
+      const nodes = ${interactiveNodesExpression};
       const element = nodes[Number(action.ref.slice(1))];
       if (!/^e[0-9]+$/.test(action.ref) || !element || element.disabled || element.type === 'password') throw Error('Unavailable element');
       element.scrollIntoView({ block: 'center' });
