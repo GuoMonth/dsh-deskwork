@@ -159,6 +159,7 @@ kbd {
 .brand-mark {
   display: block;
   width: 34px;
+  flex-shrink: 0;
   height: 34px;
   border-radius: var(--radius-control);
   background: var(--color-text);
@@ -314,6 +315,10 @@ kbd {
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-small);
 }
+.page-list button[aria-pressed='true'] {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
 .browser-viewport {
   flex: 1;
   min-height: 0;
@@ -398,6 +403,7 @@ kbd {
   margin-right: auto;
 }
 .ai-heading {
+  flex-shrink: 0;
   height: 52px;
   display: flex;
   align-items: center;
@@ -415,6 +421,7 @@ kbd {
   color: var(--color-agent);
 }
 .task-context {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--space-two);
@@ -428,6 +435,7 @@ kbd {
 }
 .conversation {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-six);
 }
@@ -478,6 +486,7 @@ kbd {
   margin: var(--space-two) 0 0;
 }
 .conversation-bottom {
+  flex-shrink: 0;
   padding: var(--space-four);
 }
 .composer {

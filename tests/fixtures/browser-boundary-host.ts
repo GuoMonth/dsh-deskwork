@@ -41,6 +41,27 @@ async function verify(): Promise<void> {
         pages.select(entry, id);
       },
     );
+    await evaluate(
+      handle.contents,
+      `(() => {
+      const card = document.createElement('div'); card.style.cursor = 'pointer'; card.textContent = 'Open records';
+      card.addEventListener('click', () => { card.textContent = 'Records opened'; }); document.body.append(card);
+      return true;
+    })()`,
+    );
+    const cards = await browser.observe(target);
+    const card = cards.elements.find((element) => element.name === 'Open records');
+    assert.ok(card, 'custom pointer card is observable without a website-specific selector');
+    const cardAction: ActionProposal = {
+      pageId: cards.pageId,
+      revision: cards.revision,
+      action: { kind: 'click', ref: card.ref },
+      summary: 'Open records',
+      risk: 'ordinary',
+    };
+    assert.equal(browser.needsConfirmation(cards, cardAction), true);
+    await browser.execute(target, cardAction, () => true);
+    assert.ok((await browser.observe(target)).text.includes('Records opened'));
     await assert.rejects(browser.observe(target, foreignPage), /不属于/);
     await evaluate(handle.contents, "document.querySelector('input').focus(); true");
     const observation = await browser.observe(target);
