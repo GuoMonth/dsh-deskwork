@@ -33,7 +33,7 @@ export async function searchDocuments(
 
 export const developmentCapabilities = {
   version: '0.1.0-alpha.1',
-  dshVersion: '0.1.2-rc.1',
+  dshVersion: '0.1.5-alpha.1',
   sdkPackage: '@guomonth/deskwork-plugin-sdk',
   sdkVersion: '0.1.0-alpha.1',
   documentation: 'offline',

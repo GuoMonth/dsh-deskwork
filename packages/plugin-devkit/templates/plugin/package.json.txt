@@ -23,11 +23,11 @@
     "zod": "4.5.4"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.1.2-rc.1"
+    "@deepseek-ai/dsh-tools": "0.1.5-alpha.1"
   },
   "devDependencies": {
     "typescript": "6.0.3",
     "@types/node": "24.13.3",
-    "@deepseek-ai/dsh-attachment": "0.1.2-rc.1"
+    "@deepseek-ai/dsh-attachment": "0.1.5-alpha.1"
   }
 }
