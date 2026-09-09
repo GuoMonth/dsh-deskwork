@@ -2,6 +2,8 @@
 
 第三方 AI 插件开发从 [Devkit](../packages/plugin-devkit/README.md) 开始；开发计划见 [M3 规格](specs/m3-plugin-development-kit.md)。
 
+当前 DSH 版本与升级验证见 [DSH 对齐记录](experiments/2026-09-09-dsh-upgrade.md)。
+
 M3 骨架已通过 PR #19 合并；内置浏览器服务与外部开发连接的本地结果见 [阶段二验证](experiments/2026-09-08-development-connection.md)。
 
 M1 alpha.2 已交付并获用户本地使用反馈；[M2 开发计划](specs/m2-dsh-plugins.md)已落实插件功能并进入预览交付。M1 入口：[规格](specs/m1-configurable-workspace.md)、[视觉与交互](design/visual-system.md)、[预览使用与限制](preview.md)、[本轮验证](experiments/2026-09-06-configurable-mvp.md)、[范围决策](decisions/0005-configurable-workspace-scope.md)、[执行计划](roadmap.md)。
