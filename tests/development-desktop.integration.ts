@@ -58,7 +58,7 @@ await test(
       }, base);
       await expect.poll(() => app.windows().some((page) => page.url().startsWith(base))).toBe(true);
       await shell.getByRole('button', { name: '插件', exact: true }).click();
-      await shell.getByText('开发插件 · 连接编程 AI', { exact: true }).click();
+      await shell.getByRole('button', { name: '开发', exact: true }).click();
       await shell.getByLabel('开发网站', { exact: true }).selectOption(siteId);
       await shell.getByRole('button', { name: '允许外部 AI 开发此网站' }).click();
       const config = z
