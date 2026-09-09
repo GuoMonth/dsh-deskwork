@@ -316,7 +316,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
       className="workspace"
       style={
         {
-          '--sidebar-width': sidebar ? '204px' : '0px',
+          '--sidebar-width': sidebar ? 'var(--size-sidebar)' : '0px',
           '--panel-width': `${String(panelWidth)}px`,
         } as CSSProperties
       }
@@ -325,7 +325,8 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
         <span className="window-controls-space" />
         <button
           className="icon-button"
-          aria-label="折叠工作区导航"
+          aria-label={sidebar ? '折叠工作区导航' : '展开工作区导航'}
+          aria-expanded={sidebar}
           onClick={() => {
             setSidebar((value) => !value);
           }}
@@ -351,9 +352,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
               <span className="brand-mark">
                 D<span>·</span>
               </span>
-              <div>
-                Deskwork<small>你的 AI 工作台</small>
-              </div>
+              <span>Deskwork</span>
             </div>
             <div className="section-label">
               工作区 <span>{snapshot.workspace.sites.length}</span>
@@ -363,6 +362,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 <button
                   key={entry.id}
                   className={`nav-entry ${site?.id === entry.id ? 'selected' : ''}`}
+                  title={entry.name}
                   onClick={() => {
                     sendCommand({ type: 'select-site', siteId: entry.id });
                   }}
@@ -388,13 +388,9 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   setDialog({ kind: 'plugins' });
                 }}
               >
-                <Icon name="settings" />
+                <Icon name="grid" />
                 插件
               </button>
-              <p>
-                网站照常使用
-                <br />让 AI 协助完成工作
-              </p>
               <button
                 onClick={() => {
                   setDialog({ kind: 'settings' });
@@ -408,12 +404,56 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
         ) : null}
         <main className="main-area">
           <div className="workspace-toolbar">
-            <div className="workspace-heading">
-              <span className="eyebrow">工作台</span>
-              <strong title={site?.name ?? '把工作放在一起'}>
-                {site?.name ?? '把工作放在一起'}
-              </strong>
+            <div
+              className="tabs"
+              role="tablist"
+              aria-label="固定网站标签"
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                const tabs = Array.from(
+                  event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+                );
+                const index = tabs.findIndex((tab) => tab === event.target);
+                if (index < 0) return;
+                event.preventDefault();
+                const next =
+                  event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? tabs.length - 1
+                      : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                tabs[next]?.focus();
+                tabs[next]?.click();
+              }}
+            >
+              {snapshot.workspace.sites.map((entry) => (
+                <button
+                  role="tab"
+                  aria-selected={site?.id === entry.id}
+                  tabIndex={site?.id === entry.id ? 0 : -1}
+                  title={entry.name}
+                  className={site?.id === entry.id ? 'active' : ''}
+                  key={entry.id}
+                  onClick={() => {
+                    sendCommand({ type: 'select-site', siteId: entry.id });
+                  }}
+                >
+                  <span className="site-glyph" aria-hidden="true">
+                    {entry.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="tab-name">{entry.name}</span>
+                </button>
+              ))}
             </div>
+            <button
+              className="icon-button add-tab"
+              aria-label="添加固定网站"
+              onClick={() => {
+                setDialog({ kind: 'site' });
+              }}
+            >
+              <Icon name="plus" size={16} />
+            </button>
             <div className="mode-switch" aria-label="工作模式">
               <button
                 aria-pressed={mode === 'copilot'}
@@ -434,32 +474,6 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                 Agent
               </button>
             </div>
-          </div>
-          <div className="tabs" role="tablist" aria-label="固定网站标签">
-            {snapshot.workspace.sites.map((entry) => (
-              <button
-                role="tab"
-                aria-selected={site?.id === entry.id}
-                className={site?.id === entry.id ? 'active' : ''}
-                key={entry.id}
-                onClick={() => {
-                  sendCommand({ type: 'select-site', siteId: entry.id });
-                }}
-              >
-                <span className="site-glyph" aria-hidden="true">
-                  {entry.name.slice(0, 1).toUpperCase()}
-                </span>
-                {entry.name}
-              </button>
-            ))}
-            <button
-              aria-label="添加固定网站"
-              onClick={() => {
-                setDialog({ kind: 'site' });
-              }}
-            >
-              <Icon name="plus" size={16} />
-            </button>
           </div>
           <div className={`content-area mode-${mode}`}>
             <section
@@ -619,8 +633,10 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
               </header>
               <div className="task-context">
                 <Icon name="link" size={13} />
-                {site?.name ?? '尚未添加网站'}
-                <span>{site ? '独立对话' : '配置后即可开始'}</span>
+                <span className="task-site-name" title={site?.name}>
+                  {site?.name ?? '尚未添加网站'}
+                </span>
+                <span className="task-context-kind">{site ? '独立对话' : '配置后即可开始'}</span>
               </div>
               <div
                 className="conversation"

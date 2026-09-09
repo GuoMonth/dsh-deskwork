@@ -1,16 +1,25 @@
 # Deskwork 视觉与交互原则
 
-状态：外壳视觉基线保留；纠偏后的空状态与配置交互已提供预览，待用户视觉审阅。品牌语义为「清晰、可信、高效，少一些操作、多一些完成」。颜色和尺寸的事实来源是 `src/ui/design-tokens.ts`，组件和可交互预览表达实现；本文只维护原则和取舍。
+状态：2026-09-09 更新为清晰、紧凑的 PC 浅色工作台，待本轮 PR 视觉审阅。品牌语义为「清晰、可信、高效，少一些操作、多一些完成」。颜色和尺寸的事实来源是 `src/ui/design-tokens.ts`，组件和可交互预览表达实现；本文只维护原则和取舍。
 
 [审阅当前界面](previews/README.md)。
 
 ## 参考与取舍
 
-[Fluent 语义 Token](https://fluent2.microsoft.design/design-tokens)提供主要方法：基础值到语义角色，再由组件消费。以浅冷灰、白色内容面、蓝色主操作与青色 AI 状态建立 Deskwork 品牌。
+[Fluent 语义 Token](https://fluent2.microsoft.design/design-tokens)提供主要方法：基础值到语义角色，再由组件消费。以中性灰外壳和白色内容面划分区域，蓝色用于主操作、选中和焦点，青色仅作 AI 活动状态。文字、可操作控件和装饰分隔线使用不同的语义角色，避免通过大面积浅灰表达所有层次。
 
 [SAP 企业设计](https://www.sap.com/design/design-system)提供角色、业务状态、简单一致的原则；[Oracle Design](https://design.oracle.com/)作为企业任务体验的辅助参考。保持适度信息密度，让业务对象、变更与结果比装饰更醒目。
 
-采用 [VS Code 工作台](https://code.visualstudio.com/docs/editing/getting-started/userinterface)的区域分工：工作区导航、业务标签、辅助对话与命令入口。Copilot 和 Agent 是同一工作的两种视图。森果等第三方业务页面保留原样，统一设计覆盖 Deskwork 自有外壳。
+参考 [Cursor 侧栏 Agent](https://cursor.com/docs/agent/overview) 的页面与对话分工，采用 [VS Code 工作台](https://code.visualstudio.com/docs/editing/getting-started/userinterface)的区域分工：工作区导航、业务标签、辅助对话与命令入口。Copilot 和 Agent 是同一工作的两种视图。森果等第三方业务页面保留原样，统一设计覆盖 Deskwork 自有外壳。
+
+## PC 信息密度
+
+- 标签承担当前网站标题，不为同一网站再增加整行标题。窗口控制、命令、标签和视图切换应紧凑且可用，优先把空间留给原网站和对话。
+- 导航与正文使用可读的文字对比；说明文字可以降级，不能把常用操作做成接近禁用的灰色。主操作保持同一色相的悬停状态。
+- 网站标题过长时截断并提供完整名称，标签溢出在自身区域滚动；添加入口和视图切换保持可见。面板尺寸与焦点支持鼠标和键盘操作。
+- 插件管理按已安装、发现、开发分入口。安装及挂载草稿在栏目切换中保留，开发连接按需读取；任务进度和错误始终可见。
+- 运行细节默认折叠，确认与待核对操作保持显著。状态颜色必须配文字，不能用对话完成文本替代实际核对。
+- 首先审阅 1440×900 和 1280×800；浅色外壳与网站原有主题共存，独立深色主题后续推进。
 
 ## 一致性约束
 

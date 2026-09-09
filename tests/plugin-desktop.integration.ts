@@ -92,7 +92,15 @@ await test(
       const shell = app.windows().find((page) => page.url().startsWith('file:'));
       assert.ok(shell);
       await shell.getByRole('button', { name: '插件', exact: true }).click();
+      await shell.getByRole('button', { name: '发现', exact: true }).click();
       await shell.getByLabel('插件安装来源').fill(`file:${resolve('tests/fixtures/query-plugin')}`);
+      await expect(shell.getByRole('button', { name: '安装插件', exact: true })).toBeDisabled();
+      await shell.getByRole('button', { name: '开发', exact: true }).click();
+      await expect(shell.getByLabel('插件安装来源')).toBeHidden();
+      await shell.getByRole('button', { name: '发现', exact: true }).click();
+      await expect(shell.getByLabel('插件安装来源')).toHaveValue(
+        `file:${resolve('tests/fixtures/query-plugin')}`,
+      );
       await shell.getByRole('checkbox').check();
       await shell.getByRole('button', { name: '安装插件', exact: true }).click();
       await expect(shell.getByText('deskwork-query-fixture', { exact: true })).toBeVisible({

@@ -1,23 +1,35 @@
-# MVP 界面审阅
+# PC 工作台视觉审阅
 
-前四张来自同一外壳组件的交互预览，网站区域只作中性承载占位。最后一张来自 Linux Electron 的系统屏幕捕获，展示通过配置加载的森果公开页面；没有登录或业务操作。
+2026-09-09：中性浅色、紧凑标签与清晰控件。以下预览复用产品组件，使用虚构网址和通用任务状态；网站区域是中性占位，不代表真实网站操作。1440×900 展示整体布局，1280×800 检查确认卡片。
 
-## 首次启动
+## 调整前
+
+![调整前的单网站外壳](before-refresh.png)
+
+## 首次启动与固定入口
 
 ![空工作台](empty-workspace.png)
 
-## 两个网址、两个固定入口
+![两个配置网站](configured-sites.png)
 
-![配置网站](configured-sites.png)
+## Copilot 确认与 Agent
 
-## Copilot 确认与 Agent 视图
+![1280×800 的确认状态](confirmation.png)
 
-![Copilot 确认](confirmation.png)
+![1440×900 的 Agent](agent.png)
 
-![Agent](agent.png)
+![失败与继续入口](failure.png)
 
-## 原样加载配置网站
+## 插件
 
-![森果配置测试，Linux 屏幕捕获](configured-senguo.png)
+![发现与安装](plugins-discover.png)
 
-视觉原则见 [统一视觉](../visual-system.md)，验证范围见 [本轮证据](../../experiments/2026-09-06-configurable-mvp.md)。
+![按需连接编程 AI](plugins-develop.png)
+
+## 历史实站证据
+
+以下是早期 Linux Electron 的森果公开页面加载截图，只说明原样加载配置网站，不代表本轮视觉或登录验收。
+
+![历史森果配置测试](configured-senguo.png)
+
+原则见 [统一视觉](../visual-system.md)，本轮验证见 [PC 视觉更新](../../experiments/2026-09-09-pc-visual-refresh.md)。

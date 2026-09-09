@@ -27,7 +27,7 @@ export function PluginPanel({
   const [error, setError] = useState('');
   const [working, setWorking] = useState(false);
   const [trusted, setTrusted] = useState(false);
-  const [developmentOpen, setDevelopmentOpen] = useState(false);
+  const [section, setSection] = useState<'installed' | 'discover' | 'develop'>('installed');
   useEffect(() => {
     let disposed = false;
     const refresh = (): void => {
@@ -56,6 +56,7 @@ export function PluginPanel({
       if (command.action === 'install') {
         setSource('');
         setTrusted(false);
+        setSection('installed');
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -65,116 +66,151 @@ export function PluginPanel({
   }
   return (
     <div className="plugin-panel">
-      <details
-        onToggle={(event) => {
-          setDevelopmentOpen(event.currentTarget.open);
-        }}
-      >
-        <summary>开发插件 · 连接编程 AI</summary>
-        {developmentOpen ? <DevelopmentPanel bridge={development} sites={sites} /> : null}
-      </details>
-      <p className="muted">从 DSH 社区市场安装本地扩展，为网站添加知识、技能和工具。</p>
-      <form
-        className="plugin-search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setError('');
-          setWorking(true);
-          void bridge
-            .search(query)
-            .then(setResults)
-            .catch((reason: unknown) => {
-              setError(String(reason));
-            })
-            .finally(() => {
-              setWorking(false);
-            });
-        }}
-      >
-        <input
-          aria-label="搜索插件"
-          placeholder="搜索市场中的插件"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-          }}
-        />
-        <button type="submit" disabled={working}>
-          搜索市场
-        </button>
-      </form>
-      {results.length ? (
-        <div className="plugin-results" aria-label="市场搜索结果">
-          {results.map((entry) => (
-            <article key={entry.url} className="plugin-result">
-              <strong>{entry.name}</strong>
-              <span className="muted">{entry.owner}</span>
-              <p>{entry.description}</p>
-              <button
-                disabled={working}
-                onClick={() => {
-                  setSource(entry.source);
+      <nav className="plugin-navigation" aria-label="插件栏目">
+        {(
+          [
+            ['installed', `已安装 · ${String(state.installed.length)}`],
+            ['discover', '发现'],
+            ['develop', '开发'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            aria-pressed={section === value}
+            onClick={() => {
+              setSection(value);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="plugin-content">
+        <section hidden={section !== 'discover'} aria-label="发现插件">
+          <p className="muted">从 DSH 社区市场安装本地扩展，为网站添加知识、技能和工具。</p>
+          <form
+            className="plugin-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setError('');
+              setWorking(true);
+              void bridge
+                .search(query)
+                .then(setResults)
+                .catch((reason: unknown) => {
+                  setError(String(reason));
+                })
+                .finally(() => {
+                  setWorking(false);
+                });
+            }}
+          >
+            <input
+              aria-label="搜索插件"
+              placeholder="搜索市场中的插件"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+            />
+            <button type="submit" disabled={working}>
+              搜索市场
+            </button>
+          </form>
+          {results.length ? (
+            <div className="plugin-results" aria-label="市场搜索结果">
+              {results.map((entry) => (
+                <article key={entry.url} className="plugin-result">
+                  <strong>{entry.name}</strong>
+                  <span className="muted">{entry.owner}</span>
+                  <p>{entry.description}</p>
+                  <button
+                    disabled={working}
+                    onClick={() => {
+                      setSource(entry.source);
+                      setTrusted(false);
+                    }}
+                  >
+                    选择安装
+                  </button>
+                </article>
+              ))}
+            </div>
+          ) : null}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run({ action: 'install', source: source.trim(), trusted: true });
+            }}
+          >
+            <label>
+              安装来源
+              <input
+                aria-label="插件安装来源"
+                value={source}
+                placeholder="npm 包名、GitHub 地址或 file:/ 本地插件目录"
+                required
+                onChange={(event) => {
+                  setSource(event.target.value);
                   setTrusted(false);
                 }}
+              />
+            </label>
+            <label className="plugin-trust">
+              <input
+                type="checkbox"
+                checked={trusted}
+                onChange={(event) => {
+                  setTrusted(event.target.checked);
+                }}
+              />
+              我信任此来源，并允许扩展在本机执行代码、访问文件和网络。
+            </label>
+            <button
+              className="primary"
+              disabled={working || state.busy || !trusted || !source.trim()}
+            >
+              安装插件
+            </button>
+          </form>
+        </section>
+        <section hidden={section !== 'installed'} aria-label="已安装插件">
+          <h3>已安装 · {state.installed.length}</h3>
+          {!state.installed.length ? (
+            <div className="plugin-empty">
+              <p>还没有安装插件。网站可以照常使用。</p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setSection('discover');
+                }}
               >
-                选择安装
+                发现插件
               </button>
-            </article>
+            </div>
+          ) : null}
+          {state.installed.map((plugin) => (
+            <PluginSettings
+              key={`${plugin.name}-${plugin.installationId}`}
+              plugin={plugin}
+              sites={sites}
+              busy={working || state.busy}
+              run={run}
+            />
           ))}
-        </div>
-      ) : null}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          void run({ action: 'install', source: source.trim(), trusted: true });
-        }}
-      >
-        <label>
-          安装来源
-          <input
-            aria-label="插件安装来源"
-            value={source}
-            placeholder="npm 包名、GitHub 地址或 file:/ 本地插件目录"
-            required
-            onChange={(event) => {
-              setSource(event.target.value);
-              setTrusted(false);
-            }}
-          />
-        </label>
-        <label className="plugin-trust">
-          <input
-            type="checkbox"
-            checked={trusted}
-            onChange={(event) => {
-              setTrusted(event.target.checked);
-            }}
-          />
-          我信任此来源，并允许扩展在本机执行代码、访问文件和网络。
-        </label>
-        <button className="primary" disabled={working || state.busy || !trusted || !source.trim()}>
-          安装插件
-        </button>
-      </form>
-      <p role="status" className="muted">
-        {state.progress || '安装后可启用、挂载到网站或随时取消。'}
-      </p>
-      {error ? (
-        <pre role="alert" className="plugin-error">
-          {error}
-        </pre>
-      ) : null}
-      <h3>已安装 · {state.installed.length}</h3>
-      {!state.installed.length ? <p className="muted">还没有安装插件。网站可以照常使用。</p> : null}
-      {state.installed.map((plugin) => (
-        <PluginSettings
-          key={`${plugin.name}-${plugin.installationId}`}
-          plugin={plugin}
-          sites={sites}
-          busy={working || state.busy}
-          run={run}
-        />
-      ))}
+        </section>
+        {section === 'develop' ? <DevelopmentPanel bridge={development} sites={sites} /> : null}
+      </div>
+      <div className="plugin-feedback" aria-live="polite">
+        <p role="status" className="muted">
+          {state.progress || '安装后可启用、挂载到网站或随时取消。'}
+        </p>
+        {error ? (
+          <pre role="alert" className="plugin-error">
+            {error}
+          </pre>
+        ) : null}
+      </div>
     </div>
   );
 }
