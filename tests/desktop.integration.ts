@@ -59,6 +59,20 @@ await test(
       await add(second.origin, 'Settings');
       await add(first.origin, 'Isolated account');
       await expect(shell.getByRole('tab')).toHaveCount(3);
+      const isolatedTab = shell.getByRole('tab', { name: 'Isolated account', exact: false });
+      await isolatedTab.focus();
+      await isolatedTab.press('Home');
+      await expect(shell.getByRole('tab', { name: 'Directory', exact: false })).toBeFocused();
+      await expect(shell.getByRole('tab', { name: 'Directory', exact: false })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      await shell.getByRole('tab', { name: 'Directory', exact: false }).press('ArrowRight');
+      await expect(shell.getByRole('tab', { name: 'Settings', exact: false })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+
       await expect
         .poll(
           () =>
