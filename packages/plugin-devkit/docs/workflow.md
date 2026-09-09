@@ -4,7 +4,7 @@
 
 ## 读取与选型
 
-先读取开发套件的版本和能力信息，再读取 [契约](contract.md)。只读查询先用 `PluginBrowserClient.observe()`；需要稳定的多步操作再使用 `act()`。当前 SDK 没有自动确认续跑、语义等待或外部开发会话连接，不能调用规划中的 API。
+先读取开发套件的版本和能力信息，再读取 [契约](contract.md)。只读查询先用 `PluginBrowserClient.observe()`；需要稳定的多步操作再使用 `act()`。模板通过内置 `deskworkBrowser` 服务创建客户端。外部开发连接从桌面主动开启后，通过 MCP 调试页面；自动确认续跑和语义等待尚未提供。
 
 ## 勘察与实现
 

@@ -8,6 +8,10 @@
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./dsh": {
+      "types": "./lib/dsh.d.ts",
+      "import": "./lib/dsh.js"
     }
   },
   "files": [
@@ -20,5 +24,13 @@
   },
   "dependencies": {
     "zod": "4.5.4"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
   }
 }

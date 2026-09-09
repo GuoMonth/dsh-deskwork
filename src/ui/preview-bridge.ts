@@ -150,6 +150,11 @@ export function createPreviewBridge(): DeskworkBridge {
     emit();
   }
   return {
+    development: {
+      state: () => Promise.resolve({ connected: false, siteId: null, configuration: '' }),
+      start: () => Promise.reject(new Error('请在桌面客户端开启开发连接')),
+      stop: () => Promise.resolve(),
+    },
     plugins: {
       state: () => Promise.resolve({ installed: [], busy: false, progress: '交互预览不安装插件' }),
       search: () => Promise.resolve([]),

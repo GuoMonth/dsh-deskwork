@@ -63,7 +63,7 @@ await test(
         name: 'deskwork_development_info',
         arguments: {},
       });
-      assert.match(JSON.stringify(information), /not-implemented/);
+      assert.match(JSON.stringify(information), /explicit-desktop-connection/);
       const search = await client.callTool({
         name: 'deskwork_search_documents',
         arguments: { query: '停止' },
@@ -96,7 +96,7 @@ await test(
       await run('npm', ['run', 'check'], { cwd: project });
       await run('npm', ['run', 'build'], { cwd: project });
       const compiled = await readFile(path.join(project, 'lib/index.js'), 'utf8');
-      assert.match(compiled, /@guomonth\/deskwork-plugin-sdk/);
+      assert.match(compiled, /ctx\.deskworkBrowser\.connect/);
       assert.doesNotMatch(compiled, /src\/runtime|src\/core/);
       await pack(project);
     } finally {

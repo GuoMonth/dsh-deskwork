@@ -1,4 +1,4 @@
 - insert:
     - id: deskwork-example-plugin
       name: deskwork-example-plugin
-      inject: [tools]
+      inject: [tools, deskworkBrowser]

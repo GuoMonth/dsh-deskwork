@@ -28,7 +28,7 @@
 
 ## M3：AI 插件开发套件
 
-用户已同意优先建设第三方开发能力，当前搭建可运行骨架。规格见 [M3](specs/m3-plugin-development-kit.md)，对外入口见 [Devkit](../packages/plugin-devkit/README.md)。
+开发骨架已通过 PR #19 合并；第二阶段已实现内置服务、开发指南和外部 MCP 连接，正在功能验证与 PR 交付。规格见 [M3](specs/m3-plugin-development-kit.md)，对外入口见 [Devkit](../packages/plugin-devkit/README.md)。
 
 1. **开发骨架**：公开 SDK、模板、随包指南、原生开发 Skill 与只读 MCP stdio；验证仓库外创建和编译插件。
 2. **连接与执行**：内置 DSH 浏览器服务、外部 AI 绑定开发页面、调试与明确的暂停／恢复状态。
