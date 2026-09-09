@@ -13,4 +13,4 @@ Read [the development workflow](../../docs/workflow.md), then [the host contract
 - Check the generated package outside the Deskwork repository. Distinguish compilation, fixture behavior, real website behavior and marketplace availability in the result.
 - Use the existing DSH package and marketplace route. Publishing is a separate external action that follows the user's authorization. Never ship credentials or business records.
 
-For local setup and MCP configuration, read [the kit entrypoint](../../README.md). Current external browser debugging and automatic confirmation resumption are not implemented; do not invent those APIs.
+For local setup and MCP configuration, read [the kit entrypoint](../../README.md). For browser debugging, ask the user to select a website and enable the development connection in Deskwork; use its generated MCP configuration. Confirm writes in the desktop UI. After confirmation, read status and reobserve before continuing. Automatic resumption of plugin function stacks is not provided.

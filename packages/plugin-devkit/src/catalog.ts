@@ -37,8 +37,10 @@ export const developmentCapabilities = {
   sdkPackage: '@guomonth/deskwork-plugin-sdk',
   sdkVersion: '0.1.0-alpha.1',
   documentation: 'offline',
-  browserConnection: 'not-implemented',
+  browserConnection: 'explicit-desktop-connection',
   browserSdk: ['observe', 'act'],
+  builtinDshService: 'deskworkBrowser',
+  bundledDevelopmentSkill: true,
   automaticConfirmationResume: false,
   compatibilityPromise: false,
 } as const;

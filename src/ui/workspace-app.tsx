@@ -828,7 +828,11 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
               }
             />
           ) : dialog.kind === 'plugins' ? (
-            <PluginPanel bridge={bridge.plugins} sites={snapshot.workspace.sites} />
+            <PluginPanel
+              bridge={bridge.plugins}
+              sites={snapshot.workspace.sites}
+              development={bridge.development}
+            />
           ) : dialog.kind === 'settings' ? (
             <ModelForm
               bridge={bridge}

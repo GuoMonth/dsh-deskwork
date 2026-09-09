@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { BrowserActionResult } from '../../packages/plugin-sdk/src/index.ts';
 import { idleTask } from './contracts.ts';
 import { pluginReadActionIsAllowed } from './plugin-action-policy.ts';
 import type {
@@ -67,7 +68,7 @@ export class TaskController {
   async propose(
     proposal: ActionProposal,
     pluginEffect?: 'read' | 'write' | 'unknown',
-  ): Promise<{ status: string }> {
+  ): Promise<BrowserActionResult> {
     if (this.busy || this.state.status !== 'running') throw new Error('任务未运行或正在等待确认');
     this.busy = true;
     const generation = this.generation;
@@ -85,7 +86,10 @@ export class TaskController {
         this.state.status = 'waiting-user';
         this.state.detail = '请确认即将执行的操作';
         await this.step(proposal.summary);
-        return { status: 'waiting-for-human-confirmation' };
+        return {
+          status: 'waiting-for-human-confirmation',
+          confirmationId: this.state.confirmation.id,
+        };
       }
       await this.browser.execute(
         this.target(),

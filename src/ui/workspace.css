@@ -1,6 +1,34 @@
 * {
   box-sizing: border-box;
 }
+.development-panel {
+  padding: var(--space-four) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.development-panel label {
+  display: grid;
+  gap: var(--space-two);
+  margin-bottom: var(--space-three);
+}
+.development-panel textarea,
+.development-panel select {
+  width: 100%;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: var(--space-two);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.development-panel textarea {
+  font-size: var(--font-small);
+  resize: vertical;
+}
+.development-actions {
+  display: flex;
+  gap: var(--space-two);
+  margin-bottom: var(--space-three);
+}
 body {
   margin: 0;
   font-family: var(--font-family);

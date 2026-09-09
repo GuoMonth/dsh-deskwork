@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { observationSchema, proposalSchema } from './contracts.ts';
 import type { BrowserAction, PageObservation } from './contracts.ts';
+import { actionResultSchema } from './development-contracts.ts';
+import type { BrowserActionResult } from './development-contracts.ts';
 const mountedPluginSchema = z.object({
   name: z.string(),
   mountName: z.string().min(1),
@@ -45,7 +47,7 @@ export class PluginBrowserClient {
     action: BrowserAction,
     effect: 'read' | 'write' | 'unknown',
     summary: string,
-  ): Promise<void> {
+  ): Promise<BrowserActionResult> {
     const proposal = proposalSchema.parse({
       pageId: observation.pageId,
       revision: observation.revision,
@@ -53,10 +55,8 @@ export class PluginBrowserClient {
       summary,
       risk: effect === 'write' ? 'consequential' : 'ordinary',
     });
-    const result = z
-      .object({ status: z.string() })
-      .parse(await this.call('plugin_action', { mountName: this.mountName, effect, proposal }));
-    if (result.status !== 'executed-observe-again')
-      throw new Error('等待用户确认；不要重复动作，确认后重新观察继续。');
+    return actionResultSchema.parse(
+      await this.call('plugin_action', { mountName: this.mountName, effect, proposal }),
+    );
   }
 }

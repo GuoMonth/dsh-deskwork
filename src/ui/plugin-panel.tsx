@@ -8,13 +8,17 @@ import type {
   InstalledPlugin,
 } from '../core/plugin-contracts.ts';
 import type { Site } from '../core/contracts.ts';
+import { DevelopmentPanel } from './development-panel.tsx';
+import type { DevelopmentBridge } from '../core/development-contracts.ts';
 
 export function PluginPanel({
   bridge,
   sites,
+  development,
 }: {
   bridge: PluginBridge;
   sites: readonly Site[];
+  development: DevelopmentBridge;
 }): ReactElement {
   const [state, setState] = useState<PluginState>({ installed: [], busy: false, progress: '' });
   const [results, setResults] = useState<MarketPlugin[]>([]);
@@ -23,6 +27,7 @@ export function PluginPanel({
   const [error, setError] = useState('');
   const [working, setWorking] = useState(false);
   const [trusted, setTrusted] = useState(false);
+  const [developmentOpen, setDevelopmentOpen] = useState(false);
   useEffect(() => {
     let disposed = false;
     const refresh = (): void => {
@@ -60,6 +65,14 @@ export function PluginPanel({
   }
   return (
     <div className="plugin-panel">
+      <details
+        onToggle={(event) => {
+          setDevelopmentOpen(event.currentTarget.open);
+        }}
+      >
+        <summary>开发插件 · 连接编程 AI</summary>
+        {developmentOpen ? <DevelopmentPanel bridge={development} sites={sites} /> : null}
+      </details>
       <p className="muted">从 DSH 社区市场安装本地扩展，为网站添加知识、技能和工具。</p>
       <form
         className="plugin-search"

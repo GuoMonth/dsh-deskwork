@@ -20,7 +20,13 @@ export function apply(ctx: Context): void {
         const filter = page.elements.find((element) => element.name === '类别');
         if (!filter) throw new Error('Page changed: missing category filter');
         if (filter.options) return JSON.stringify(filter.options);
-        await client.act(page, { kind: 'click', ref: filter.ref }, 'read', '展开类别筛选');
+        const action = await client.act(
+          page,
+          { kind: 'click', ref: filter.ref },
+          'read',
+          '展开类别筛选',
+        );
+        if (action.status !== 'executed-observe-again') return JSON.stringify(action);
         page = await client.observe();
         return page.text;
       },
