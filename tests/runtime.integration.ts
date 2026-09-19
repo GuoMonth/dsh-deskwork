@@ -38,6 +38,9 @@ await test(
           [
             'skill',
             'deskwork_developer_docs',
+            'list_mcp_resources',
+            'list_mcp_resource_templates',
+            'read_mcp_resource',
             'mcp__deskwork__observe_page',
             'mcp__deskwork__list_pages',
             'mcp__deskwork__select_page',
@@ -134,7 +137,7 @@ await test(
           timer.unref();
         }),
       ]);
-      assert.deepEqual(calls, ['observe_page']);
+      assert.deepEqual(calls, ['observe_page'], JSON.stringify(notifications));
       assert.equal(requests, 2);
       assert.equal(
         receivedDeskworkPersona,

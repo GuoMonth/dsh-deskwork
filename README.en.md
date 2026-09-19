@@ -1,5 +1,6 @@
 # DSH Deskwork
 
+DSH runtime baseline: **`0.1.6-alpha.2`** (explicitly pinned prerelease), with Electron **`44.0.0`**. See the [upgrade record](docs/experiments/2026-09-19-dsh-016-alignment.md). Browser Use / Computer Use providers are not enabled by this upgrade.
 **Sign in to your business systems. Let AI help get the work done.**
 
 An AI desktop workspace for ERP and business operations, powered by DeepSeek Harness.
