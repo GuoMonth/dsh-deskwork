@@ -1,5 +1,6 @@
 # DSH Deskwork
 
+DSH 运行时基线：**`0.1.6-alpha.2`**（精确锁定的预发布版本）。桌面运行时固定 Electron `44.0.0`，原因和验证见[升级记录](docs/experiments/2026-09-19-dsh-016-alignment.md)。本次升级尚未启用上游 Browser Use / Computer Use 提供方。
 **登录你的业务系统，让 AI 帮你把事办完。**
 
 An AI desktop workspace for ERP and business operations, powered by DeepSeek Harness.
