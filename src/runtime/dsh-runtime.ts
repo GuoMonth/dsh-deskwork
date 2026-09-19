@@ -66,6 +66,8 @@ export class DshRuntime {
         id: 'llm-deepseek',
         config: {
           apiKeyEnv: 'DEEPSEEK_API_KEY',
+          // Keep the existing Deskwork endpoint contract when DSH defaults to Messages.
+          protocol: 'chat-completions',
           ...(options.baseURL ? { baseURL: options.baseURL } : {}),
           thinking: 'disabled',
           maxTokens: 8192,
