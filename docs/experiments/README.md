@@ -13,3 +13,5 @@
 - [AI 反馈成本与 host 隔离](2026-09-05-ai-feedback-loop.md)：同源码完整检查约快 59%，跨文件类型负对照有效；host 模式通过，chromium 模式失败未自动降级。
 
 - [DSH 0.1.6-alpha.2 对齐](2026-09-19-dsh-016-alignment.md)：运行时、Electron 加载器与插件回归。
+
+- [官方桌面端与浏览器复用调研](2026-10-01-official-desktop-research.md)：DSH 0.2.0-rc.2 的真实附加实验、协议迁移发现与升级方案。
