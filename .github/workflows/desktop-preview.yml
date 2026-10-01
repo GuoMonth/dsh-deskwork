@@ -26,7 +26,8 @@ jobs:
       - run: npm run experiment:prepare
       - run: npm run build
       - run: node --test tests/runtime.integration.ts tests/desktop.integration.ts tests/browser-boundary.integration.ts tests/plugin-runtime.integration.ts tests/plugin-desktop.integration.ts tests/development-desktop.integration.ts
-      - run: npm run package:mac > .artifacts/package-mac.log 2>&1
+      - run: npm run package:prepare > .artifacts/package-mac.log 2>&1
+      - run: node node_modules/electron-builder/cli.js --mac --arm64 --publish never >> .artifacts/package-mac.log 2>&1
         env:
           # Preview uses ad-hoc signing only; this job receives no signing credentials.
           CSC_FOR_PULL_REQUEST: 'true'
