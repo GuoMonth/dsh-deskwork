@@ -47,7 +47,7 @@ export class Pages {
       entry.site.id !== target.tabId ||
       entry.site.sessionId !== target.sessionId
     )
-      throw new Error('目标页面不属于当前网站，或已关闭');
+      throw new Error('The target page does not belong to this website or has closed');
     return entry;
   }
   select(target: TaskTarget, pageId: string): void {
@@ -84,7 +84,7 @@ export class Pages {
     this.window.contentView.addChildView(view);
     this.attach(entry);
     void view.webContents.loadURL(site.url).catch(() => {
-      entry.page.title = '无法打开网站 · 请检查网址或网络';
+      entry.page.title = 'Cannot open the website · Check the URL or network';
       this.changed();
     });
     this.layout();
@@ -165,7 +165,7 @@ export class Pages {
         page: {
           id: `page-${randomUUID()}`,
           siteId: entry.site.id,
-          title: '新页面',
+          title: 'New page',
           url: popup.webContents.getURL(),
           popup: true,
         },
@@ -187,7 +187,7 @@ export class Pages {
     contents.on('render-process-gone', () => {
       entry.epoch++;
       this.takeover(entry.site.id);
-      entry.page.title = '页面进程已退出，请刷新';
+      entry.page.title = 'The page process exited. Refresh the page.';
       this.changed();
     });
   }
@@ -231,7 +231,7 @@ export class Pages {
   }
   closePopup(pageId: string): void {
     const entry = this.entries.get(pageId);
-    if (!entry?.popupWindow) throw new Error('固定入口请使用网站设置移除');
+    if (!entry?.popupWindow) throw new Error('Remove pinned entries from website settings');
     entry.popupWindow.close();
   }
   async close(): Promise<void> {
@@ -242,7 +242,7 @@ export class Pages {
     const entry = [...this.entries.values()].find(
       (value) => value.site.id === siteId && value.page.id === this.selected.get(siteId),
     );
-    if (!entry) throw new Error('页面已关闭');
+    if (!entry) throw new Error('Page closed');
     entry.epoch++;
     this.takeover(siteId);
     await entry.contents.loadURL(entry.contents.getURL() || entry.page.url || entry.site.url);

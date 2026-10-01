@@ -46,6 +46,9 @@ export function createPreviewBridge(): DeskworkBridge {
       case 'select-site':
         snapshot.activeSiteId = siteId;
         break;
+      case 'language':
+        snapshot.workspace.locale = command.locale;
+        break;
       case 'settings':
         snapshot.runtimeConfigured = true;
         break;
@@ -60,27 +63,27 @@ export function createPreviewBridge(): DeskworkBridge {
           status: 'running',
           title: command.text,
           target: { tabId: site.id, sessionId: site.sessionId },
-          detail: '交互预览：正在观察页面',
+          detail: 'Preview: observing the page',
         };
         snapshot.runningSiteId = site.id;
         emit();
         await new Promise<void>((resolve) => setTimeout(resolve, 700));
         if (current.task.status !== 'running') return;
-        if (/失败/.test(command.text)) {
+        if (/fail|失败/i.test(command.text)) {
           current.task.status = 'failed';
-          current.task.detail = '预览：页面无法定位，请查看页面后重试';
+          current.task.detail = 'Preview: cannot locate the page. Check it and retry.';
           snapshot.runningSiteId = null;
-        } else if (/确认/.test(command.text)) {
+        } else if (/confirm|确认/i.test(command.text)) {
           const observation = {
             pageId: 'preview-page',
             revision: 'preview',
             url: site.url,
             title: site.name,
-            text: '交互预览',
+            text: 'Interactive preview',
             elements: [],
           };
           current.task.status = 'waiting-user';
-          current.task.detail = '预览：请核对即将执行的动作';
+          current.task.detail = 'Preview: review the action to execute';
           current.task.confirmation = {
             id: crypto.randomUUID(),
             observation,
@@ -89,18 +92,18 @@ export function createPreviewBridge(): DeskworkBridge {
               revision: 'preview',
               action: { kind: 'click', ref: 'e0' },
               risk: 'consequential',
-              summary: '提交当前页面中已核对的内容（交互示例）',
+              summary: 'Submit the reviewed content on this page (interactive example)',
             },
           };
         } else {
           current.task.status = 'succeeded';
-          current.task.detail = '预览：查询完成';
+          current.task.detail = 'Preview: query complete';
           snapshot.runningSiteId = null;
         }
         current.messages.push({
           id: crypto.randomUUID(),
           role: 'assistant',
-          text: '这是工作台交互预览。桌面客户端会在这里读取你配置的网站，并显示实际操作步骤。',
+          text: 'This is an interactive workspace preview. The desktop app reads your configured websites and shows the actual execution steps here.',
         });
         break;
       }
@@ -109,21 +112,21 @@ export function createPreviewBridge(): DeskworkBridge {
           context.task.confirmation = null;
           context.task.requiresVerification = true;
           context.task.status = 'verifying';
-          context.task.detail = '预览：请在原页面核对结果';
+          context.task.detail = 'Preview: verify the result on the original page';
         }
         break;
       case 'stop':
         if (context) {
           context.task.status = context.task.requiresVerification ? 'verifying' : 'paused';
           context.task.confirmation = null;
-          context.task.detail = '已停止，可以接手页面';
+          context.task.detail = 'Stopped. You can take over the page';
           snapshot.runningSiteId = context.task.requiresVerification ? siteId : null;
         }
         break;
       case 'resume':
         if (context) {
           context.task.status = 'succeeded';
-          context.task.detail = '预览：重新观察完成';
+          context.task.detail = 'Preview: observation complete';
           snapshot.runningSiteId = null;
         }
         break;
@@ -131,7 +134,7 @@ export function createPreviewBridge(): DeskworkBridge {
         if (context) {
           context.task.status = command.outcome === 'verified' ? 'succeeded' : 'paused';
           context.task.requiresVerification = false;
-          context.task.detail = '预览：用户已核对';
+          context.task.detail = 'Preview: result reviewed';
           snapshot.runningSiteId = null;
         }
         break;
@@ -152,13 +155,18 @@ export function createPreviewBridge(): DeskworkBridge {
   return {
     development: {
       state: () => Promise.resolve({ connected: false, siteId: null, configuration: '' }),
-      start: () => Promise.reject(new Error('请在桌面客户端开启开发连接')),
+      start: () => Promise.reject(new Error('Start a development connection in the desktop app')),
       stop: () => Promise.resolve(),
     },
     plugins: {
-      state: () => Promise.resolve({ installed: [], busy: false, progress: '交互预览不安装插件' }),
+      state: () =>
+        Promise.resolve({
+          installed: [],
+          busy: false,
+          progress: 'The preview does not install plugins',
+        }),
       search: () => Promise.resolve([]),
-      command: () => Promise.reject(new Error('请在桌面客户端安装插件')),
+      command: () => Promise.reject(new Error('Install plugins in the desktop app')),
     },
     snapshot: () => Promise.resolve(structuredClone(snapshot)),
     command,

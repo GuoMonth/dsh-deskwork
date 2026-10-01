@@ -38,7 +38,8 @@ export class StateStore {
     if (raw === undefined) return structuredClone(defaultWorkspace);
     const version = z.object({ version: z.number() }).parse(raw).version;
     if (version === 2) return workspaceSchema.parse(raw);
-    if (version !== 1) throw new Error('配置版本不受支持，请保留原文件');
+    if (version !== 1)
+      throw new Error('Unsupported configuration version. Keep the original file.');
     const old = z
       .object({
         version: z.literal(1),

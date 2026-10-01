@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "我的工作台",
+  "sites": [
+    {
+      "id": "example-example-erp",
+      "name": "示例 ERP（可选测试样例）",
+      "url": "https://erp.example.test/",
+      "sessionId": "example-example-erp"
+    }
+  ]
+}

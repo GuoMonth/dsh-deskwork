@@ -76,7 +76,7 @@ await test('host catches visible writes and unknown effects; stop invalidates su
       href: '',
       disabled: false,
     };
-    await env.controller.start({ tabId: 'site', sessionId: 'session' }, '更新');
+    await env.controller.start({ tabId: 'site', sessionId: 'session' }, 'Update');
     const proposal = {
       pageId: 'page',
       revision: 'r1',

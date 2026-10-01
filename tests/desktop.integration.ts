@@ -37,7 +37,7 @@ await test(
     }
     try {
       let shell = await shellPage();
-      await expect(shell.getByRole('heading', { name: '你的工作，一个入口。' })).toBeVisible();
+      await expect(shell.getByRole('heading', { name: 'Your work, in one place.' })).toBeVisible();
       await application.evaluate(({ BrowserWindow }) => {
         BrowserWindow.getAllWindows()[0]?.setSize(1366, 768);
       });
@@ -45,14 +45,16 @@ await test(
         await shell.locator('.conversation').evaluate((element) => element.scrollTop),
         0,
       );
-      await expect(shell.getByRole('heading', { name: '今天，有什么需要处理？' })).toBeVisible();
+      await expect(
+        shell.getByRole('heading', { name: 'What would you like to work on today?' }),
+      ).toBeVisible();
       async function add(url: string, name: string): Promise<void> {
-        await shell.getByRole('button', { name: '添加固定网站', exact: true }).click();
-        await shell.getByLabel('网站网址', { exact: true }).fill(url);
-        await shell.getByLabel('名称', { exact: false }).fill(name);
+        await shell.getByRole('button', { name: 'Add pinned website', exact: true }).click();
+        await shell.getByLabel('Website URL', { exact: true }).fill(url);
+        await shell.getByLabel('Name', { exact: false }).fill(name);
         await shell
           .getByRole('dialog')
-          .getByRole('button', { name: '添加网站', exact: true })
+          .getByRole('button', { name: 'Add website', exact: true })
           .click();
         await expect(shell.getByRole('dialog')).toHaveCount(0);
       }
@@ -93,8 +95,8 @@ await test(
       await expect(firstPage.getByText('已登录测试账号')).toBeVisible();
       await expect(isolatedPage.getByText('登录演示账号')).toBeVisible();
       await shell.getByRole('tab', { name: 'Isolated account', exact: false }).click();
-      await shell.getByRole('button', { name: '网站设置', exact: true }).click();
-      await shell.getByRole('button', { name: '移除此入口（保留网站数据）' }).click();
+      await shell.getByRole('button', { name: 'Website settings', exact: true }).click();
+      await shell.getByRole('button', { name: 'Remove this entry (keep website data)' }).click();
       await expect(shell.getByRole('tab')).toHaveCount(2);
       await shell.getByRole('tab', { name: 'Directory', exact: false }).click();
       await firstPage.getByText('打开临时页面').click();
@@ -122,15 +124,15 @@ await test(
           await page.getByText('登录演示账号').click();
         }
         await shell
-          .getByRole('textbox', { name: '告诉 DSH 你的目标' })
+          .getByRole('textbox', { name: 'Tell DSH your goal' })
           .fill(`Update ${name} to Deskwork verified change`);
-        await shell.getByRole('button', { name: '发送任务' }).click();
-        await expect(shell.getByRole('button', { name: '确认并执行' })).toBeVisible({
+        await shell.getByRole('button', { name: 'Send task' }).click();
+        await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
           timeout: 30000,
         });
         assert.equal(website.writes(), 0);
         await shell.getByRole('button', { name: 'Agent', exact: true }).click();
-        await expect(shell.getByRole('button', { name: '查看页面', exact: true })).toBeVisible();
+        await expect(shell.getByRole('button', { name: 'View page', exact: true })).toBeVisible();
         await expect
           .poll(async () =>
             application.evaluate(
@@ -141,20 +143,20 @@ await test(
             ),
           )
           .toBe(0);
-        await shell.getByRole('button', { name: '确认并执行' }).click();
+        await shell.getByRole('button', { name: 'Confirm and execute' }).click();
         await expect(
           shell
             .locator('.change-preview')
             .getByText('提交当前内容，并刷新核对结果', { exact: true }),
         ).toBeVisible({ timeout: 30000 });
         assert.equal(website.writes(), 0);
-        await shell.getByRole('button', { name: '确认并执行' }).click();
-        await expect(shell.getByText('本轮已完成', { exact: true })).toBeVisible({
+        await shell.getByRole('button', { name: 'Confirm and execute' }).click();
+        await expect(shell.getByText('Turn completed', { exact: true })).toBeVisible({
           timeout: 30000,
         });
         assert.equal(website.value(), 'Deskwork verified change');
         assert.equal(website.writes(), 1);
-        await shell.getByRole('button', { name: '查看页面', exact: true }).click();
+        await shell.getByRole('button', { name: 'View page', exact: true }).click();
         await expect
           .poll(async () =>
             application.evaluate(
@@ -205,33 +207,35 @@ await test(
       second.rejectWrites();
       second.reset();
       await shell.getByRole('tab', { name: 'Settings', exact: false }).click();
-      await shell.getByRole('button', { name: '刷新网站' }).click();
+      await shell.getByRole('button', { name: 'Refresh website' }).click();
       await shell
-        .getByRole('textbox', { name: '告诉 DSH 你的目标' })
+        .getByRole('textbox', { name: 'Tell DSH your goal' })
         .fill('Update Settings to Deskwork verified change');
-      await shell.getByRole('button', { name: '发送任务' }).click();
-      await expect(shell.getByRole('button', { name: '确认并执行' })).toBeVisible({
+      await shell.getByRole('button', { name: 'Send task' }).click();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
         timeout: 30000,
       });
-      await shell.getByRole('button', { name: '确认并执行' }).click();
+      await shell.getByRole('button', { name: 'Confirm and execute' }).click();
       await expect(
         shell.locator('.change-preview').getByText('提交当前内容，并刷新核对结果', { exact: true }),
       ).toBeVisible({ timeout: 30000 });
-      await shell.getByRole('button', { name: '确认并执行' }).click();
-      await expect(shell.getByText('结果待核对', { exact: true })).toBeVisible({ timeout: 30000 });
+      await shell.getByRole('button', { name: 'Confirm and execute' }).click();
+      await expect(shell.getByText('Result needs verification', { exact: true })).toBeVisible({
+        timeout: 30000,
+      });
       assert.equal(second.writes(), 1);
       assert.equal(second.value(), 'Original');
-      await shell.getByRole('button', { name: '确认未生效，结束核对' }).click();
+      await shell.getByRole('button', { name: 'Not applied: finish verification' }).click();
       // Switching tabs cannot retarget the pending task; manual input revokes its confirmation.
       await shell
-        .getByRole('textbox', { name: '告诉 DSH 你的目标' })
+        .getByRole('textbox', { name: 'Tell DSH your goal' })
         .fill('Update Settings to Deskwork verified change');
-      await shell.getByRole('button', { name: '发送任务' }).click();
-      await expect(shell.getByRole('button', { name: '确认并执行' })).toBeVisible({
+      await shell.getByRole('button', { name: 'Send task' }).click();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
         timeout: 30000,
       });
       await shell.getByRole('tab', { name: 'Directory', exact: false }).click();
-      await expect(shell.getByRole('textbox', { name: '告诉 DSH 你的目标' })).toBeDisabled();
+      await expect(shell.getByRole('textbox', { name: 'Tell DSH your goal' })).toBeDisabled();
       await shell.getByRole('tab', { name: 'Settings', exact: false }).click();
       const liveSecond = application
         .windows()
@@ -246,15 +250,15 @@ await test(
         contents.sendInputEvent({ type: 'keyDown', keyCode: 'A' });
         contents.sendInputEvent({ type: 'keyUp', keyCode: 'A' });
       }, second.origin);
-      await expect(shell.getByText('已暂停 · 可以接手', { exact: true })).toBeVisible();
-      await expect(shell.getByRole('button', { name: '确认并执行' })).toHaveCount(0);
+      await expect(shell.getByText('Paused · You can take over', { exact: true })).toBeVisible();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toHaveCount(0);
       assert.equal(second.writes(), 1);
       // Expired identity invalidates a pending confirmation without requiring a page click.
       await shell
-        .getByRole('textbox', { name: '告诉 DSH 你的目标' })
+        .getByRole('textbox', { name: 'Tell DSH your goal' })
         .fill('Update Settings to Deskwork verified change');
-      await shell.getByRole('button', { name: '发送任务' }).click();
-      await expect(shell.getByRole('button', { name: '确认并执行' })).toBeVisible({
+      await shell.getByRole('button', { name: 'Send task' }).click();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
         timeout: 30000,
       });
       const pending = await shell.evaluate(async () => window.deskwork?.snapshot());
@@ -272,8 +276,8 @@ await test(
         if (!contents) throw new Error('No website');
         await contents.session.cookies.remove(origin, 'identity');
       }, second.origin);
-      await expect(shell.getByText('已暂停 · 可以接手', { exact: true })).toBeVisible();
-      await expect(shell.getByRole('button', { name: '确认并执行' })).toHaveCount(0);
+      await expect(shell.getByText('Paused · You can take over', { exact: true })).toBeVisible();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toHaveCount(0);
       const staleError = await shell.evaluate(async (command) => {
         if (!window.deskwork) throw new Error('No bridge');
         try {
@@ -283,9 +287,9 @@ await test(
           return String(error);
         }
       }, staleCommand);
-      assert.match(staleError, /确认已失效/);
+      assert.match(staleError, /Confirmation expired/);
       assert.equal(second.writes(), 1);
-      await shell.getByRole('button', { name: '刷新网站' }).click();
+      await shell.getByRole('button', { name: 'Refresh website' }).click();
       await expect(liveSecond.getByText('登录演示账号')).toBeVisible();
       first.reset();
       second.reset();
