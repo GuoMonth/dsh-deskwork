@@ -8,6 +8,7 @@ import { createServer } from 'node:http';
 import { z } from 'zod';
 import { PluginManager } from '../src/host/plugin-manager.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
+import { readMessagesRequest, writeMessagesResponse } from './fixtures/messages.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
 for (const scenario of [
@@ -64,57 +65,25 @@ for (const scenario of [
     });
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
-        let body = '';
-        request.setEncoding('utf8');
-        for await (const chunk of request) {
-          if (typeof chunk === 'string') body += chunk;
-        }
-        const parsed = z
-          .object({
-            tools: z.array(
-              z.object({
-                function: z.object({
-                  name: z.string(),
-                  parameters: z.object({ type: z.literal('object') }).loose(),
-                }),
-              }),
-            ),
-          })
-          .parse(JSON.parse(body));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === scenario.tool));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === 'skill'));
+        const parsed = await readMessagesRequest(request);
+        const body = JSON.stringify(parsed);
+        assert.ok(parsed.tools.some((tool) => tool.name === scenario.tool));
+        assert.ok(parsed.tools.some((tool) => tool.name === 'skill'));
         modelCalls++;
         const name = modelCalls === 1 ? 'skill' : scenario.tool;
-        const delta =
-          modelCalls < 3
-            ? {
-                role: 'assistant',
-                tool_calls: [
-                  {
-                    index: 0,
-                    id: `plugin-${String(modelCalls)}`,
-                    type: 'function',
-                    function: {
-                      name,
-                      arguments:
-                        modelCalls === 1
-                          ? JSON.stringify({ name: scenario.skill })
-                          : scenario.arguments,
-                    },
-                  },
-                ],
-              }
-            : { role: 'assistant', content: '已读取类别选项。' };
         if (modelCalls === 3) {
           assert.ok(body.includes(scenario.evidence));
           complete?.();
         }
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify({ id: 'plugin-model', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
-        );
-        response.end(
-          `data: ${JSON.stringify({ id: 'plugin-model', choices: [{ index: 0, delta: {}, finish_reason: modelCalls < 3 ? 'tool_calls' : 'stop' }] })}\n\ndata: [DONE]\n\n`,
+        writeMessagesResponse(
+          response,
+          modelCalls < 3
+            ? {
+                name,
+                input: modelCalls === 1 ? { name: scenario.skill } : JSON.parse(scenario.arguments),
+              }
+            : '已读取类别选项。',
+          `plugin-${String(modelCalls)}`,
         );
       };
       void handle().catch((error: unknown) => {

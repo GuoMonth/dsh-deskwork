@@ -18,6 +18,7 @@ await test(
     const executablePath = process.env['DESKWORK_TEST_EXECUTABLE'];
     const launchOptions = {
       ...(executablePath ? { executablePath } : {}),
+      cwd: process.env['DESKWORK_TEST_WORKING_DIRECTORY'] ?? resolve('.'),
       args: [
         ...(executablePath ? [] : [resolve('.')]),
         `--profile-directory=${directory}`,
