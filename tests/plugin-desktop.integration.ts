@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { createServer } from 'node:http';
 import { _electron as electron, expect } from '@playwright/test';
 import { z } from 'zod';
+import { respondMessages } from './fixtures/messages.ts';
 
 await test(
   'desktop plugin installation, two page structures, independent targets and lifecycle',
@@ -30,32 +31,26 @@ await test(
         }
         const parsed = z
           .object({
-            messages: z.array(z.object({ role: z.string() }).loose()),
-            tools: z.array(z.object({ function: z.object({ name: z.string() }) })),
+            messages: z.array(z.object({ role: z.string(), content: z.unknown() }).loose()),
+            tools: z.array(z.object({ name: z.string() })),
           })
           .parse(JSON.parse(body));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === 'fixture_query'));
-        const finished = parsed.messages.some((message) => message.role === 'tool');
-        const delta = finished
-          ? { role: 'assistant', content: '查询完成，已读取类别。' }
-          : {
-              role: 'assistant',
-              tool_calls: [
-                {
-                  index: 0,
-                  id: `query-${String(++replies)}`,
-                  type: 'function',
-                  function: { name: 'fixture_query', arguments: '{}' },
-                },
-              ],
-            };
-        if (finished) assert.ok(body.includes('货款'));
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify({ id: 'query', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
+        assert.ok(parsed.tools.some((tool) => tool.name === 'fixture_query'));
+        const finished = parsed.messages.some(
+          (message) =>
+            message.role === 'user' &&
+            Array.isArray(message.content) &&
+            message.content.some(
+              (block: unknown) =>
+                z.object({ type: z.literal('tool_result') }).safeParse(block).success,
+            ),
         );
-        response.end(
-          `data: ${JSON.stringify({ id: 'query', choices: [{ index: 0, delta: {}, finish_reason: finished ? 'stop' : 'tool_calls' }] })}\n\ndata: [DONE]\n\n`,
+        if (finished) assert.ok(body.includes('货款'));
+        respondMessages(
+          response,
+          finished
+            ? { id: 'query-finished', text: '查询完成，已读取类别。' }
+            : { id: `query-${String(++replies)}`, tool: { name: 'fixture_query', input: {} } },
         );
       };
       void handle().catch((error: unknown) => {
