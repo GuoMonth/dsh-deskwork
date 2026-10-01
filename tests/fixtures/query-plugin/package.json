@@ -11,5 +11,8 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "scripts": {
+    "postinstall": "node lib/install-check.js"
   }
 }
