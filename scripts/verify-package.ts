@@ -53,35 +53,33 @@ try {
   )
     throw new Error('随包可执行文件与运行时清单不匹配');
 
-  const child = spawn(
-    process.execPath,
-    [
-      '--test',
-      'tests/runtime.integration.ts',
-      'tests/desktop.integration.ts',
-      'tests/plugin-runtime.integration.ts',
-      'tests/plugin-desktop.integration.ts',
-      'tests/development-desktop.integration.ts',
-    ],
-    {
-      env: {
-        ...process.env,
-        PATH: emptyPath,
-        NODE_PATH: '',
-        NODE_OPTIONS: '',
-        DESKWORK_TEST_WORKING_DIRECTORY: verification,
-        DESKWORK_TEST_EXECUTABLE: executable,
-        DESKWORK_TEST_RESOURCES: resources,
-      },
-      stdio: 'inherit',
-    },
-  );
-  const code = await new Promise<number>((resolve, reject: (error: Error) => void) => {
-    child.once('error', reject);
-    child.on('close', (code) => {
-      resolve(code ?? 1);
+  const environment: NodeJS.ProcessEnv = {
+    ...process.env,
+    PATH: emptyPath,
+    NODE_PATH: '',
+    NODE_OPTIONS: '',
+    DESKWORK_TEST_WORKING_DIRECTORY: verification,
+    DESKWORK_TEST_EXECUTABLE: executable,
+    DESKWORK_TEST_RESOURCES: resources,
+  };
+  const runChecks = async (args: string[]): Promise<number> => {
+    const child = spawn(process.execPath, args, { env: environment, stdio: 'inherit' });
+    return new Promise<number>((resolve, reject: (error: Error) => void) => {
+      child.once('error', reject);
+      child.once('close', (code) => {
+        resolve(code ?? 1);
+      });
     });
-  });
+  };
+  let code = await runChecks([
+    '--test',
+    'tests/runtime.integration.ts',
+    'tests/desktop.integration.ts',
+    'tests/plugin-runtime.integration.ts',
+    'tests/plugin-desktop.integration.ts',
+    'tests/development-desktop.integration.ts',
+  ]);
+  if (code === 0) code = await runChecks(['experiments/market-runtime.integration.ts']);
   if (code === 0) await verifyRuntime(resources);
   process.exitCode = code;
 } finally {

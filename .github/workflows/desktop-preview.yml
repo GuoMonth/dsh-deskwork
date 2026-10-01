@@ -53,6 +53,7 @@ jobs:
           path: |
             .artifacts/releases/*.dmg
             .artifacts/desktop/
+            .artifacts/market-runtime/
             .artifacts/package-mac.log
           if-no-files-found: error
           retention-days: 14
