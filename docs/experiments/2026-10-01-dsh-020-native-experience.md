@@ -10,7 +10,7 @@
 
 rc.2 的官方 API-Key 适配器使用原生 Messages API，已移除旧 `chat-completions` 配置；确定性模型夹具同步改用 Messages 请求与 SSE 事件。测试端点实际收到请求，检查模型指令、工具调用和历史恢复，不能仅凭 initialize 成功断言模型配置已生效。
 
-API-Key 适配器的原生 Messages helper `@deepseek-ai/dsh-llm-deepseek` 显式列为生产依赖，确保 electron-builder 收入安装包。打包后将 Linux 应用复制到仓库外再运行集成测试，避免仓库的 node_modules 掩盖缺失依赖。
+API-Key 适配器的原生 Messages helper `@deepseek-ai/dsh-llm-deepseek` 显式列为生产依赖，确保生产安装和封存的桌面运行时包含该包。打包后将 Linux 应用复制到仓库外再运行集成测试，避免仓库的 node_modules 掩盖缺失依赖。
 
 新增按入口隔离的原生 filesystem Skill 根目录，关闭全局默认目录发现。ERP 自己注册导入的经验 Skill；现有浏览器插件与开发指南继续用同一个原生 Skill 服务。
 
@@ -39,6 +39,14 @@ DESKWORK_ERP_TARBALL=/absolute/path/to/candidate.tgz node --test tests/native-er
 现有插件测试覆盖标准安装、原生 Skill 加载、森果查询与开发指南；真实 Electron 测试覆盖确认、读取结果、提交后刷新、拒绝伪成功、会话隔离和重启恢复。ERP 仓库另有真实 Chromium 官方 Playwright MCP 与跨用户经验分享回归。Cua Driver 在隔离的 Linux Xvfb 中实际捕获可见窗口 PNG、后台点击并重新截图，由独立页面读取确认点击结果；使用上游原生二进制和完整尺寸窗口内坐标。
 
 制品摘要、双方确切提交和 PR 关联记录在 Issue #122 的交付评论；消费方测试需要提供该摘要对应的 ERP TGZ。建议先合并 ERP 接口，再合并 Deskwork 消费方；两侧合并本身不构成 npm 发布。
+
+## 对齐最新 main
+
+合并前同步 [PR #27](https://github.com/GuoMonth/dsh-deskwork/pull/27) 的 main 提交 `b7d570e585b44b63615f876b28a008b60fd87395`。保留应用 `0.2.0-alpha.2`、SDK/Devkit `0.1.0-alpha.2`、Cordis group `1.0.4`、pnpm `11.20.0`、独立 `Resources/runtime`、文件清单封存、Node-mode 环境和 SDK 提供方启用检查。原生服务和审批入口与 SDK server 一起构建、复制到该运行时，从运行时自己的生产依赖加载；不恢复根仓库依赖打包。
+
+复用 main 的 Messages 测试夹具，重新验证 9 项桌面/runtime/plugin 集成、仓库外 Devkit 和指定 ERP TGZ 的跨账号导入及重启。联合测试也支持 `DESKWORK_TEST_EXECUTABLE` 与 `DESKWORK_TEST_RESOURCES`，可直接以仓库外安装包的可执行文件和 `resources/runtime` 验证同一分享链路。
+
+Linux 安装包在仓库外、空 PATH 下的 8 项现有集成及 ERP 跨用户分享/重启联合验证通过；市场计算器安装后实际回读 `96`，再次核对 16,858 个运行时文件清单一致。命令：`DESKWORK_ERP_TARBALL=/absolute/path/to/candidate.tgz xvfb-run -a node scripts/verify-package.ts`。这同时确认新增服务使用随包运行时，没有依赖开发仓库提供 Node 或模块。CI 与最终合并提交的结果另记于 Issue #122。
 
 ## 未覆盖范围
 

@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { z } from 'zod';
 import type { RuntimeOptions } from '../src/runtime/dsh-runtime.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
-import { respondMessages } from './fixtures/messages.ts';
+import { readMessagesRequest, writeMessagesResponse } from './fixtures/messages.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
 await test(
@@ -26,14 +26,8 @@ await test(
     let receivedDeskworkPersona = false;
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
-        let body = '';
-        request.setEncoding('utf8');
-        for await (const chunk of request) {
-          if (typeof chunk === 'string') body += chunk;
-        }
-        const parsed = z
-          .object({ tools: z.array(z.object({ name: z.string() })) })
-          .parse(JSON.parse(body));
+        const parsed = await readMessagesRequest(request);
+        const body = JSON.stringify(parsed);
         assert.deepEqual(
           parsed.tools.map((tool) => tool.name).sort(),
           [
@@ -52,15 +46,18 @@ await test(
           ].sort(),
         );
         requests++;
-        receivedDeskworkPersona ||= body.includes('你是 DSH Deskwork 网站助手');
+        receivedDeskworkPersona ||= JSON.stringify(parsed.system).includes(
+          '你是 DSH Deskwork 网站助手',
+        );
         if (requests === 3)
           restoredContext =
             body.includes('读取页面，说明结果') && body.includes('已读取测试商品，尚未修改。');
-        respondMessages(
+        writeMessagesResponse(
           response,
           requests === 1
-            ? { id: 'call_1', tool: { name: 'mcp__deskwork__observe_page', input: {} } }
-            : { id: `response-${String(requests)}`, text: '已读取测试商品，尚未修改。' },
+            ? { name: 'mcp__deskwork__observe_page', input: {} }
+            : '已读取测试商品，尚未修改。',
+          `runtime-${String(requests)}`,
         );
       };
       void handle().catch((error: unknown) => {
@@ -165,3 +162,63 @@ await test(
     }
   },
 );
+
+await test(
+  'disabled selected model provider fails startup instead of SDK default fallback',
+  { timeout: 15000 },
+  async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'deskwork-provider-error-'));
+    const profile = join(directory, 'profiles/sdk-minimal');
+    await mkdir(profile, { recursive: true });
+    await writeFile(
+      join(profile, 'package.json'),
+      JSON.stringify({
+        name: 'provider-negative-control',
+        private: true,
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-sdk-minimal'] } },
+      }),
+    );
+    await writeFile(join(profile, 'cordis.patch.yml'), '- id: llm-deepseek\n  disabled: true\n');
+    const resources = resolve(process.env['DESKWORK_TEST_RESOURCES'] ?? '.');
+    const runtime = new DshRuntime({
+      executable: process.env['DESKWORK_TEST_EXECUTABLE'] ?? process.execPath,
+      cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      mcpPath: join(resources, 'dist/runtime/mcp-server.mjs'),
+      dataDirectory: directory,
+      apiKey: 'fixture-key',
+      model: 'deepseek-v4-flash',
+      toolEndpoint: 'http://127.0.0.1:1',
+      toolToken: 'fixture-token',
+      onNotification: (): void => {},
+    });
+    try {
+      await assert.rejects(runtime.start(), /选定的 DeepSeek.*未启用/);
+    } finally {
+      await runtime.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+await test('invalid Messages address is rejected without starting a process or revealing credentials', async () => {
+  const runtime = new DshRuntime({
+    executable: '/missing-executable',
+    cliPath: '/missing-cli',
+    mcpPath: '/missing-mcp',
+    dataDirectory: '/missing-data',
+    apiKey: 'secret',
+    model: 'deepseek-v4-flash',
+    baseURL: 'https://user:secret@example.test/v1/chat/completions?token=secret',
+    toolEndpoint: '',
+    toolToken: 'secret',
+    onNotification: (): void => {},
+  });
+  await assert.rejects(
+    runtime.start(),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes('Messages API 根地址') &&
+      !error.message.includes('secret'),
+  );
+  await runtime.close();
+});

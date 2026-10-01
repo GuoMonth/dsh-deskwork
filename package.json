@@ -1,6 +1,6 @@
 {
   "name": "dsh-deskwork",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
   "description": "A local ERP workspace powered by DeepSeek Harness",
   "license": "MIT",
@@ -32,12 +32,13 @@
     "test:desktop": "npm run build && node --test tests/desktop.integration.ts",
     "test:browser": "node --test tests/browser-boundary.integration.ts",
     "test:runtime": "npm run build && node --test tests/runtime.integration.ts",
-    "package:mac": "npm run build && electron-builder --mac --arm64 --publish never",
-    "package:linux": "npm run build && electron-builder --linux dir --publish never",
+    "package:mac": "npm run build && npm run package:prepare && electron-builder --mac --arm64 --publish never",
+    "package:linux": "npm run build && npm run package:prepare && electron-builder --linux dir --publish never",
     "build:plugins": "node scripts/build-plugins.ts",
     "build:devkit": "node scripts/build-devkit.ts",
     "test:devkit": "npm run build:devkit && node --test tests/plugin-devkit.integration.ts",
-    "pack:devkit": "node scripts/pack-devkit.ts"
+    "pack:devkit": "node scripts/pack-devkit.ts",
+    "package:prepare": "node scripts/prepare-desktop-runtime.ts"
   },
   "devDependencies": {
     "@electron/asar": "4.3.0",
@@ -58,9 +59,7 @@
     "vite": "8.2.2"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-llm-deepseek": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-user-approval": "0.2.0-rc.2",
-    "@deepseek-ai/cordis-plugin-group": "1.0.2",
+    "@deepseek-ai/cordis-plugin-group": "1.0.4",
     "@deepseek-ai/dsh": "0.2.0-rc.2",
     "@deepseek-ai/dsh-anonymous-user-id": "0.2.0-rc.2",
     "@deepseek-ai/dsh-attachment": "0.2.0-rc.2",
@@ -92,6 +91,10 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "4.5.4",
+    "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm-deepseek": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-user-approval": "0.2.0-rc.2",
     "@deepseek-ai/dsh-browser-use": "0.2.0-rc.2",
     "@deepseek-ai/dsh-skill-filesystem": "0.2.0-rc.2"
   },
@@ -101,18 +104,17 @@
     "appId": "cc.deskwork.desktop",
     "productName": "DSH Deskwork",
     "directories": {
-      "output": ".artifacts/releases"
+      "output": ".artifacts/releases",
+      "app": ".artifacts/desktop-app"
     },
     "files": [
       "dist/**",
-      "package.json"
+      "package.json",
+      "!node_modules{,/**}"
     ],
     "asar": true,
-    "asarUnpack": [
-      "dist/runtime/**",
-      "node_modules/**"
-    ],
-    "npmRebuild": false,
+    "asarUnpack": [],
+    "npmRebuild": true,
     "mac": {
       "target": [
         {
@@ -128,6 +130,25 @@
       "entitlements": "packaging/macos-entitlements.plist",
       "entitlementsInherit": "packaging/macos-entitlements.plist"
     },
-    "artifactName": "DSH-Deskwork-${version}-${os}-${arch}.${ext}"
+    "artifactName": "DSH-Deskwork-${version}-${os}-${arch}.${ext}",
+    "extraResources": [
+      {
+        "from": ".artifacts/desktop-runtime",
+        "to": "runtime",
+        "filter": [
+          "**/*",
+          "!node_modules{,/**}"
+        ]
+      },
+      {
+        "from": ".artifacts/desktop-runtime/node_modules",
+        "to": "runtime/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "afterSign": "packaging/after-sign.mjs",
+    "beforeBuild": "packaging/before-build.mjs"
   }
 }

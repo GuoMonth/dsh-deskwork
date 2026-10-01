@@ -8,7 +8,7 @@ import { createServer } from 'node:http';
 import { z } from 'zod';
 import { PluginManager } from '../src/host/plugin-manager.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
-import { respondMessages } from './fixtures/messages.ts';
+import { readMessagesRequest, writeMessagesResponse } from './fixtures/messages.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
 for (const scenario of [
@@ -33,7 +33,6 @@ for (const scenario of [
     const directory = await mkdtemp(join(tmpdir(), 'deskwork-native-plugin-'));
     const calls: string[] = [];
     let modelCalls = 0;
-    const notifications: unknown[] = [];
     let complete: (() => void) | undefined;
     const done = new Promise<void>((resolve) => {
       complete = resolve;
@@ -66,21 +65,8 @@ for (const scenario of [
     });
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
-        let body = '';
-        request.setEncoding('utf8');
-        for await (const chunk of request) {
-          if (typeof chunk === 'string') body += chunk;
-        }
-        const parsed = z
-          .object({
-            tools: z.array(
-              z.object({
-                name: z.string(),
-                input_schema: z.object({ type: z.literal('object') }).loose(),
-              }),
-            ),
-          })
-          .parse(JSON.parse(body));
+        const parsed = await readMessagesRequest(request);
+        const body = JSON.stringify(parsed);
         assert.ok(parsed.tools.some((tool) => tool.name === scenario.tool));
         assert.ok(parsed.tools.some((tool) => tool.name === 'skill'));
         modelCalls++;
@@ -89,20 +75,15 @@ for (const scenario of [
           assert.ok(body.includes(scenario.evidence));
           complete?.();
         }
-        respondMessages(
+        writeMessagesResponse(
           response,
           modelCalls < 3
             ? {
-                id: `plugin-${String(modelCalls)}`,
-                tool: {
-                  name,
-                  input:
-                    modelCalls === 1
-                      ? { name: scenario.skill }
-                      : (JSON.parse(scenario.arguments) as unknown),
-                },
+                name,
+                input: modelCalls === 1 ? { name: scenario.skill } : JSON.parse(scenario.arguments),
               }
-            : { id: 'plugin-done', text: '已读取类别选项。' },
+            : '已读取类别选项。',
+          `plugin-${String(modelCalls)}`,
         );
       };
       void handle().catch((error: unknown) => {
@@ -141,20 +122,14 @@ for (const scenario of [
         baseURL: `http://127.0.0.1:${String(address.port)}`,
         toolEndpoint: bridge.endpoint,
         toolToken: bridge.token,
-        onNotification: (method, params): void => {
-          notifications.push({ method, params });
-        },
+        onNotification: (): void => {},
       });
       await runtime.prompt('plugin-test', '请加载森果查询技能并读取收支类别');
       await Promise.race([
         done,
         new Promise((_, reject) => {
           const timer = setTimeout(() => {
-            reject(
-              new Error(
-                `模型未完成插件调用 (${String(modelCalls)} requests): ${JSON.stringify(notifications.slice(-3))}`,
-              ),
-            );
+            reject(new Error('模型未完成插件调用'));
           }, 20000);
           timer.unref();
         }),

@@ -1,13 +1,12 @@
 import { createServer } from 'node:http';
-import { respondMessages } from './messages.ts';
-import { z } from 'zod';
+import {
+  readMessagesRequest,
+  writeMessagesResponse,
+  hasToolResult,
+  messagesText,
+} from './messages.ts';
 import { observationSchema } from '../../src/core/contracts.ts';
 import type { PageObservation } from '../../src/core/contracts.ts';
-const requestSchema = z
-  .object({
-    messages: z.array(z.object({ role: z.string(), content: z.unknown().optional() }).loose()),
-  })
-  .loose();
 function findObservation(value: unknown, depth = 0): PageObservation | undefined {
   if (depth > 8) return undefined;
   const observation = observationSchema.safeParse(value);
@@ -32,16 +31,6 @@ function findObservation(value: unknown, depth = 0): PageObservation | undefined
   }
   return undefined;
 }
-function messageText(content: unknown): string {
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return '';
-  return content
-    .map((block: unknown) =>
-      z.object({ type: z.literal('text'), text: z.string() }).safeParse(block),
-    )
-    .flatMap((block) => (block.success ? [block.data.text] : []))
-    .join('\n');
-}
 export async function startModel(): Promise<{
   url: string;
   calls: () => number;
@@ -50,26 +39,17 @@ export async function startModel(): Promise<{
   let calls = 0;
   const server = createServer((request, response) => {
     const handle = async (): Promise<void> => {
-      let body = '';
-      request.setEncoding('utf8');
-      for await (const chunk of request) if (typeof chunk === 'string') body += chunk;
-      const parsed = requestSchema.parse(JSON.parse(body));
+      const parsed = await readMessagesRequest(request);
       calls++;
       const last = parsed.messages.at(-1);
-      const isToolResult =
-        last?.role === 'user' &&
-        Array.isArray(last.content) &&
-        last.content.some(
-          (block: unknown) => z.object({ type: z.literal('tool_result') }).safeParse(block).success,
-        );
-      const observation = isToolResult ? findObservation(last.content) : undefined;
+      const observation = hasToolResult(last?.content) ? findObservation(last?.content) : undefined;
       let name = 'observe_page';
       let arguments_: unknown = {};
       let text = '';
       const lastText = JSON.stringify(last?.content);
-      if (isToolResult && lastText.includes('waiting-for-human-confirmation'))
+      if (hasToolResult(last?.content) && lastText.includes('waiting-for-human-confirmation'))
         text = '操作已准备，请在工作台确认。';
-      else if (isToolResult && /verified[^a-z]+true/.test(lastText))
+      else if (hasToolResult(last?.content) && /verified[^a-z]+true/.test(lastText))
         text = '已刷新页面，回读结果符合预期。';
       else if (observation) {
         const desired = 'Deskwork verified change';
@@ -83,7 +63,7 @@ export async function startModel(): Promise<{
           observation.text.includes(`Stored value: ${desired}`) ||
           parsed.messages.some(
             (message) =>
-              message.role === 'user' && messageText(message.content).includes('"kind":"click"'),
+              message.role === 'user' && messagesText(message.content).includes('"kind":"click"'),
           )
         )
           name = 'verify_result';
@@ -104,15 +84,11 @@ export async function startModel(): Promise<{
           name = 'request_takeover';
           arguments_ = { reason: '请先在原网站登录，再继续。' };
         }
-      } else if (isToolResult) text = '页面操作遇阻，请接手核对。';
-      respondMessages(
+      } else if (hasToolResult(last?.content)) text = '页面操作遇阻，请接手核对。';
+      writeMessagesResponse(
         response,
-        text
-          ? { id: `response-${String(calls)}`, text }
-          : {
-              id: `call_${String(calls)}`,
-              tool: { name: `mcp__deskwork__${name}`, input: arguments_ },
-            },
+        text || { name: `mcp__deskwork__${name}`, input: arguments_ },
+        `response-${String(calls)}`,
       );
     };
     void handle().catch((error: unknown) => {

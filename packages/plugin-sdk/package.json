@@ -1,6 +1,6 @@
 {
   "name": "@guomonth/deskwork-plugin-sdk",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Typed task browser client for DSH Deskwork plugins",
   "license": "MIT",
   "type": "module",

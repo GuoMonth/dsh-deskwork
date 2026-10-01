@@ -9,7 +9,7 @@ import { PluginManager } from '../src/host/plugin-manager.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
 import type { RuntimeOptions } from '../src/runtime/dsh-runtime.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
-import { respondMessages } from './fixtures/messages.ts';
+import { writeMessagesResponse } from './fixtures/messages.ts';
 
 const requestSchema = z.object({
   tools: z.array(z.object({ name: z.string() })),
@@ -37,6 +37,8 @@ await test(
   async () => {
     const artifact = process.env['DESKWORK_ERP_TARBALL'];
     assert.ok(artifact, 'Set DESKWORK_ERP_TARBALL to the absolute candidate npm TGZ.');
+    const resources = resolve(process.env['DESKWORK_TEST_RESOURCES'] ?? '.');
+    const executable = process.env['DESKWORK_TEST_EXECUTABLE'] ?? process.execPath;
     const root = await mkdtemp(join(tmpdir(), 'deskwork-erp-native-'));
     let approvals = 0,
       requests = 0,
@@ -212,11 +214,11 @@ await test(
               assert.deepEqual(item.verifications, []);
             }
           }
-          respondMessages(response, { id: 'complete', text: '已导出、确认导入并核对本地经验。' });
+          writeMessagesResponse(response, '已导出、确认导入并核对本地经验。', 'complete');
           finish?.();
           return;
         }
-        respondMessages(response, { id: `call-${String(stage)}`, tool: { name, input } });
+        writeMessagesResponse(response, { name, input }, `call-${String(stage)}`);
       };
       void handle().catch((error: unknown) => {
         fail?.(error);
@@ -230,15 +232,15 @@ await test(
     assert.ok(address && typeof address !== 'string');
     const manager = new PluginManager({
       directory: join(root, 'plugins'),
-      executable: process.execPath,
-      cliPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js'),
-      pnpmPath: resolve('node_modules/pnpm/bin/pnpm.cjs'),
+      executable,
+      cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      pnpmPath: join(resources, 'node_modules/pnpm/bin/pnpm.cjs'),
     });
     const recipientManager = new PluginManager({
       directory: join(root, 'plugins-second-user'),
-      executable: process.execPath,
-      cliPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js'),
-      pnpmPath: resolve('node_modules/pnpm/bin/pnpm.cjs'),
+      executable,
+      cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      pnpmPath: join(resources, 'node_modules/pnpm/bin/pnpm.cjs'),
     });
     let runtime: DshRuntime | undefined;
     try {
@@ -247,9 +249,9 @@ await test(
       const dataDirectory = join(root, 'runtime');
       const plugins = await manager.prepareRuntime(dataDirectory, 'receiver-site');
       const options: RuntimeOptions = {
-        executable: process.execPath,
-        cliPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js'),
-        mcpPath: resolve('dist/runtime/mcp-server.mjs'),
+        executable,
+        cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+        mcpPath: join(resources, 'dist/runtime/mcp-server.mjs'),
         dataDirectory,
         plugins,
         site: { id: 'receiver-site', name: 'Fixture ERP', url: 'https://erp.example.test/app/' },
