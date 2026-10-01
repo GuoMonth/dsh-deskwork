@@ -1,5 +1,7 @@
 # DSH Deskwork
 
+下载本项目最新发布：[macOS Apple Silicon 安装包](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64 便携包](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [发布说明与校验值](https://github.com/GuoMonth/dsh-deskwork/releases/latest)。macOS 包使用临时签名，尚未配置 Developer ID／Apple 公证。ERP 插件在插件安装来源中填入 `@guosheng_047/dsh-erp@latest`，即可安装我们发布的最新版。
+
 DSH 运行时基线：**`0.2.0-rc.2`**（精确锁定的预发布版本），Electron `44.0.0`。当前任务浏览器注册到原生 Browser Use，复用原生 Skill 和审批支持 ERP 经验导出、导入。Computer Use 由 ERP 插件显式启用。实现与验证见[升级记录](docs/experiments/2026-10-01-dsh-020-native-experience.md)。
 
 桌面分发沿用[自包含运行时与打包验证](docs/experiments/2026-10-01-dsh-020-alignment.md)，生产依赖和原生服务置于独立运行时。

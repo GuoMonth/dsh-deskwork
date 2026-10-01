@@ -1,5 +1,7 @@
 # DSH Deskwork
 
+Download our latest release: [macOS Apple Silicon](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64 portable archive](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [release notes and checksums](https://github.com/GuoMonth/dsh-deskwork/releases/latest). The macOS package uses ad-hoc signing; Developer ID signing and Apple notarization are not configured. Install our latest ERP plugin by entering `@guosheng_047/dsh-erp@latest` as the plugin source.
+
 DSH runtime baseline: **`0.2.0-rc.2`** (pinned prerelease), with Electron **`44.0.0`**. The task browser registers with native Browser Use; native Skills and approval support ERP experience sharing. Computer Use is an explicit ERP plugin opt-in. See the [implementation and verification record](docs/experiments/2026-10-01-dsh-020-native-experience.md).
 
 Desktop distribution retains the [self-contained runtime and packaging validation](docs/experiments/2026-10-01-dsh-020-alignment.md), with production dependencies and native services in a separate runtime.
