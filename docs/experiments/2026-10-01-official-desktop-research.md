@@ -13,7 +13,7 @@
 ## 基准与判据
 
 - 官方源码：`dsh-v0.2.0-rc.2` / `639ed015397290b3745d163aafe02ffee4aa3f84`，候选预发布版本。npm 主包 `latest`/`next` 及 macOS、Windows 官方更新清单均为 `0.2.0-rc.2`。官方网站已提供安装包。[发布](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2)、[下载](https://www.deepseek.com/harness/)、[macOS 清单](https://download.deepseek.com/dsh-desk/feeds/mac-arm64/nightly-mac.yml)、[Windows 清单](https://download.deepseek.com/dsh-desk/feeds/win-x64/nightly.yml)
-- 当前 Deskwork DSH 为 `0.1.6-alpha.2`；Electron 与 electron-builder 已与官方该 tag 的 lockfile 一致。宿主与 Devkit 涉及的 27 个 DSH 包均有目标版本；部分子包的 `latest` 指向旧版，必须使用精确版本。
+- 研究基准 Deskwork DSH 为 `0.1.6-alpha.2`；Electron 与 electron-builder 已与官方该 tag 的 lockfile 一致。宿主与 Devkit 涉及的 27 个 DSH 包均有目标版本；部分子包的 `latest` 指向旧版，必须使用精确版本。
 - 浏览器复用通过条件：操作用户已登录的相同 WebContents，无第二个浏览器或重复登录；保持入口身份、任务目标、确认、停止和恢复行为。实际连接成功只满足其中一部分。
 - 分发对齐通过条件：发行包自带运行时和包管理器，目标原生模块可加载，插件安装不修改应用资源，仓库外安装、退出与重启有效；开发启动不能代替这些判据。
 

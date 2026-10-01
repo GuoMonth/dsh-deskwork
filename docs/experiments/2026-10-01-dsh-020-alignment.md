@@ -31,7 +31,9 @@
 - `npm run build`：通过。
 - 源码集成：runtime、desktop、browser-boundary、plugin-runtime、plugin-desktop、development-desktop、plugin-devkit 均通过，10 项集成全部成功（约 11.4 秒）。
 - Linux 安装目录：在仓库外、空 PATH 下的 8 项随包集成通过，验证实际 Node/native 加载、postinstall、核心树不变及退出重启。`npm run check` 格式、文档、严格类型、typed lint、单元回归全部通过。
-- macOS arm64 DMG、仓库外复制、签名与空 PATH 验证：由 Desktop preview CI 执行，结果随后补齐。
+- macOS arm64：[Desktop preview CI](https://github.com/GuoMonth/dsh-deskwork/actions/runs/36798587064) 在实现提交 `3edb4454b37102952a47b4ace3f53d74c0b9db94` 通过。源码 9 项集成；DMG verify/挂载、仓库外复制、`codesign --verify --deep --strict`、17,586 个运行时文件完整清单，以及空 PATH 下 8 项随包集成均通过；核对 Node `24.18.1` 与实际原生加载，测试后核心清单仍一致。预览包为应用 `0.2.0-alpha.2`，使用临时签名。
+- [确定性 CI](https://github.com/GuoMonth/dsh-deskwork/actions/runs/36798587029)：格式、文档、类型、lint、单元测试和仓库外 Devkit 均通过。
+- [arm64 DMG 工件](https://github.com/GuoMonth/dsh-deskwork/actions/runs/36798587064/artifacts/11134748159)：对应上述固定实现提交，工件保留 14 天。
 
 ## 范围与限制
 
