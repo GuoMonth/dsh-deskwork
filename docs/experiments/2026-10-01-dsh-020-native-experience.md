@@ -10,6 +10,8 @@
 
 rc.2 的官方 API-Key 适配器使用原生 Messages API，已移除旧 `chat-completions` 配置；确定性模型夹具同步改用 Messages 请求与 SSE 事件。测试端点实际收到请求，检查模型指令、工具调用和历史恢复，不能仅凭 initialize 成功断言模型配置已生效。
 
+API-Key 适配器的原生 Messages helper `@deepseek-ai/dsh-llm-deepseek` 显式列为生产依赖，确保 electron-builder 收入安装包。打包后将 Linux 应用复制到仓库外再运行集成测试，避免仓库的 node_modules 掩盖缺失依赖。
+
 新增按入口隔离的原生 filesystem Skill 根目录，关闭全局默认目录发现。ERP 自己注册导入的经验 Skill；现有浏览器插件与开发指南继续用同一个原生 Skill 服务。
 
 ERP 提供一次调用导出/导入：生成标准 `SKILL.md` 和 JSON 引用目录；接收者范围下的知识和关系原子写入，标为待核验，重复导入保留本地修正。数据边界及操作示例见 [ERP 原生分享指南](https://github.com/GuoMonth/dsh-erp/blob/issue-122-native-erp/docs/native-and-sharing.md)。导出不上传或发布，分享者仍需检查描述里的自由文本。
@@ -32,10 +34,10 @@ DESKWORK_ERP_TARBALL=/absolute/path/to/candidate.tgz node --test tests/native-er
 
 联合测试安装 ERP npm TGZ，验证宿主提供方为 `deskwork`，模型目录没有另一个 Playwright 或旧 ERP 浏览器操作工具。通过真实 DSH Agent loop 调用：观察 → 原生证据保存 → 知识记录 → Skill 导出 → 拒绝导入 → 允许导入 → Skill 目录发现 → 本地知识核对。随后停止并重启运行时，在新 Session 中重新发现 Skill 并读取导入知识，无需再次导入或观察。两次审批写入原生 Session 审计；导出的 JSON 不含本地入口身份和证据 ID。
 
-现有插件测试覆盖标准安装、原生 Skill 加载、森果查询与开发指南；真实 Electron 测试覆盖确认、读取结果、提交后刷新、拒绝伪成功、会话隔离和重启恢复。ERP 仓库另有真实 Chromium 官方 Playwright MCP 与跨用户经验分享回归。
+现有插件测试覆盖标准安装、原生 Skill 加载、森果查询与开发指南；真实 Electron 测试覆盖确认、读取结果、提交后刷新、拒绝伪成功、会话隔离和重启恢复。ERP 仓库另有真实 Chromium 官方 Playwright MCP 与跨用户经验分享回归。Cua Driver 在隔离的 Linux Xvfb 中实际捕获可见窗口 PNG、后台点击并重新截图，由独立页面读取确认点击结果；使用上游原生二进制和完整尺寸窗口内坐标。
 
 制品摘要、双方确切提交和 PR 关联记录在 Issue #122 的交付评论；消费方测试需要提供该摘要对应的 ERP TGZ。建议先合并 ERP 接口，再合并 Deskwork 消费方；两侧合并本身不构成 npm 发布。
 
 ## 未覆盖范围
 
-真实 DeepSeek、真实 ERP 权限/业务结果、用户 macOS、Cua Driver 实际桌面点击/截图和分享文件的人工保密审阅尚未验收。已验证的 Cua Driver 内容限于实际原生二进制加载、工具目录、无提示权限状态及卸载。标准 Skill 目录可传递复用，本轮没有自动上传分享链接或独立导入导出按钮；用户通过对话触发一次工具调用完成导出或导入。
+真实 DeepSeek、真实 ERP 权限/业务结果、真实模型视觉附件往返、用户 macOS 和分享文件的人工保密审阅尚未验收。标准 Skill 目录可传递复用，本轮没有自动上传分享链接或独立导入导出按钮；用户通过对话触发一次工具调用完成导出或导入。
