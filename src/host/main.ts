@@ -3,7 +3,7 @@ import type { DevelopmentState } from '../core/development-contracts.ts';
 import { PluginManager } from './plugin-manager.ts';
 import { PluginMarket } from './plugin-market.ts';
 import { pluginCommandSchema } from '../core/plugin-contracts.ts';
-import { app, BrowserWindow, ipcMain, safeStorage, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, Menu, dialog } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -75,6 +75,7 @@ async function main(): Promise<void> {
   let closing = false;
   let runtime: DshRuntime | undefined;
   let runtimeGeneration = 0;
+  const nativeApprovals = new Set<AbortController>();
   let model = 'deepseek-v4-flash';
   let apiKey = '';
   let configured = false;
@@ -219,6 +220,35 @@ async function main(): Promise<void> {
       throw new Error('任务工具已暂停或正在等待确认');
     controller.state.metrics.toolCalls++;
     switch (request.name) {
+      case 'native_approval': {
+        const generation = runtimeGeneration;
+        const cancellation = new AbortController();
+        nativeApprovals.add(cancellation);
+        try {
+          const decision = await dialog.showMessageBox(window, {
+            type: 'question',
+            title: '确认更新 ERP 经验',
+            message: '是否允许这一次本地知识更新？',
+            detail: request.arguments.reason,
+            buttons: ['取消', '允许一次'],
+            defaultId: 0,
+            cancelId: 0,
+            signal: cancellation.signal,
+          });
+          return {
+            outcome:
+              cancellation.signal.aborted ||
+              generation !== runtimeGeneration ||
+              controllers.get(siteId ?? '')?.state.status !== 'running'
+                ? 'cancelled'
+                : decision.response === 1
+                  ? 'allowed-once'
+                  : 'rejected',
+          };
+        } finally {
+          nativeApprovals.delete(cancellation);
+        }
+      }
       case 'plugin_action': {
         const plugin = plugins
           .state()
@@ -255,6 +285,7 @@ async function main(): Promise<void> {
   });
   async function stopRuntime(): Promise<void> {
     runtimeGeneration++;
+    for (const pending of nativeApprovals) pending.abort();
     tools.revoke();
     const previous = runtime;
     runtime = undefined;
@@ -277,6 +308,7 @@ async function main(): Promise<void> {
         siteId,
       );
       if (generation !== runtimeGeneration || controller.state.status !== 'running') return;
+      const runtimeSite = workspace.sites.find((site) => site.id === siteId);
       runtime = new DshRuntime({
         executable: process.execPath,
         cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
@@ -288,6 +320,7 @@ async function main(): Promise<void> {
         toolEndpoint: tools.endpoint,
         toolToken: tools.token,
         plugins: selectedPlugins,
+        ...(runtimeSite ? { site: runtimeSite } : {}),
         recoveryContext: [
           ...messages,
           {

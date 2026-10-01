@@ -8,6 +8,7 @@ import { createServer } from 'node:http';
 import { z } from 'zod';
 import { PluginManager } from '../src/host/plugin-manager.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
+import { respondMessages } from './fixtures/messages.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
 for (const scenario of [
@@ -32,6 +33,7 @@ for (const scenario of [
     const directory = await mkdtemp(join(tmpdir(), 'deskwork-native-plugin-'));
     const calls: string[] = [];
     let modelCalls = 0;
+    const notifications: unknown[] = [];
     let complete: (() => void) | undefined;
     const done = new Promise<void>((resolve) => {
       complete = resolve;
@@ -73,48 +75,34 @@ for (const scenario of [
           .object({
             tools: z.array(
               z.object({
-                function: z.object({
-                  name: z.string(),
-                  parameters: z.object({ type: z.literal('object') }).loose(),
-                }),
+                name: z.string(),
+                input_schema: z.object({ type: z.literal('object') }).loose(),
               }),
             ),
           })
           .parse(JSON.parse(body));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === scenario.tool));
-        assert.ok(parsed.tools.some((tool) => tool.function.name === 'skill'));
+        assert.ok(parsed.tools.some((tool) => tool.name === scenario.tool));
+        assert.ok(parsed.tools.some((tool) => tool.name === 'skill'));
         modelCalls++;
         const name = modelCalls === 1 ? 'skill' : scenario.tool;
-        const delta =
-          modelCalls < 3
-            ? {
-                role: 'assistant',
-                tool_calls: [
-                  {
-                    index: 0,
-                    id: `plugin-${String(modelCalls)}`,
-                    type: 'function',
-                    function: {
-                      name,
-                      arguments:
-                        modelCalls === 1
-                          ? JSON.stringify({ name: scenario.skill })
-                          : scenario.arguments,
-                    },
-                  },
-                ],
-              }
-            : { role: 'assistant', content: '已读取类别选项。' };
         if (modelCalls === 3) {
           assert.ok(body.includes(scenario.evidence));
           complete?.();
         }
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify({ id: 'plugin-model', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
-        );
-        response.end(
-          `data: ${JSON.stringify({ id: 'plugin-model', choices: [{ index: 0, delta: {}, finish_reason: modelCalls < 3 ? 'tool_calls' : 'stop' }] })}\n\ndata: [DONE]\n\n`,
+        respondMessages(
+          response,
+          modelCalls < 3
+            ? {
+                id: `plugin-${String(modelCalls)}`,
+                tool: {
+                  name,
+                  input:
+                    modelCalls === 1
+                      ? { name: scenario.skill }
+                      : (JSON.parse(scenario.arguments) as unknown),
+                },
+              }
+            : { id: 'plugin-done', text: '已读取类别选项。' },
         );
       };
       void handle().catch((error: unknown) => {
@@ -153,14 +141,20 @@ for (const scenario of [
         baseURL: `http://127.0.0.1:${String(address.port)}`,
         toolEndpoint: bridge.endpoint,
         toolToken: bridge.token,
-        onNotification: (): void => {},
+        onNotification: (method, params): void => {
+          notifications.push({ method, params });
+        },
       });
       await runtime.prompt('plugin-test', '请加载森果查询技能并读取收支类别');
       await Promise.race([
         done,
         new Promise((_, reject) => {
           const timer = setTimeout(() => {
-            reject(new Error('模型未完成插件调用'));
+            reject(
+              new Error(
+                `模型未完成插件调用 (${String(modelCalls)} requests): ${JSON.stringify(notifications.slice(-3))}`,
+              ),
+            );
           }, 20000);
           timer.unref();
         }),

@@ -7,6 +7,7 @@ import { createServer } from 'node:http';
 import { z } from 'zod';
 import type { RuntimeOptions } from '../src/runtime/dsh-runtime.ts';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
+import { respondMessages } from './fixtures/messages.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
 
 await test(
@@ -31,10 +32,10 @@ await test(
           if (typeof chunk === 'string') body += chunk;
         }
         const parsed = z
-          .object({ tools: z.array(z.object({ function: z.object({ name: z.string() }) })) })
+          .object({ tools: z.array(z.object({ name: z.string() })) })
           .parse(JSON.parse(body));
         assert.deepEqual(
-          parsed.tools.map((tool) => tool.function.name).sort(),
+          parsed.tools.map((tool) => tool.name).sort(),
           [
             'skill',
             'deskwork_developer_docs',
@@ -51,38 +52,15 @@ await test(
           ].sort(),
         );
         requests++;
-        const messages = z
-          .object({ messages: z.array(z.object({ role: z.string(), content: z.unknown() })) })
-          .parse(JSON.parse(body)).messages;
-        receivedDeskworkPersona ||= messages.some(
-          (message) =>
-            message.role === 'system' &&
-            typeof message.content === 'string' &&
-            message.content.includes('你是 DSH Deskwork 网站助手'),
-        );
+        receivedDeskworkPersona ||= body.includes('你是 DSH Deskwork 网站助手');
         if (requests === 3)
           restoredContext =
             body.includes('读取页面，说明结果') && body.includes('已读取测试商品，尚未修改。');
-        const delta =
+        respondMessages(
+          response,
           requests === 1
-            ? {
-                role: 'assistant',
-                tool_calls: [
-                  {
-                    index: 0,
-                    id: 'call_1',
-                    type: 'function',
-                    function: { name: 'mcp__deskwork__observe_page', arguments: '{}' },
-                  },
-                ],
-              }
-            : { role: 'assistant', content: '已读取测试商品，尚未修改。' };
-        response.writeHead(200, { 'content-type': 'text/event-stream' });
-        response.write(
-          `data: ${JSON.stringify({ id: 'response-1', object: 'chat.completion.chunk', model: 'deepseek-v4-flash', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
-        );
-        response.end(
-          `data: ${JSON.stringify({ id: 'response-1', choices: [{ index: 0, delta: {}, finish_reason: requests === 1 ? 'tool_calls' : 'stop' }], usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 } })}\n\ndata: [DONE]\n\n`,
+            ? { id: 'call_1', tool: { name: 'mcp__deskwork__observe_page', input: {} } }
+            : { id: `response-${String(requests)}`, text: '已读取测试商品，尚未修改。' },
         );
       };
       void handle().catch((error: unknown) => {

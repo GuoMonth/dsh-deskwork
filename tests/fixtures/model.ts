@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { respondMessages } from './messages.ts';
 import { z } from 'zod';
 import { observationSchema } from '../../src/core/contracts.ts';
 import type { PageObservation } from '../../src/core/contracts.ts';
@@ -31,6 +32,16 @@ function findObservation(value: unknown, depth = 0): PageObservation | undefined
   }
   return undefined;
 }
+function messageText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((block: unknown) =>
+      z.object({ type: z.literal('text'), text: z.string() }).safeParse(block),
+    )
+    .flatMap((block) => (block.success ? [block.data.text] : []))
+    .join('\n');
+}
 export async function startModel(): Promise<{
   url: string;
   calls: () => number;
@@ -45,14 +56,20 @@ export async function startModel(): Promise<{
       const parsed = requestSchema.parse(JSON.parse(body));
       calls++;
       const last = parsed.messages.at(-1);
-      const observation = last?.role === 'tool' ? findObservation(last.content) : undefined;
+      const isToolResult =
+        last?.role === 'user' &&
+        Array.isArray(last.content) &&
+        last.content.some(
+          (block: unknown) => z.object({ type: z.literal('tool_result') }).safeParse(block).success,
+        );
+      const observation = isToolResult ? findObservation(last.content) : undefined;
       let name = 'observe_page';
       let arguments_: unknown = {};
       let text = '';
       const lastText = JSON.stringify(last?.content);
-      if (last?.role === 'tool' && lastText.includes('waiting-for-human-confirmation'))
+      if (isToolResult && lastText.includes('waiting-for-human-confirmation'))
         text = '操作已准备，请在工作台确认。';
-      else if (last?.role === 'tool' && /verified[^a-z]+true/.test(lastText))
+      else if (isToolResult && /verified[^a-z]+true/.test(lastText))
         text = '已刷新页面，回读结果符合预期。';
       else if (observation) {
         const desired = 'Deskwork verified change';
@@ -66,9 +83,7 @@ export async function startModel(): Promise<{
           observation.text.includes(`Stored value: ${desired}`) ||
           parsed.messages.some(
             (message) =>
-              message.role === 'user' &&
-              typeof message.content === 'string' &&
-              message.content.includes('"kind":"click"'),
+              message.role === 'user' && messageText(message.content).includes('"kind":"click"'),
           )
         )
           name = 'verify_result';
@@ -89,26 +104,15 @@ export async function startModel(): Promise<{
           name = 'request_takeover';
           arguments_ = { reason: '请先在原网站登录，再继续。' };
         }
-      } else if (last?.role === 'tool') text = '页面操作遇阻，请接手核对。';
-      const delta = text
-        ? { role: 'assistant', content: text }
-        : {
-            role: 'assistant',
-            tool_calls: [
-              {
-                index: 0,
-                id: `call_${String(calls)}`,
-                type: 'function',
-                function: { name: `mcp__deskwork__${name}`, arguments: JSON.stringify(arguments_) },
-              },
-            ],
-          };
-      response.writeHead(200, { 'content-type': 'text/event-stream' });
-      response.write(
-        `data: ${JSON.stringify({ id: `response-${String(calls)}`, object: 'chat.completion.chunk', model: 'deepseek-v4-flash', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
-      );
-      response.end(
-        `data: ${JSON.stringify({ id: `response-${String(calls)}`, choices: [{ index: 0, delta: {}, finish_reason: text ? 'stop' : 'tool_calls' }], usage: { prompt_tokens: 50, completion_tokens: 20, total_tokens: 70 } })}\n\ndata: [DONE]\n\n`,
+      } else if (isToolResult) text = '页面操作遇阻，请接手核对。';
+      respondMessages(
+        response,
+        text
+          ? { id: `response-${String(calls)}`, text }
+          : {
+              id: `call_${String(calls)}`,
+              tool: { name: `mcp__deskwork__${name}`, input: arguments_ },
+            },
       );
     };
     void handle().catch((error: unknown) => {

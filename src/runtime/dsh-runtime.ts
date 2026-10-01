@@ -26,6 +26,7 @@ export interface RuntimeOptions {
   toolToken: string;
   baseURL?: string;
   plugins?: readonly InstalledPlugin[];
+  site?: { id: string; name: string; url: string };
   recoveryContext?: readonly { role: 'user' | 'assistant'; text: string }[];
   onNotification: (method: string, params: unknown) => void;
 }
@@ -66,8 +67,6 @@ export class DshRuntime {
         id: 'llm-deepseek',
         config: {
           apiKeyEnv: 'DEEPSEEK_API_KEY',
-          // Keep the existing Deskwork endpoint contract when DSH defaults to Messages.
-          protocol: 'chat-completions',
           ...(options.baseURL ? { baseURL: options.baseURL } : {}),
           thinking: 'disabled',
           maxTokens: 8192,
@@ -100,6 +99,15 @@ export class DshRuntime {
     patch.push({
       insert: [
         {
+          id: 'deskwork-native-services',
+          name: join(dirname(options.mcpPath), 'native-services.mjs'),
+          config: { skillDirectory: join(options.dataDirectory, 'skills') },
+        },
+        {
+          id: 'deskwork-approval-answerer',
+          name: join(dirname(options.mcpPath), 'user-approval.mjs'),
+        },
+        {
           id: 'deskwork-browser-service',
           name: join(dirname(options.mcpPath), 'browser-service.mjs'),
         },
@@ -112,6 +120,26 @@ export class DshRuntime {
         { id: 'deskwork-skill-tool', name: '@deepseek-ai/dsh-tool-skill' },
       ],
     });
+    if (options.plugins?.some((plugin) => plugin.name === '@guosheng_047/dsh-erp')) {
+      patch.push({
+        id: 'erp',
+        inject: ['tools', 'llm', 'agents', 'systemPrompt', 'browserUse', 'deskworkBrowser'],
+        config: {
+          browserMode: 'native',
+          ...(options.site
+            ? {
+                system: {
+                  url: options.site.url,
+                  baseUrl: new URL('.', options.site.url).href,
+                  name: options.site.name,
+                  account: options.site.id,
+                },
+              }
+            : {}),
+          dataDir: join(options.dataDirectory, 'erp'),
+        },
+      });
+    }
     await writeFile(patchPath, JSON.stringify(patch), { mode: 0o600 });
     this.assertOpen();
     // Cordis resolves out-of-tree plugins through Node internals; Electron needs the explicit flag.

@@ -2,6 +2,24 @@ import type { BuildOptions } from 'esbuild';
 
 export const desktopBuildOptions: BuildOptions[] = [
   {
+    entryPoints: ['src/runtime/native-services.ts'],
+    outfile: 'dist/runtime/native-services.mjs',
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    packages: 'external',
+    target: 'node24',
+  },
+  {
+    entryPoints: ['src/runtime/user-approval.ts'],
+    outfile: 'dist/runtime/user-approval.mjs',
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    packages: 'external',
+    target: 'node24',
+  },
+  {
     entryPoints: ['src/runtime/browser-service.ts'],
     outfile: 'dist/runtime/browser-service.mjs',
     bundle: true,
