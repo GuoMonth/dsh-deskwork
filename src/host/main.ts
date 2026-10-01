@@ -1,3 +1,4 @@
+import { readRuntimeDescriptor } from '../runtime/desktop-runtime.ts';
 import { DevelopmentSession } from './development-session.ts';
 import type { DevelopmentState } from '../core/development-contracts.ts';
 import { PluginManager } from './plugin-manager.ts';
@@ -34,9 +35,15 @@ async function main(): Promise<void> {
   const connectionPath = join(directory, 'development-connection.json');
   await rm(connectionPath, { force: true });
   let development: DevelopmentSession | undefined;
-  const runtimeRoot = app.isPackaged
-    ? join(process.resourcesPath, 'app.asar.unpacked')
-    : app.getAppPath();
+  const runtimeRoot = app.isPackaged ? join(process.resourcesPath, 'runtime') : app.getAppPath();
+  if (app.isPackaged) {
+    const descriptor = await readRuntimeDescriptor(runtimeRoot);
+    if (
+      descriptor.appVersion !== app.getVersion() ||
+      descriptor.electronVersion !== process.versions.electron
+    )
+      throw new Error('应用与随包运行时版本不匹配');
+  }
   const plugins = new PluginManager({
     directory: join(directory, 'plugins'),
     executable: process.execPath,

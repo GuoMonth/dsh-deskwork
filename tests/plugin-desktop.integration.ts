@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, rm, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:http';
 import { _electron as electron, expect } from '@playwright/test';
+import { readMessagesRequest, writeMessagesResponse, hasToolResult } from './fixtures/messages.ts';
 import { z } from 'zod';
-import { respondMessages } from './fixtures/messages.ts';
 
 await test(
   'desktop plugin installation, two page structures, independent targets and lifecycle',
@@ -24,33 +24,15 @@ await test(
     let replies = 0;
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
-        let body = '';
-        request.setEncoding('utf8');
-        for await (const chunk of request) {
-          if (typeof chunk === 'string') body += chunk;
-        }
-        const parsed = z
-          .object({
-            messages: z.array(z.object({ role: z.string(), content: z.unknown() }).loose()),
-            tools: z.array(z.object({ name: z.string() })),
-          })
-          .parse(JSON.parse(body));
+        const parsed = await readMessagesRequest(request);
+        const body = JSON.stringify(parsed);
         assert.ok(parsed.tools.some((tool) => tool.name === 'fixture_query'));
-        const finished = parsed.messages.some(
-          (message) =>
-            message.role === 'user' &&
-            Array.isArray(message.content) &&
-            message.content.some(
-              (block: unknown) =>
-                z.object({ type: z.literal('tool_result') }).safeParse(block).success,
-            ),
-        );
+        const finished = parsed.messages.some((message) => hasToolResult(message.content));
         if (finished) assert.ok(body.includes('货款'));
-        respondMessages(
+        writeMessagesResponse(
           response,
-          finished
-            ? { id: 'query-finished', text: '查询完成，已读取类别。' }
-            : { id: `query-${String(++replies)}`, tool: { name: 'fixture_query', input: {} } },
+          finished ? '查询完成，已读取类别。' : { name: 'fixture_query', input: {} },
+          `query-${String(++replies)}`,
         );
       };
       void handle().catch((error: unknown) => {
@@ -73,6 +55,7 @@ await test(
     const executablePath = process.env['DESKWORK_TEST_EXECUTABLE'];
     const app = await electron.launch({
       ...(executablePath ? { executablePath } : {}),
+      cwd: process.env['DESKWORK_TEST_WORKING_DIRECTORY'] ?? resolve('.'),
       args: [
         ...(executablePath ? [] : [resolve('.')]),
         `--profile-directory=${directory}`,
@@ -101,6 +84,25 @@ await test(
       await expect(shell.getByText('deskwork-query-fixture', { exact: true })).toBeVisible({
         timeout: 25000,
       });
+      const installations = join(directory, 'plugins/installations');
+      const installationId = (await readdir(installations))[0];
+      assert.ok(installationId);
+      const installation = z
+        .object({ executable: z.string(), node: z.string(), electron: z.literal('44.0.0') })
+        .parse(
+          JSON.parse(
+            await readFile(
+              join(
+                installations,
+                installationId,
+                'profiles/sdk-minimal/node_modules/deskwork-query-fixture/installation-runtime.json',
+              ),
+              'utf8',
+            ),
+          ),
+        );
+      assert.equal(installation.executable, await app.evaluate(({ app }) => app.getPath('exe')));
+      assert.match(installation.node, /^24\./);
       await mkdir('.artifacts/desktop', { recursive: true });
       await shell.getByRole('dialog').screenshot({ path: '.artifacts/desktop/m2-plugins.png' });
       await shell.getByRole('button', { name: '关闭对话框' }).click();

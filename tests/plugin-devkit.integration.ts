@@ -64,6 +64,27 @@ await test(
         arguments: {},
       });
       assert.match(JSON.stringify(information), /explicit-desktop-connection/);
+      const content = z
+        .object({
+          content: z.array(z.object({ type: z.literal('text'), text: z.string() })).min(1),
+        })
+        .parse(information).content[0];
+      assert.ok(content);
+      const capabilities = z
+        .object({ version: z.string(), dshVersion: z.string(), sdkVersion: z.string() })
+        .parse(JSON.parse(content.text));
+      const runtimeManifest = z
+        .object({ dependencies: z.record(z.string(), z.string()) })
+        .parse(JSON.parse(await readFile('package.json', 'utf8')));
+      const sdkManifest = z
+        .object({ version: z.string() })
+        .parse(JSON.parse(await readFile('packages/plugin-sdk/package.json', 'utf8')));
+      const kitManifest = z
+        .object({ version: z.string() })
+        .parse(JSON.parse(await readFile('packages/plugin-devkit/package.json', 'utf8')));
+      assert.equal(capabilities.dshVersion, runtimeManifest.dependencies['@deepseek-ai/dsh']);
+      assert.equal(capabilities.sdkVersion, sdkManifest.version);
+      assert.equal(capabilities.version, kitManifest.version);
       const search = await client.callTool({
         name: 'deskwork_search_documents',
         arguments: { query: '停止' },

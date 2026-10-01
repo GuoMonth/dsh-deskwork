@@ -20,6 +20,15 @@ export const desktopBuildOptions: BuildOptions[] = [
     target: 'node24',
   },
   {
+    entryPoints: ['src/runtime/sdk-server.ts'],
+    outfile: 'dist/runtime/sdk-server.mjs',
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    packages: 'external',
+    target: 'node24',
+  },
+  {
     entryPoints: ['src/runtime/browser-service.ts'],
     outfile: 'dist/runtime/browser-service.mjs',
     bundle: true,

@@ -1,8 +1,9 @@
+import { nodeEnvironment } from '../runtime/node-environment.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, rm, symlink } from 'node:fs/promises';
-import { join, dirname, delimiter } from 'node:path';
+import { join, dirname } from 'node:path';
 import { z } from 'zod';
 import { installedPluginSchema, packageNameSchema } from '../core/plugin-contracts.ts';
 import type { InstalledPlugin, PluginCommand, PluginState } from '../core/plugin-contracts.ts';
@@ -141,7 +142,8 @@ export class PluginManager {
       await writeFile(join(profile, 'cordis.patch.yml'), '[]\n');
       await writeFile(
         join(profile, 'pnpm-workspace.yaml'),
-        'packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\ndangerouslyAllowAllBuilds: true\n',
+        'packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\ndangerouslyAllowAllBuilds: true\n' +
+          (process.platform === 'win32' ? '' : 'scriptShell: /bin/sh\n'),
       );
       const bin = join(home, 'bin');
       await mkdir(bin, { recursive: true });
@@ -205,14 +207,16 @@ export class PluginManager {
       let output = '';
       const child = spawn(this.options.executable, args, {
         cwd: home,
-        env: {
-          PATH: `${bin}${delimiter}${process.env['PATH'] ?? ''}`,
-          HOME: process.env['HOME'],
-          TMPDIR: process.env['TMPDIR'],
-          ELECTRON_RUN_AS_NODE: '1',
-          DSH_HOME: home,
-          CI: 'true',
-        },
+        env: nodeEnvironment(
+          {
+            PATH: process.env['PATH'],
+            HOME: process.env['HOME'],
+            TMPDIR: process.env['TMPDIR'],
+            DSH_HOME: home,
+            CI: 'true',
+          },
+          bin,
+        ),
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: process.platform !== 'win32',
       });

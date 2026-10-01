@@ -34,6 +34,7 @@ await test(
     const executablePath = process.env['DESKWORK_TEST_EXECUTABLE'];
     const app = await electron.launch({
       ...(executablePath ? { executablePath } : {}),
+      cwd: process.env['DESKWORK_TEST_WORKING_DIRECTORY'] ?? resolve('.'),
       args: [
         ...(executablePath ? [] : [resolve('.')]),
         `--profile-directory=${directory}`,
