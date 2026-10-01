@@ -32,7 +32,7 @@ function toolValue(content: unknown[]): unknown {
 }
 
 await test(
-  'packed ERP uses the Deskwork native provider and shares experience through native approval and Skill',
+  'packed ERP reuses Deskwork native services and shares experience with a clean second-user installation across restarts',
   { timeout: 60000 },
   async () => {
     const artifact = process.env['DESKWORK_ERP_TARBALL'];
@@ -42,6 +42,7 @@ await test(
       requests = 0,
       observationCalls = 0;
     let scope: z.infer<typeof scopeSchema> | undefined;
+    let recipientScope: z.infer<typeof scopeSchema> | undefined;
     let observationId = '',
       importFile = '';
     const notifications: unknown[] = [];
@@ -83,8 +84,9 @@ await test(
           ),
         );
         const stage = requests++;
-        const previous =
-          stage && stage !== 9 ? toolValue(parsed.messages.at(-1)?.content ?? []) : undefined;
+        const previous = ![0, 9, 12, 17].includes(stage)
+          ? toolValue(parsed.messages.at(-1)?.content ?? [])
+          : undefined;
         let name: string;
         let input: unknown = {};
         if (stage === 0) name = 'erp_native_status';
@@ -150,21 +152,66 @@ await test(
           assert.ok(body.includes('erp-experience-'), 'native Skill survives runtime restart');
           name = 'erp_knowledge_search';
           input = { scope, query: 'Purchasing', after: '', limit: 50 };
+        } else if (stage === 12) {
+          assert.ok(!body.includes('erp-experience-'), 'a clean recipient has no sender Skill');
+          name = 'erp_native_status';
+        } else if (stage === 13) {
+          recipientScope = z
+            .object({ browserProvider: z.literal('deskwork'), scope: scopeSchema })
+            .parse(previous).scope;
+          assert.notDeepEqual(recipientScope, scope);
+          assert.equal(recipientScope.account, 'second-user-site');
+          assert.notEqual(recipientScope.account, scope?.account);
+          name = 'erp_knowledge_search';
+          input = { scope: recipientScope, query: '', after: '', limit: 50 };
+        } else if (stage === 14) {
+          assert.equal(z.object({ items: z.array(z.unknown()) }).parse(previous).items.length, 0);
+          name = 'erp_experience_import';
+          input = { scope: recipientScope, path: importFile };
+        } else if (stage === 15) {
+          const imported = z
+            .object({ state: z.literal('needs-review'), scope: scopeSchema })
+            .parse(previous);
+          assert.deepEqual(imported.scope, recipientScope);
+          assert.ok(body.includes('erp-experience-'), 'recipient discovers the imported Skill');
+          name = 'erp_knowledge_search';
+          input = { scope: recipientScope, query: 'Purchasing', after: '', limit: 50 };
+        } else if (stage === 17) name = 'erp_native_status';
+        else if (stage === 18) {
+          assert.deepEqual(z.object({ scope: scopeSchema }).parse(previous).scope, recipientScope);
+          assert.ok(body.includes('erp-experience-'), 'recipient Skill survives runtime restart');
+          name = 'erp_knowledge_search';
+          input = { scope: recipientScope, query: 'Purchasing', after: '', limit: 50 };
         } else {
           const knowledge = z
             .object({
               items: z.array(
-                z.object({ record: z.object({ id: z.string(), flags: z.array(z.string()) }) }),
+                z.object({
+                  record: z.object({
+                    id: z.string(),
+                    flags: z.array(z.string()),
+                    scope: scopeSchema,
+                    evidence: z.array(z.unknown()),
+                  }),
+                  verifications: z.array(z.unknown()),
+                }),
               ),
             })
             .parse(previous);
-          assert.equal(knowledge.items.length, 2);
+          assert.equal(knowledge.items.length, stage >= 12 ? 1 : 2);
           assert.ok(
             knowledge.items.some(
               (item) =>
                 item.record.id.startsWith('shared-') && item.record.flags.includes('needs-review'),
             ),
           );
+          if (stage >= 12) {
+            for (const item of knowledge.items) {
+              assert.deepEqual(item.record.scope, recipientScope);
+              assert.deepEqual(item.record.evidence, []);
+              assert.deepEqual(item.verifications, []);
+            }
+          }
           respondMessages(response, { id: 'complete', text: '已导出、确认导入并核对本地经验。' });
           finish?.();
           return;
@@ -183,6 +230,12 @@ await test(
     assert.ok(address && typeof address !== 'string');
     const manager = new PluginManager({
       directory: join(root, 'plugins'),
+      executable: process.execPath,
+      cliPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      pnpmPath: resolve('node_modules/pnpm/bin/pnpm.cjs'),
+    });
+    const recipientManager = new PluginManager({
+      directory: join(root, 'plugins-second-user'),
       executable: process.execPath,
       cliPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js'),
       pnpmPath: resolve('node_modules/pnpm/bin/pnpm.cjs'),
@@ -249,9 +302,49 @@ await test(
       assert.equal(requests, 12);
       assert.equal(approvals, 2);
       assert.equal(observationCalls, 1);
+      await runtime.close();
+      await recipientManager.load();
+      await recipientManager.install(resolve(artifact));
+      const recipientDirectory = join(root, 'runtime-second-user');
+      const recipientOptions: RuntimeOptions = {
+        ...options,
+        dataDirectory: recipientDirectory,
+        plugins: await recipientManager.prepareRuntime(recipientDirectory, 'second-user-site'),
+        site: {
+          id: 'second-user-site',
+          name: 'Recipient ERP',
+          url: 'https://erp.example.test/app/',
+        },
+      };
+      for (const session of ['second-user-clean-install', 'second-user-after-restart']) {
+        done = new Promise<void>((resolveDone, reject) => {
+          finish = resolveDone;
+          fail = reject;
+        });
+        runtime = new DshRuntime(recipientOptions);
+        await runtime.prompt(session, '在自己的 ERP 中核对分享的采购经验。');
+        await Promise.race([
+          done,
+          new Promise<never>((_, reject) => {
+            const timer = setTimeout(() => {
+              reject(new Error('Clean recipient did not import or restore shared knowledge'));
+            }, 10000);
+            timer.unref();
+          }),
+        ]);
+        await runtime.close();
+      }
+      assert.equal(requests, 20);
+      assert.equal(approvals, 3);
+      assert.equal(
+        observationCalls,
+        1,
+        'recipient reuses knowledge without inheriting live evidence',
+      );
     } finally {
       await runtime?.close();
       await manager.close();
+      await recipientManager.close();
       await bridge.close();
       model.closeAllConnections();
       await new Promise<void>((closed) => {

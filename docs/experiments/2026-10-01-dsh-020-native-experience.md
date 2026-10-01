@@ -32,7 +32,9 @@ xvfb-run -a node --test tests/desktop.integration.ts
 DESKWORK_ERP_TARBALL=/absolute/path/to/candidate.tgz node --test tests/native-erp.integration.ts
 ```
 
-联合测试安装 ERP npm TGZ，验证宿主提供方为 `deskwork`，模型目录没有另一个 Playwright 或旧 ERP 浏览器操作工具。通过真实 DSH Agent loop 调用：观察 → 原生证据保存 → 知识记录 → Skill 导出 → 拒绝导入 → 允许导入 → Skill 目录发现 → 本地知识核对。随后停止并重启运行时，在新 Session 中重新发现 Skill 并读取导入知识，无需再次导入或观察。两次审批写入原生 Session 审计；导出的 JSON 不含本地入口身份和证据 ID。
+联合测试安装 ERP npm TGZ，验证宿主提供方为 `deskwork`，模型目录没有另一个 Playwright 或旧 ERP 浏览器操作工具。通过真实 DSH Agent loop 调用：观察 → 原生证据保存 → 知识记录 → Skill 导出 → 拒绝导入 → 允许导入 → Skill 目录发现 → 本地知识核对。随后停止并重启运行时，在新 Session 中重新发现 Skill 并读取导入知识，无需再次导入或观察。来源用户的两次审批写入原生 Session 审计；导出的 JSON 不含本地入口身份和证据 ID。
+
+再用独立插件目录重新安装同一 TGZ，为第二个账号创建空运行目录，确认没有来源 Skill 或知识。第二个账号经原生审批导入同一分享文件后，只得到绑定自身范围的待核验知识，不继承证据或确认；再次重启并创建新 Session，仍可发现 Skill 和读取知识。整个联合检查共 20 次真实模型请求、3 次原生导入审批，仅来源用户调用一次页面观察。
 
 现有插件测试覆盖标准安装、原生 Skill 加载、森果查询与开发指南；真实 Electron 测试覆盖确认、读取结果、提交后刷新、拒绝伪成功、会话隔离和重启恢复。ERP 仓库另有真实 Chromium 官方 Playwright MCP 与跨用户经验分享回归。Cua Driver 在隔离的 Linux Xvfb 中实际捕获可见窗口 PNG、后台点击并重新截图，由独立页面读取确认点击结果；使用上游原生二进制和完整尺寸窗口内坐标。
 
