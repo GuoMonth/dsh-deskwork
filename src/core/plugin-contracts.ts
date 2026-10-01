@@ -15,7 +15,7 @@ export const installSourceSchema = z
       /^(?:@[a-z0-9._-]+\/)?[a-z0-9][a-z0-9._-]*(?:@[a-zA-Z0-9.^~*+-]+)?$/.test(source) ||
       /^https:\/\/(?:github\.com|codeload\.github\.com)\/[^\s?#]+(?:[?#][^\s]*)?$/.test(source) ||
       /^github:[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(?:#[a-zA-Z0-9_./-]+)?$/.test(source),
-    '请输入 npm 包名、GitHub 地址或 file:/ 本地插件目录',
+    'Enter an npm package, GitHub URL or file:/ local plugin directory',
   );
 export const installedPluginSchema = z
   .object({

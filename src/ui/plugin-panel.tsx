@@ -1,3 +1,4 @@
+import { useI18n } from './locale.tsx';
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type {
@@ -20,6 +21,7 @@ export function PluginPanel({
   sites: readonly Site[];
   development: DevelopmentBridge;
 }): ReactElement {
+  const t = useI18n();
   const [state, setState] = useState<PluginState>({ installed: [], busy: false, progress: '' });
   const [results, setResults] = useState<MarketPlugin[]>([]);
   const [query, setQuery] = useState('');
@@ -66,12 +68,12 @@ export function PluginPanel({
   }
   return (
     <div className="plugin-panel">
-      <nav className="plugin-navigation" aria-label="插件栏目">
+      <nav className="plugin-navigation" aria-label={t('Plugin sections')}>
         {(
           [
-            ['installed', `已安装 · ${String(state.installed.length)}`],
-            ['discover', '发现'],
-            ['develop', '开发'],
+            ['installed', t(`Installed · ${String(state.installed.length)}`)],
+            ['discover', t('Discover')],
+            ['develop', t('Develop')],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -86,8 +88,12 @@ export function PluginPanel({
         ))}
       </nav>
       <div className="plugin-content">
-        <section hidden={section !== 'discover'} aria-label="发现插件">
-          <p className="muted">从 DSH 社区市场安装本地扩展，为网站添加知识、技能和工具。</p>
+        <section hidden={section !== 'discover'} aria-label={t('Discover plugins')}>
+          <p className="muted">
+            {t(
+              'Install local extensions from the DSH community marketplace to add knowledge, skills and tools to your websites.',
+            )}
+          </p>
           <form
             className="plugin-search"
             onSubmit={(event) => {
@@ -106,19 +112,19 @@ export function PluginPanel({
             }}
           >
             <input
-              aria-label="搜索插件"
-              placeholder="搜索市场中的插件"
+              aria-label={t('Search plugins')}
+              placeholder={t('Search marketplace plugins')}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
               }}
             />
             <button type="submit" disabled={working}>
-              搜索市场
+              {t('Search marketplace')}
             </button>
           </form>
           {results.length ? (
-            <div className="plugin-results" aria-label="市场搜索结果">
+            <div className="plugin-results" aria-label={t('Marketplace search results')}>
               {results.map((entry) => (
                 <article key={entry.url} className="plugin-result">
                   <strong>{entry.name}</strong>
@@ -131,7 +137,7 @@ export function PluginPanel({
                       setTrusted(false);
                     }}
                   >
-                    选择安装
+                    {t('Select for installation')}
                   </button>
                 </article>
               ))}
@@ -144,11 +150,11 @@ export function PluginPanel({
             }}
           >
             <label>
-              安装来源
+              {t('Installation source')}
               <input
-                aria-label="插件安装来源"
+                aria-label={t('Plugin installation source')}
                 value={source}
-                placeholder="npm 包名、GitHub 地址或 file:/ 本地插件目录"
+                placeholder={t('npm package, GitHub URL or file:/ local plugin directory')}
                 required
                 onChange={(event) => {
                   setSource(event.target.value);
@@ -164,28 +170,33 @@ export function PluginPanel({
                   setTrusted(event.target.checked);
                 }}
               />
-              我信任此来源，并允许扩展在本机执行代码、访问文件和网络。
+              {t(
+                'I trust this source and allow the extension to run code and access files and the network on this computer.',
+              )}
             </label>
             <button
               className="primary"
               disabled={working || state.busy || !trusted || !source.trim()}
             >
-              安装插件
+              {t('Install plugin')}
             </button>
           </form>
         </section>
-        <section hidden={section !== 'installed'} aria-label="已安装插件">
-          <h3>已安装 · {state.installed.length}</h3>
+        <section hidden={section !== 'installed'} aria-label={t('Installed plugins')}>
+          <h3>
+            {t('Installed ·')}
+            {state.installed.length}
+          </h3>
           {!state.installed.length ? (
             <div className="plugin-empty">
-              <p>还没有安装插件。网站可以照常使用。</p>
+              <p>{t('No plugins installed. Your websites are ready to use.')}</p>
               <button
                 className="primary"
                 onClick={() => {
                   setSection('discover');
                 }}
               >
-                发现插件
+                {t('Discover plugins')}
               </button>
             </div>
           ) : null}
@@ -203,11 +214,14 @@ export function PluginPanel({
       </div>
       <div className="plugin-feedback" aria-live="polite">
         <p role="status" className="muted">
-          {state.progress || '安装后可启用、挂载到网站或随时取消。'}
+          {t(state.progress) ||
+            t(
+              'After installation, enable or mount a plugin to websites, or remove it at any time.',
+            )}
         </p>
         {error ? (
           <pre role="alert" className="plugin-error">
-            {error}
+            {t(error)}
           </pre>
         ) : null}
       </div>
@@ -225,6 +239,7 @@ function PluginSettings({
   busy: boolean;
   run: (command: PluginCommand) => Promise<void>;
 }): ReactElement {
+  const t = useI18n();
   const [mountName, setMountName] = useState(plugin.mountName);
   const [siteIds, setSiteIds] = useState(plugin.siteIds);
   const [allSites, setAllSites] = useState(!plugin.siteIds.length);
@@ -232,11 +247,11 @@ function PluginSettings({
     <article className="plugin-installed">
       <strong>{plugin.name}</strong>{' '}
       <span className="muted">
-        {plugin.version} · {plugin.enabled ? '已启用' : '已禁用'}
+        {plugin.version} · {plugin.enabled ? t('Enabled') : t('Disabled')}
       </span>
       <p className="muted plugin-source">{plugin.source}</p>
       <label>
-        唯一挂载名
+        {t('Unique mount name')}
         <input
           value={mountName}
           pattern="[a-zA-Z0-9_-]+"
@@ -254,7 +269,7 @@ function PluginSettings({
             setAllSites(event.target.checked);
           }}
         />
-        所有网站
+        {t('All websites')}
       </label>
       {!allSites ? (
         <div className="plugin-sites">
@@ -289,7 +304,7 @@ function PluginSettings({
             });
           }}
         >
-          保存并启用
+          {t('Save and enable')}
         </button>
         <button
           disabled={busy || !plugin.enabled}
@@ -303,7 +318,7 @@ function PluginSettings({
             });
           }}
         >
-          取消挂载
+          {t('Unmount')}
         </button>
         <button
           disabled={busy}
@@ -311,7 +326,7 @@ function PluginSettings({
             void run({ action: 'update', name: plugin.name });
           }}
         >
-          更新
+          {t('Update')}
         </button>
         <button
           className="danger"
@@ -320,7 +335,7 @@ function PluginSettings({
             void run({ action: 'remove', name: plugin.name });
           }}
         >
-          卸载
+          {t('Uninstall')}
         </button>
       </div>
     </article>

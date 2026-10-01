@@ -51,7 +51,7 @@ export async function startValidatedToolServer<T>(
       }
       const input = parse(JSON.parse(body));
       const execute = async (): Promise<unknown> => {
-        if (requestToken !== token || response.destroyed) throw new Error('工具调用已撤销');
+        if (requestToken !== token || response.destroyed) throw new Error('Tool call revoked');
         return call(input);
       };
       const operation = interrupt(input) ? execute() : queue.then(execute);
@@ -63,9 +63,11 @@ export async function startValidatedToolServer<T>(
       response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(result));
     };
     void handle().catch((error: unknown) => {
-      response
-        .writeHead(400, { 'content-type': 'application/json' })
-        .end(JSON.stringify({ error: error instanceof Error ? error.message : '工具执行失败' }));
+      response.writeHead(400, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : 'Tool execution failed',
+        }),
+      );
     });
   });
   await new Promise<void>((resolve, reject) => {

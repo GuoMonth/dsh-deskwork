@@ -1,3 +1,4 @@
+import './check-translations.ts';
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';

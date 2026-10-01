@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { SkillLedger } from '../experiments/legacy-record-slice/skill-ledger.ts';
 
 await test('verified skills survive serialization and invalidate on account, field or page changes', () => {
-  const target = { tabId: 'erp', sessionId: 'senguo', profileId: 'fixture' };
+  const target = { tabId: 'erp', sessionId: 'example-erp', profileId: 'fixture' };
   const record = {
     shopId: 'shop',
     objectId: 'product',

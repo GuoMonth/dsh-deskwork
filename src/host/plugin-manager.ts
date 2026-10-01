@@ -21,7 +21,7 @@ const registrySchema = z
     ({ installed }) =>
       new Set(installed.map((entry) => entry.name)).size === installed.length &&
       new Set(installed.map((entry) => entry.mountName)).size === installed.length,
-    '插件或挂载名重复',
+    'Duplicate plugin or mount name',
   );
 export interface PluginManagerOptions {
   directory: string;
@@ -68,7 +68,7 @@ export class PluginManager {
     );
   }
   private async save(installed: InstalledPlugin[]): Promise<void> {
-    if (this.closed) throw new Error('插件管理已关闭');
+    if (this.closed) throw new Error('Plugin manager closed');
     const data = registrySchema.parse({ version: 1, installed });
     const path = this.registryPath();
     await writeFile(path + '.next', JSON.stringify(data), { mode: 0o600, flush: true });
@@ -80,26 +80,27 @@ export class PluginManager {
     this.options.onProgress?.();
   }
   async command(command: PluginCommand): Promise<void> {
-    if (this.busy || this.closed) throw new Error('插件变更正在进行或客户端已关闭');
+    if (this.busy || this.closed)
+      throw new Error('A plugin change is in progress or the app has closed');
     this.busy = true;
     try {
       if (command.action === 'install') await this.install(command.source);
       else {
         const current = this.installed.find((entry) => entry.name === command.name);
-        if (!current) throw new Error('插件未安装');
+        if (!current) throw new Error('Plugin not installed');
         if (command.action === 'update') await this.install(current.source, current);
         else if (command.action === 'remove') {
           await this.save(this.installed.filter((entry) => entry !== current));
           // A removal failure must not resurrect an enabled plugin. Its orphaned files can be cleaned later.
           await rm(this.installationHome(current.installationId), { recursive: true, force: true });
-          this.notify('插件已卸载');
+          this.notify('Plugin uninstalled');
         } else {
           if (
             this.installed.some(
               (entry) => entry !== current && entry.mountName === command.mountName,
             )
           )
-            throw new Error('挂载名已被使用');
+            throw new Error('Mount name already in use');
           await this.save(
             this.installed.map((entry) =>
               entry === current
@@ -112,11 +113,11 @@ export class PluginManager {
                 : entry,
             ),
           );
-          this.notify('插件设置已保存，下次任务使用新设置');
+          this.notify('Plugin settings saved; the next task uses the new settings');
         }
       }
     } catch (error) {
-      this.notify(error instanceof Error ? error.message : '插件操作失败');
+      this.notify(error instanceof Error ? error.message : 'Plugin operation failed');
       throw error;
     } finally {
       this.busy = false;
@@ -154,7 +155,7 @@ export class PluginManager {
         `#!/bin/sh\nexec ${quote(this.options.executable)} ${quote(this.options.pnpmPath)} "$@"\n`,
         { mode: 0o700 },
       );
-      this.notify(`正在安装 ${source}`);
+      this.notify(`Installing ${source}`);
       await this.run(
         [this.options.cliPath, 'plugin', '--profile', 'sdk-minimal', 'add', '--save-exact', source],
         home,
@@ -162,15 +163,17 @@ export class PluginManager {
       );
       const raw: unknown = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'));
       const names = Object.keys(profileSchema.parse(raw).dependencies);
-      if (names.length !== 1 || !names[0]) throw new Error('安装结果没有唯一的插件包');
+      if (names.length !== 1 || !names[0])
+        throw new Error('Installation did not produce a unique plugin package');
       const name = packageNameSchema.parse(names[0]);
       const manifestRaw: unknown = JSON.parse(
         await readFile(join(profile, 'node_modules', name, 'package.json'), 'utf8'),
       );
       const manifest = manifestSchema.parse(manifestRaw);
-      if (previous && name !== previous.name) throw new Error('升级源返回了不同插件');
+      if (previous && name !== previous.name)
+        throw new Error('The update source returned a different plugin');
       if (!previous && this.installed.some((entry) => entry.name === name))
-        throw new Error('插件已安装，请使用更新');
+        throw new Error('Plugin already installed; use Update');
       // DSH itself composes the patch; this catches malformed bundles before replacing the working install.
       await this.run(
         [this.options.cliPath, '--profile', 'sdk-minimal', '--dump-config'],
@@ -196,7 +199,7 @@ export class PluginManager {
       };
       await this.options.validate?.(home, plugin);
       await this.save([...this.installed.filter((entry) => entry.name !== name), plugin]);
-      this.notify(`已安装 ${name} ${manifest.version}`);
+      this.notify(`Installed ${name} ${manifest.version}`);
     } catch (error) {
       await rm(home, { recursive: true, force: true });
       throw error;
@@ -237,12 +240,13 @@ export class PluginManager {
         if (this.child === child) this.child = undefined;
         clearTimeout(timer);
         if (code === 0) resolve();
-        else reject(new Error(`插件安装或加载失败 (${String(code)})\n${output}`));
+        else
+          reject(new Error(`Plugin installation or loading failed (${String(code)})\n${output}`));
       });
     });
   }
   async prepareRuntime(dataDirectory: string, siteId: string): Promise<InstalledPlugin[]> {
-    if (this.busy) throw new Error('请等待插件变更完成');
+    if (this.busy) throw new Error('Wait for the plugin change to finish');
     const selected = this.installed.filter(
       (entry) => entry.enabled && (!entry.siteIds.length || entry.siteIds.includes(siteId)),
     );

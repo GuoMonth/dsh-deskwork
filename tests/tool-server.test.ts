@@ -21,7 +21,7 @@ await test('tool credentials are revoked between runtimes; browser-origin and un
     server.revoke();
     assert.equal((await invoke(oldToken)).status, 403);
     assert.equal(
-      (await invoke(server.token, 'observe_page', 'https://center.senguo.cc')).status,
+      (await invoke(server.token, 'observe_page', 'https://erp.example.test/')).status,
       403,
     );
     assert.equal((await invoke(server.token, 'arbitrary_javascript')).status, 400);

@@ -78,6 +78,7 @@ try {
     'tests/plugin-runtime.integration.ts',
     'tests/plugin-desktop.integration.ts',
     'tests/development-desktop.integration.ts',
+    'tests/locale-desktop.integration.ts',
   ]);
   if (code === 0 && process.env['DESKWORK_ERP_TARBALL'])
     code = await runChecks(['--test', 'tests/native-erp.integration.ts']);

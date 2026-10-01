@@ -17,8 +17,8 @@ await test(
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       response.end(
         request.url === '/select'
-          ? '<title>Native select</title><select aria-label="类别"><option>货款</option><option>其他收入</option></select>'
-          : '<title>Custom menu</title><button onclick="document.querySelector(\'section\').hidden=false">类别</button><section hidden>货款 其他收入</section>',
+          ? '<title>Native select</title><select aria-label="Category"><option>Option A</option><option>Option B</option></select>'
+          : '<title>Custom menu</title><button onclick="document.querySelector(\'section\').hidden=false">Category</button><section hidden>Option A Option B</section>',
       );
     });
     let replies = 0;
@@ -28,10 +28,10 @@ await test(
         const body = JSON.stringify(parsed);
         assert.ok(parsed.tools.some((tool) => tool.name === 'fixture_query'));
         const finished = parsed.messages.some((message) => hasToolResult(message.content));
-        if (finished) assert.ok(body.includes('货款'));
+        if (finished) assert.ok(body.includes('Option A'));
         writeMessagesResponse(
           response,
-          finished ? '查询完成，已读取类别。' : { name: 'fixture_query', input: {} },
+          finished ? '查询完成，已读取Category。' : { name: 'fixture_query', input: {} },
           `query-${String(++replies)}`,
         );
       };
@@ -69,18 +69,22 @@ await test(
         .toBe(true);
       const shell = app.windows().find((page) => page.url().startsWith('file:'));
       assert.ok(shell);
-      await shell.getByRole('button', { name: '插件', exact: true }).click();
-      await shell.getByRole('button', { name: '发现', exact: true }).click();
-      await shell.getByLabel('插件安装来源').fill(`file:${resolve('tests/fixtures/query-plugin')}`);
-      await expect(shell.getByRole('button', { name: '安装插件', exact: true })).toBeDisabled();
-      await shell.getByRole('button', { name: '开发', exact: true }).click();
-      await expect(shell.getByLabel('插件安装来源')).toBeHidden();
-      await shell.getByRole('button', { name: '发现', exact: true }).click();
-      await expect(shell.getByLabel('插件安装来源')).toHaveValue(
+      await shell.getByRole('button', { name: 'Plugins', exact: true }).click();
+      await shell.getByRole('button', { name: 'Discover', exact: true }).click();
+      await shell
+        .getByLabel('Plugin installation source')
+        .fill(`file:${resolve('tests/fixtures/query-plugin')}`);
+      await expect(
+        shell.getByRole('button', { name: 'Install plugin', exact: true }),
+      ).toBeDisabled();
+      await shell.getByRole('button', { name: 'Develop', exact: true }).click();
+      await expect(shell.getByLabel('Plugin installation source')).toBeHidden();
+      await shell.getByRole('button', { name: 'Discover', exact: true }).click();
+      await expect(shell.getByLabel('Plugin installation source')).toHaveValue(
         `file:${resolve('tests/fixtures/query-plugin')}`,
       );
       await shell.getByRole('checkbox').check();
-      await shell.getByRole('button', { name: '安装插件', exact: true }).click();
+      await shell.getByRole('button', { name: 'Install plugin', exact: true }).click();
       await expect(shell.getByText('deskwork-query-fixture', { exact: true })).toBeVisible({
         timeout: 25000,
       });
@@ -105,7 +109,7 @@ await test(
       assert.match(installation.node, /^24\./);
       await mkdir('.artifacts/desktop', { recursive: true });
       await shell.getByRole('dialog').screenshot({ path: '.artifacts/desktop/m2-plugins.png' });
-      await shell.getByRole('button', { name: '关闭对话框' }).click();
+      await shell.getByRole('button', { name: 'Close dialog' }).click();
       for (const path of ['/select', '/custom']) {
         await shell.evaluate(
           async ({ url, name }) => {
@@ -117,12 +121,12 @@ await test(
         await expect
           .poll(() => app.windows().some((page) => page.url() === base + path))
           .toBe(true);
-        await shell.getByRole('textbox', { name: '告诉 DSH 你的目标' }).fill('查询类别');
-        await shell.getByRole('button', { name: '发送任务' }).click();
-        await expect(shell.getByText('本轮已完成', { exact: true })).toBeVisible({
+        await shell.getByRole('textbox', { name: 'Tell DSH your goal' }).fill('查询Category');
+        await shell.getByRole('button', { name: 'Send task' }).click();
+        await expect(shell.getByText('Turn completed', { exact: true })).toBeVisible({
           timeout: 25000,
         });
-        assert.equal(await shell.getByRole('button', { name: '确认并执行' }).count(), 0);
+        assert.equal(await shell.getByRole('button', { name: 'Confirm and execute' }).count(), 0);
       }
       const snapshot = await shell.evaluate(() => {
         if (!window.deskwork) throw new Error('Missing desktop bridge');
@@ -138,11 +142,13 @@ await test(
         snapshot.contexts.map((context) => context.task.metrics.toolCalls),
         [1, 3],
       );
-      await shell.getByRole('button', { name: '插件', exact: true }).click();
-      await shell.getByRole('button', { name: '取消挂载', exact: true }).click();
-      await expect(shell.getByText(/1.0.0 · 已禁用/)).toBeVisible();
-      await shell.getByRole('button', { name: '卸载', exact: true }).click();
-      await expect(shell.getByText('还没有安装插件。网站可以照常使用。')).toBeVisible();
+      await shell.getByRole('button', { name: 'Plugins', exact: true }).click();
+      await shell.getByRole('button', { name: 'Unmount', exact: true }).click();
+      await expect(shell.getByText(/1.0.0 · Disabled/)).toBeVisible();
+      await shell.getByRole('button', { name: 'Uninstall', exact: true }).click();
+      await expect(
+        shell.getByText('No plugins installed. Your websites are ready to use.'),
+      ).toBeVisible();
     } finally {
       await app.close();
       for (const server of [site, model]) {

@@ -58,7 +58,7 @@ export async function startErpFixture(
         return;
       }
       const content = loggedIn
-        ? `<div class="top"><strong>商品资料</strong><a href="/logout">退出测试店铺</a></div><p class="hint">本地 ERP 夹具 · 合成业务数据</p><div class="card"><div class="identity">店铺 <span id="shop-id">test-shop</span> · <span id="page-revision">fixture-v1</span></div><h1 id="product-name">山东红富士苹果</h1><p>商品编号 <span id="object-id">SG-1001</span></p><form action="/save" method="post"><label for="record-value">商品备注</label><textarea id="record-value" name="value">${escape(value)}</textarea><button id="save">保存资料</button></form><p class="hint">此字段可修改并恢复。刷新页面显示实际保存值。</p></div>`
+        ? `<div class="top"><strong>商品资料</strong><a href="/logout">退出测试店铺</a></div><p class="hint">本地 ERP 夹具 · 合成业务数据</p><div class="card"><div class="identity">店铺 <span id="shop-id">test-shop</span> · <span id="page-revision">fixture-v1</span></div><h1 id="product-name">山东红富士苹果</h1><p>商品编号 <span id="object-id">EX-1001</span></p><form action="/save" method="post"><label for="record-value">商品备注</label><textarea id="record-value" name="value">${escape(value)}</textarea><button id="save">保存资料</button></form><p class="hint">此字段可修改并恢复。刷新页面显示实际保存值。</p></div>`
         : '<div class="login"><span class="mark">森</span><h1>登录本地测试店铺</h1><p>合成 ERP 夹具，用于验证真实浏览器会话。</p><form action="/login" method="post"><button id="login">进入测试店铺</button></form><small>无需输入真实账号或密码</small></div>';
       response
         .writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })

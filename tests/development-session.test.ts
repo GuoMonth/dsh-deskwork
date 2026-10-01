@@ -86,7 +86,7 @@ await test('development connection binds one target, pauses writes, rejects stal
     const obsolete = controller.state.confirmation?.id;
     assert.ok(obsolete);
     page.revision = 'r2';
-    await assert.rejects(controller.confirm(obsolete), /已变化/);
+    await assert.rejects(controller.confirm(obsolete), /changed/i);
     assert.equal(writes, 0);
     await controller.resume();
     await call({

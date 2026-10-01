@@ -35,12 +35,12 @@ export class DevelopmentSession {
     return this.enabled;
   }
   async open(): Promise<void> {
-    if (this.server) throw new Error('开发连接已创建');
+    if (this.server) throw new Error('Development connection created');
     this.server = await startValidatedToolServer(
       (raw) => developmentRequestSchema.parse(raw),
       async (request) => {
         if (!this.enabled || this.controller.state.id !== this.taskId)
-          throw new Error('开发连接已撤销');
+          throw new Error('Development connection revoked');
         const controller = this.controller;
         if (request.name === 'status') return this.status();
         if (request.name === 'stop') {

@@ -1,6 +1,6 @@
 # M1 集成验证 · 2026-09-05
 
-> 历史证据：以下为原资料工具／合成 ERP 切片的实测记录。2026-09-06 的 [范围纠偏](../decisions/0005-configurable-workspace-scope.md) 已取消森果字段适配的交付要求；本记录不证明新的通用浏览器 M1 通过。保留原结果与未验证项用于追溯。
+> 历史证据：以下为原资料工具／合成 ERP 切片的实测记录。2026-09-06 的 [范围纠偏](../decisions/0005-configurable-workspace-scope.md) 已取消示例 ERP字段适配的交付要求；本记录不证明新的通用浏览器 M1 通过。保留原结果与未验证项用于追溯。
 
 源码身份：本记录所在提交的 `src/`、`tests/` 与 `experiments/browser-harness-electron.integration.ts`；依赖以该提交的 package-lock 为准。
 
@@ -10,7 +10,7 @@
 | --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------- |
 | Browser Harness H-002 | `xvfb-run -a node --test experiments/browser-harness-electron.integration.ts` | 0.1.13 可发现并读取 Electron ERP；同时暴露 shell 目标              | 未验证通用弹窗、重连和 macOS；产品采用宿主 CDP |
 | DSH H-003             | `npm run test:runtime`                                                        | 真实发布进程握手、三个 MCP 工具发现、模型请求和工具回传、退出      | 模型为本地可控响应，无真实 API 密钥            |
-| 桌面业务切片          | `xvfb-run -a npm run test:desktop`                                            | 手动登录、确认前零写入、Agent 切换、保存、服务端回读、页面无宿主桥 | 本地 ERP 夹具，不代表森果真实页面              |
+| 桌面业务切片          | `xvfb-run -a npm run test:desktop`                                            | 手动登录、确认前零写入、Agent 切换、保存、服务端回读、页面无宿主桥 | 本地 ERP 夹具，不代表示例 ERP真实页面          |
 | 任务边界              | `node --test tests/task-controller.test.ts tests/tool-server.test.ts`         | 身份变化使确认失效、响应丢失只核对、停止撤销确认和工具凭据         | 确定性回归                                     |
 | 技能 H-005 的子集     | `node --test tests/skill-ledger.test.ts`                                      | 持久记录可复用，身份/字段/版本变化使记录不适用                     | 手写技能复用，不证明自主学习或实测加速         |
 
@@ -18,7 +18,7 @@
 
 原始本地证据：`.artifacts/runtime/events.json`、`.artifacts/browser-harness/result.json`、`.artifacts/desktop/`。只使用合成数据，真实凭据不进入这些工件。
 
-尚未验证：真实森果店铺与商品字段、真实模型质量/耗时、用户 Mac 安装与登录、页面长期稳定性和自动进化。macOS CI 与安装包结果在 PR 中附对应运行链接，未通过前不标记 M1 完成。
+尚未验证：真实示例 ERP店铺与商品字段、真实模型质量/耗时、用户 Mac 安装与登录、页面长期稳定性和自动进化。macOS CI 与安装包结果在 PR 中附对应运行链接，未通过前不标记 M1 完成。
 
 恢复负例：DSH 同 ID 重启的历史断言失败；改用宿主保存并显式提供的恢复上下文后通过。另有保存失败但输入框已更新的负例，要求回读服务端而不是读取本地表单值。桌面测试使用 URL 精确识别 shell 和业务页面，避免依赖不确定的窗口创建顺序。
 

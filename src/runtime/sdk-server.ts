@@ -19,7 +19,7 @@ export function apply(ctx: Context, config: JsonRpcConfig): void {
       // The upstream SDK creates a default adapter when the configured one failed.
       if (!ctx.llm.listProviders().some((provider) => provider.id === 'deepseek-official')) {
         throw new Error(
-          '选定的 DeepSeek 模型提供方未启用，请检查模型地址与插件配置；不会切换到默认路由。',
+          'The selected DeepSeek provider is disabled. Check the model URL and plugin configuration; the runtime will not switch to a default route.',
         );
       }
     }

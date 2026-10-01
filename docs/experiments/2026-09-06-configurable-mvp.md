@@ -1,6 +1,6 @@
 # 通用工作台 MVP 验证 · 2026-09-06
 
-源码身份：本记录所在提交，分支 `feat/m1-senguo-workspace`，PR #2。依赖沿用锁文件：Electron 44.2.0、DSH 0.1.2-rc.1、Node 24。Linux x64 实验在 Xvfb 与已授权 host 隔离环境运行；产品仍保留 Chromium sandbox。
+源码身份：本记录所在提交，分支 `feat/m1-example-erp-workspace`，PR #2。依赖沿用锁文件：Electron 44.2.0、DSH 0.1.2-rc.1、Node 24。Linux x64 实验在 Xvfb 与已授权 host 隔离环境运行；产品仍保留 Chromium sandbox。
 
 ## 结论与覆盖
 
@@ -13,7 +13,7 @@
 | 结果判据     | 控制器负例与桌面负例                                             | 输入框变化不证明保存；刷新后出现用户确认的预期正文才能自动核对，否则保持待核对                                                                                                               |
 | 完整桌面     | `xvfb-run -a node --test tests/desktop.integration.ts`           | 真实 Electron＋DSH＋可控模型；两个站点、三个入口增删、同源身份隔离、弹窗 opener、独立对话、Agent 隐藏与 Copilot 显示原生页面、持久 Cookie 与重启、保存失败不重复提交、标签切换与原生输入接手 |
 | 运行时协议   | `node --test tests/runtime.integration.ts`                       | 发布版 DSH 发现七个宿主工具、实际工具调用、退出与宿主恢复上下文                                                                                                                              |
-| 配置真实网址 | `xvfb-run -a node experiments/configured-site.smoke.ts`          | 森果公开「选择店铺」页面可配置加载，原生页面可见，网页无宿主桥；没有登录、模型调用或写入                                                                                                     |
+| 配置真实网址 | `xvfb-run -a node experiments/configured-site.smoke.ts`          | 示例 ERP公开「选择店铺」页面可配置加载，原生页面可见，网页无宿主桥；没有登录、模型调用或写入                                                                                                 |
 | 界面预览     | agent-browser 检查 `npm run dev`                                 | 外壳空状态、网址配置与两种视图；网站区域为中性占位，不仿制 ERP                                                                                                                               |
 
 本轮修正过两个验证问题：测试网站的会话 Cookie 未设置有效期，不能证明重启保留登录，改为明确的持久 Cookie；Playwright 的 DOM 填写不能代表 Electron 原生用户输入，接手回归改用原生输入事件。不会把这些结果推广成所有 ERP 登录策略都兼容。
@@ -22,7 +22,7 @@ Electron `BrowserWindow.capturePage()` 在本环境的截图不包含 WebContent
 
 ## 已知限制
 
-- 真实 DeepSeek API 密钥当前不可用；真实模型完成率、耗时、已登录森果业务及用户 Mac 安装验收仍待完成。
+- 真实 DeepSeek API 密钥当前不可用；真实模型完成率、耗时、已登录示例 ERP业务及用户 Mac 安装验收仍待完成。
 - 通用操作目前覆盖普通 DOM。跨域 iframe、封闭 Shadow DOM、canvas、复杂自定义控件、上传下载及通用 SSO 未验收；不自动转为 ERP 专属连接器。
 - 观察输出有数量与长度限制；密码不作为字段值输出，长字段和未知控件需接手。截图不用于含可见密码框的登录页面。
 - 未验证的填写、选择、未知按钮、全部键盘动作和带查询参数的导航先确认。普通链接的判断是已知语义规则，不证明任意网页脚本没有隐藏副作用。

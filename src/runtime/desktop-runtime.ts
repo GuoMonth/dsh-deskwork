@@ -53,7 +53,7 @@ async function inventory(root: string): Promise<RuntimeDescriptor['files']> {
           sha256: createHash('sha256').update(body).digest('hex'),
           executable: process.platform !== 'win32' && ((await lstat(path)).mode & 0o111) !== 0,
         });
-      } else throw new Error(`运行时包含未物化的链接：${name}`);
+      } else throw new Error(`Runtime contains an unmaterialized link: ${name}`);
     }
   };
   await visit(root);
@@ -76,14 +76,15 @@ export async function readRuntimeDescriptor(
     JSON.parse(await readFile(join(root, runtimeDescriptorFile), 'utf8')),
   );
   if (descriptor.platform !== target.platform || descriptor.arch !== target.arch)
-    throw new Error('随包运行时的平台或架构不匹配');
+    throw new Error('The bundled runtime platform or architecture does not match');
   if (
     descriptor.packages['@deepseek-ai/dsh'] !== descriptor.dshVersion ||
     descriptor.packages['pnpm'] !== descriptor.pnpmVersion
   )
-    throw new Error('随包核心版本与运行时清单不匹配');
+    throw new Error('Bundled core versions do not match the runtime manifest');
   const paths = descriptor.files.map((file) => file.path);
-  if (new Set(paths).size !== paths.length) throw new Error('运行时清单包含重复路径');
+  if (new Set(paths).size !== paths.length)
+    throw new Error('Duplicate paths in the runtime manifest');
   for (const required of [
     'node_modules/@deepseek-ai/dsh/lib/bin.js',
     'node_modules/pnpm/bin/pnpm.cjs',
@@ -92,7 +93,7 @@ export async function readRuntimeDescriptor(
     'dist/runtime/browser-service.mjs',
     'dist/runtime/devkit/lib/plugin.js',
   ]) {
-    if (!paths.includes(required)) throw new Error(`随包运行时缺少 ${required}`);
+    if (!paths.includes(required)) throw new Error(`Bundled runtime missing ${required}`);
   }
   return descriptor;
 }
@@ -104,13 +105,15 @@ export async function verifyRuntime(
   const descriptor = await readRuntimeDescriptor(root, target);
   const actual = await inventory(root);
   if (JSON.stringify(actual) !== JSON.stringify(descriptor.files))
-    throw new Error('随包运行时文件、内容或执行权限与清单不匹配');
+    throw new Error(
+      'Bundled runtime files, contents or executable permissions differ from the manifest',
+    );
   for (const [name, version] of Object.entries(descriptor.packages)) {
     const manifest = z
       .object({ name: z.string(), version: z.string() })
       .parse(JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')));
     if (manifest.name !== name || manifest.version !== version)
-      throw new Error(`随包依赖版本不匹配：${name}`);
+      throw new Error(`Bundled dependency version mismatch: ${name}`);
   }
   return descriptor;
 }

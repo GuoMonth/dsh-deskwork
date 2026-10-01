@@ -18,7 +18,7 @@ DMG 提供拖放安装；临时签名用于校验应用包完整性，不能替�
 
 在左侧「插件」中搜索 DSH 社区市场，或填入 npm 包名／GitHub Release 插件地址。核对来源并主动信任后安装。已安装插件可修改唯一挂载名、绑定网站、取消挂载、更新或卸载；影响任务的变更前先停止任务。开发时也可安装标准 `file:/` 插件目录，无 ZIP 资产导入。
 
-插件是本地可执行代码。经过 Deskwork 浏览器接口的写入仍需确认；插件自身的文件和网络访问属于安装信任范围。开源预览不承诺兼容性，安装或加载失败会显示错误并保留旧版本。首个样例是[森果收支查询插件](../plugins/senguo-query/README.md)，可从[插件 Release](https://github.com/GuoMonth/dsh-deskwork/releases/tag/senguo-query-v0.1.0-alpha.1)复制 `.tgz` 资产下载地址安装。[M2 PR #14](https://github.com/GuoMonth/dsh-deskwork/pull/14)记录市场收录状态，收录前使用公开下载地址。
+公开自动化验证使用 [synthetic query fixture](../tests/fixtures/query-plugin/README.md)，仅包含生成的类别数据。私有集成插件和业务截图保存在仓库外，不随源码或 Release 分发。
 
 ## 操作与核对
 
@@ -48,6 +48,6 @@ Linux 无显示环境时，桌面测试加 `xvfb-run -a`。夹具手工运行在
 
 macOS 用户数据位于 `~/Library/Application Support/dsh-deskwork`。网址和对话自动保存；更新应用保留此目录。旧版网址与会话引用会先备份再迁移，旧任务确认、字段适配及技能文件进入 `archive/`，不自动执行。无需维护字段映射文件。
 
-[森果配置样例](../examples/workspace.json)只用于测试或开发参考，产品不会自动导入。实验依据与限制见 [本轮验证](experiments/2026-09-06-configurable-mvp.md)。
+[示例 ERP配置样例](../examples/workspace.json)只用于测试或开发参考，产品不会自动导入。实验依据与限制见 [本轮验证](experiments/2026-09-06-configurable-mvp.md)。
 
 开发环境可通过 `DESKWORK_DEVELOPMENT_API_KEY` 向宿主临时注入测试密钥；仅在未打包且启用本机开发外壳时读取，不保存到配置文件。正常客户端仍使用模型设置与系统安全存储。开发模式默认使用 `.artifacts/development-profile`，支持 `--profile-directory` 指定私有目录。

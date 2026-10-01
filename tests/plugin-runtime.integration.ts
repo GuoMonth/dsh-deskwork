@@ -14,10 +14,10 @@ import { startToolServer } from '../src/runtime/tool-server.ts';
 for (const scenario of [
   {
     label: 'installed browser service plugin',
-    skill: 'senguo-query',
-    tool: 'senguo_query_categories',
+    skill: 'fixture-query',
+    tool: 'fixture_query',
     arguments: '{}',
-    evidence: '货款',
+    evidence: 'Option A',
     install: true,
   },
   {
@@ -46,15 +46,15 @@ for (const scenario of [
       return Promise.resolve({
         pageId: 'page-a',
         revision: String(calls.length),
-        url: 'https://pf.senguo.cc/manage/#/main/home/tab/takenote',
-        title: '流水',
-        text: calls.length > 1 ? '所有类别\n货款\n其他收入\n确认(0/2)' : '流水 收支类别',
+        url: 'https://erp.example.test/',
+        title: 'Example ERP',
+        text: calls.length > 1 ? 'Option A\nOption B' : 'Category',
         elements: [
           {
             ref: 'e0',
             tag: 'button',
             role: 'button',
-            name: '收支类别',
+            name: 'Category',
             value: '',
             type: 'button',
             href: '',
@@ -108,7 +108,7 @@ for (const scenario of [
     let runtime: DshRuntime | undefined;
     try {
       await manager.load();
-      if (scenario.install) await manager.install(`file:${resolve('plugins/senguo-query')}`);
+      if (scenario.install) await manager.install(`file:${resolve('tests/fixtures/query-plugin')}`);
       const dataDirectory = join(directory, 'runtime');
       const plugins = await manager.prepareRuntime(dataDirectory, 'site-a');
       runtime = new DshRuntime({
@@ -124,7 +124,10 @@ for (const scenario of [
         toolToken: bridge.token,
         onNotification: (): void => {},
       });
-      await runtime.prompt('plugin-test', '请加载森果查询技能并读取收支类别');
+      await runtime.prompt(
+        'plugin-test',
+        'Load the fixture query Skill and read the available categories',
+      );
       await Promise.race([
         done,
         new Promise((_, reject) => {

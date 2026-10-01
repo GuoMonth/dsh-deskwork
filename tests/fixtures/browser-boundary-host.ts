@@ -29,11 +29,14 @@ async function verify(): Promise<void> {
     const handle = pages.resolve(target);
     await handle.contents.loadURL(website.origin + '/login');
     const foreignPage = pages.resolve(other).page.id;
-    assert.throws(() => pages.resolve(target, foreignPage), /不属于/);
+    assert.throws(() => pages.resolve(target, foreignPage), /does not belong/i);
     assert.throws(() => {
       pages.select(target, foreignPage);
-    }, /不属于/);
-    assert.throws(() => pages.resolve({ ...target, sessionId: other.sessionId }), /不属于/);
+    }, /does not belong/i);
+    assert.throws(
+      () => pages.resolve({ ...target, sessionId: other.sessionId }),
+      /does not belong/i,
+    );
     const browser = new ElectronBrowser(
       (entry, id) => pages.resolve(entry, id),
       (entry) => pages.list(entry),
@@ -62,7 +65,7 @@ async function verify(): Promise<void> {
     assert.equal(browser.needsConfirmation(cards, cardAction), true);
     await browser.execute(target, cardAction, () => true);
     assert.ok((await browser.observe(target)).text.includes('Records opened'));
-    await assert.rejects(browser.observe(target, foreignPage), /不属于/);
+    await assert.rejects(browser.observe(target, foreignPage), /does not belong/i);
     await evaluate(handle.contents, "document.querySelector('input').focus(); true");
     const observation = await browser.observe(target);
     const proposal: ActionProposal = {
@@ -79,7 +82,7 @@ async function verify(): Promise<void> {
     assert.ok(confirmation);
     // Scripted focus changes do not produce a native mouse/key takeover event.
     await evaluate(handle.contents, "document.querySelector('button').focus(); true");
-    await assert.rejects(controller.confirm(confirmation.id), /页面或输入已变化/);
+    await assert.rejects(controller.confirm(confirmation.id), /page or input changed/i);
     assert.equal(website.writes(), 0);
 
     const current = await browser.observe(target);

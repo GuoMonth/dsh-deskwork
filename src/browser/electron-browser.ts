@@ -15,7 +15,7 @@ const evaluationSchema = z.object({
   exceptionDetails: z.unknown().optional(),
 });
 export async function evaluate(contents: WebContents, expression: string): Promise<unknown> {
-  if (contents.isDestroyed()) throw new Error('页面已关闭');
+  if (contents.isDestroyed()) throw new Error('Page closed');
   if (!contents.debugger.isAttached()) contents.debugger.attach('1.3');
   const raw: unknown = await contents.debugger.sendCommand('Runtime.evaluate', {
     expression,
@@ -24,7 +24,8 @@ export async function evaluate(contents: WebContents, expression: string): Promi
     timeout: 10000,
   });
   const response = evaluationSchema.parse(raw);
-  if (response.exceptionDetails) throw new Error('页面操作未完成，请重新观察或接手');
+  if (response.exceptionDetails)
+    throw new Error('The page operation did not finish. Observe again or take over.');
   return response.result.value;
 }
 // Application-owned expressions only; no scripts, selectors, or executable code from the model.
@@ -58,7 +59,7 @@ export function actionNeedsConfirmation(
   if (action.kind === 'key') return true;
   const element = observation.elements.find((entry) => entry.ref === action.ref);
   if (!element || element.disabled || element.type === 'password')
-    throw new Error('元素不可操作，请用户在页面中接手');
+    throw new Error('The element is not actionable. Take over on the page.');
   // Unknown controls and edits may autosave. Only plain, non-action links bypass review.
   if (action.kind === 'click' && element.tag === 'a' && /^https?:/.test(element.href))
     return dangerous.test(element.name + element.href) || Boolean(new URL(element.href).search);
@@ -112,19 +113,20 @@ export class ElectronBrowser implements BrowserAdapter {
   }
   async execute(target: TaskTarget, proposal: ActionProposal, valid: () => boolean): Promise<void> {
     const current = await this.observe(target, proposal.pageId);
-    if (!valid() || current.revision !== proposal.revision) throw new Error('页面或任务已变化');
+    if (!valid() || current.revision !== proposal.revision)
+      throw new Error('The page or task changed');
     const handle = this.resolve(target, proposal.pageId);
     const action = proposal.action;
     if (action.kind === 'navigate') {
-      if (!valid()) throw new Error('任务已停止');
+      if (!valid()) throw new Error('Task stopped');
       await handle.contents.loadURL(action.url);
       return;
     }
     if (action.kind === 'key') {
       const focused = current.elements.find((element) => element.ref === current.focusedRef);
       if (!focused || focused.disabled || focused.type === 'password')
-        throw new Error('键盘目标不可确认，请用户在页面中接手');
-      if (!valid()) throw new Error('任务已停止');
+        throw new Error('Cannot confirm the keyboard target. Take over on the page.');
+      if (!valid()) throw new Error('Task stopped');
       handle.automating = true;
       try {
         handle.contents.sendInputEvent({ type: 'keyDown', keyCode: action.key });
@@ -135,7 +137,7 @@ export class ElectronBrowser implements BrowserAdapter {
       }
       return;
     }
-    if (!valid()) throw new Error('任务已停止');
+    if (!valid()) throw new Error('Task stopped');
     const result = await evaluate(
       handle.contents,
       `(() => {
@@ -160,14 +162,14 @@ export class ElectronBrowser implements BrowserAdapter {
       return true;
     })()`,
     );
-    if (result !== true) throw new Error('页面没有确认动作执行');
+    if (result !== true) throw new Error('The page did not confirm the action');
   }
   async screenshot(target: TaskTarget, pageId: string): Promise<string> {
     const handle = this.resolve(target, pageId);
     const observation = await this.observe(target, pageId);
     // Login screenshots could expose credentials; leave authentication to the user.
     if (observation.elements.some((element) => element.type === 'password'))
-      throw new Error('登录页面请由用户操作，不发送截图');
+      throw new Error('Sign in manually on the login page; screenshots are not sent');
     const capture = await handle.contents.capturePage();
     return capture
       .resize({ width: Math.min(1280, capture.getSize().width) })

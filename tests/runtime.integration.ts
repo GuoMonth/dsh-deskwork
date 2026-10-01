@@ -19,7 +19,7 @@ await test(
     const notifications: { method: string; params: unknown }[] = [];
     const bridge = await startToolServer((request) => {
       calls.push(request.name);
-      return Promise.resolve({ page: '测试商品 SG-1001，备注为原值' });
+      return Promise.resolve({ page: '测试商品 EX-1001，备注为原值' });
     });
     let requests = 0;
     let restoredContext = false;
@@ -47,7 +47,7 @@ await test(
         );
         requests++;
         receivedDeskworkPersona ||= JSON.stringify(parsed.system).includes(
-          '你是 DSH Deskwork 网站助手',
+          'You are the DSH Deskwork website assistant',
         );
         if (requests === 3)
           restoredContext =
@@ -192,7 +192,7 @@ await test(
       onNotification: (): void => {},
     });
     try {
-      await assert.rejects(runtime.start(), /选定的 DeepSeek.*未启用/);
+      await assert.rejects(runtime.start(), /selected DeepSeek.*disabled/i);
     } finally {
       await runtime.close();
       await rm(directory, { recursive: true, force: true });
@@ -217,7 +217,7 @@ await test('invalid Messages address is rejected without starting a process or r
     runtime.start(),
     (error) =>
       error instanceof Error &&
-      error.message.includes('Messages API 根地址') &&
+      error.message.includes('Messages API root URL') &&
       !error.message.includes('secret'),
   );
   await runtime.close();

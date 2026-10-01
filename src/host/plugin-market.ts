@@ -33,9 +33,12 @@ export class PluginMarket {
   async search(query: string): Promise<MarketPlugin[]> {
     if (!this.cache || Date.now() - this.cache.at > 300000) {
       const response = await fetch(marketCatalogURL, { signal: AbortSignal.timeout(20000) });
-      if (!response.ok) throw new Error(`市场加载失败 (${String(response.status)})，请稍后重试`);
+      if (!response.ok)
+        throw new Error(
+          `Marketplace loading failed (${String(response.status)}). Try again later.`,
+        );
       const body = await response.text();
-      if (body.length > 8000000) throw new Error('市场目录过大');
+      if (body.length > 8000000) throw new Error('Marketplace directory too large');
       const raw: unknown = JSON.parse(body);
       this.cache = { at: Date.now(), entries: parseMarketCatalog(raw) };
     }

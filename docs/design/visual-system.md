@@ -10,7 +10,7 @@
 
 [SAP 企业设计](https://www.sap.com/design/design-system)提供角色、业务状态、简单一致的原则；[Oracle Design](https://design.oracle.com/)作为企业任务体验的辅助参考。保持适度信息密度，让业务对象、变更与结果比装饰更醒目。
 
-参考 [Cursor 侧栏 Agent](https://cursor.com/docs/agent/overview) 的页面与对话分工，采用 [VS Code 工作台](https://code.visualstudio.com/docs/editing/getting-started/userinterface)的区域分工：工作区导航、业务标签、辅助对话与命令入口。Copilot 和 Agent 是同一工作的两种视图。森果等第三方业务页面保留原样，统一设计覆盖 Deskwork 自有外壳。
+参考 [Cursor 侧栏 Agent](https://cursor.com/docs/agent/overview) 的页面与对话分工，采用 [VS Code 工作台](https://code.visualstudio.com/docs/editing/getting-started/userinterface)的区域分工：工作区导航、业务标签、辅助对话与命令入口。Copilot 和 Agent 是同一工作的两种视图。示例 ERP等第三方业务页面保留原样，统一设计覆盖 Deskwork 自有外壳。
 
 ## PC 信息密度
 
@@ -29,6 +29,6 @@
 - 科技感通过及时反馈和减少操作体现。轻量动效支持减少动态效果，不能妨碍阅读或业务输入。
 - 保留 macOS 原生窗口控制。面板可调、侧栏可折叠，模式切换保留上下文；支持键盘操作与可见焦点。
 - 预览展示添加网址、空状态、两个／三个配置标签，以及同一页面上下文的 Copilot／Agent。网站区域使用中性的承载占位或真实加载页面，不绘制仿 ERP 业务界面；测试夹具仅用于测试。
-- 外壳名称和图标来自配置或网站，任务入口不写死森果、商品或店铺。等待登录、执行、确认、失败和接手是通用交互状态。
+- 外壳名称和图标来自配置或网站，任务入口不写死示例 ERP、商品或店铺。等待登录、执行、确认、失败和接手是通用交互状态。
 
 `npm run dev` 提供空状态、网址配置和通用对话状态预览，网站区域为中性承载占位。产品与预览复用外壳组件。真实网页独立加载，不属于 React 页面树。M1 首先实现浅色，深色与高对比主题后续按同一语义层扩展。

@@ -1,4 +1,0 @@
-- insert:
-    - id: senguo-query
-      name: '@guomonth/dsh-senguo-query'
-      inject: [tools, skills, deskworkBrowser]

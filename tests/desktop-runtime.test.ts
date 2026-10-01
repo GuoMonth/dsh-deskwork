@@ -48,13 +48,13 @@ await test('runtime descriptor rejects a wrong target and missing or changed nat
     await verifyRuntime(root, target);
     await assert.rejects(
       readRuntimeDescriptor(root, { platform: 'darwin', arch: 'x64' }),
-      /架构不匹配/,
+      /architecture does not match/i,
     );
     await writeFile(join(root, 'node_modules/native/binding.node'), 'modified bytes');
-    await assert.rejects(verifyRuntime(root, target), /文件、内容或执行权限/);
+    await assert.rejects(verifyRuntime(root, target), /files, contents or executable permissions/i);
     await writeFile(join(root, 'node_modules/native/binding.node'), 'fixture');
     await rm(join(root, 'node_modules/native/binding.node'));
-    await assert.rejects(verifyRuntime(root, target), /文件、内容或执行权限/);
+    await assert.rejects(verifyRuntime(root, target), /files, contents or executable permissions/i);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
