@@ -1,5 +1,7 @@
 # 实验记录
 
+- [DSH 0.2.0 原生能力与经验分享](2026-10-01-dsh-020-native-experience.md)：Messages API、宿主 Browser Use、原生 Skill 与 ERP 制品联合验证。
+
 - [DSH 0.2.0-rc.2 升级](2026-10-01-dsh-020-alignment.md)：Messages、提供方启用检查、自包含桌面运行时与新版回归。
 - [通用工作台 MVP](2026-09-06-configurable-mvp.md)：配置式双站点、真实 DSH／Electron 工具链、确认与回读边界，真实模型和用户 Mac 待验收。
 

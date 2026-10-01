@@ -79,6 +79,8 @@ try {
     'tests/plugin-desktop.integration.ts',
     'tests/development-desktop.integration.ts',
   ]);
+  if (code === 0 && process.env['DESKWORK_ERP_TARBALL'])
+    code = await runChecks(['--test', 'tests/native-erp.integration.ts']);
   if (code === 0) code = await runChecks(['experiments/market-runtime.integration.ts']);
   if (code === 0) await verifyRuntime(resources);
   process.exitCode = code;
