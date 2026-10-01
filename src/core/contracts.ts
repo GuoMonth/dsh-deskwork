@@ -1,3 +1,4 @@
+import { localeSchema } from './locale.ts';
 import {
   identifier,
   websiteUrl,
@@ -32,14 +33,24 @@ export const siteSchema = z
   .strict();
 export type Site = z.infer<typeof siteSchema>;
 export const workspaceSchema = z
-  .object({ version: z.literal(2), name: z.string(), sites: z.array(siteSchema).max(24) })
+  .object({
+    version: z.literal(2),
+    locale: localeSchema.default('en'),
+    name: z.string(),
+    sites: z.array(siteSchema).max(24),
+  })
   .strict()
   .refine(
     (value) => new Set(value.sites.map((site) => site.id)).size === value.sites.length,
-    '入口标识重复',
+    'Duplicate website entry IDs',
   );
 export type Workspace = z.infer<typeof workspaceSchema>;
-export const defaultWorkspace: Workspace = { version: 2, name: '我的工作台', sites: [] };
+export const defaultWorkspace: Workspace = {
+  version: 2,
+  locale: 'en',
+  name: 'My workspace',
+  sites: [],
+};
 export const targetSchema = z.object({ tabId: identifier, sessionId: identifier }).strict();
 export type TaskTarget = z.infer<typeof targetSchema>;
 export const confirmationSchema = z
@@ -106,7 +117,7 @@ export function idleTask(): TaskState {
     status: 'idle',
     target: null,
     title: '',
-    detail: '准备好开始今天的工作',
+    detail: 'Ready to start your work',
     confirmation: null,
     pendingAction: null,
     result: null,
@@ -136,6 +147,7 @@ export const snapshotSchema = z
   .strict();
 export type WorkspaceSnapshot = z.infer<typeof snapshotSchema>;
 export const commandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('language'), locale: localeSchema }).strict(),
   z.object({ type: z.literal('add-site'), url: websiteUrl, name: z.string().max(100) }).strict(),
   z
     .object({

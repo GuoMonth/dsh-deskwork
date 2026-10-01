@@ -15,6 +15,8 @@ AI owns code, tests, experiments, documentation maintenance, commits, and PR upd
 
 ## Execute
 
+- Keep private business integrations, account data and business screenshots outside public source, commit messages, CI artifacts and releases. Public regressions use generated data and reserved example domains; release assets are limited to desktop binaries, SDK/Devkit packages and integrity metadata.
+
 - M3 prioritizes third-party AI plugin authors. Read [M3](docs/specs/m3-plugin-development-kit.md) and the [Devkit](packages/plugin-devkit/README.md) for SDK/developer tooling work. Keep one source for bundled guides across files, native DSH Skill and MCP stdio. Prove packages outside this repository; do not equate scaffold compilation with live browser debugging or marketplace acceptance. Do not expose planned APIs as working features.
 
 - M2 follows standard DSH plugins and existing marketplace installation. The user accepted trusted local executable extensions and removed the ZIP asset route on 2026-09-08. Read [M2 specification](docs/specs/m2-dsh-plugins.md) and [ADR-0006](docs/decisions/0006-trusted-dsh-plugins.md) before extension work. Host browser confirmation does not confine arbitrary plugin network/file access; do not reinstate data-only packages or claim a plugin sandbox. The user explicitly requests no compatibility promises: implement against one selected market/runtime version, test actual functionality, and do not build compatibility matrices, certification, or speculative adapters. Deliver M2 in three large implementation steps; probes are part of delivery, not separate approval gates.

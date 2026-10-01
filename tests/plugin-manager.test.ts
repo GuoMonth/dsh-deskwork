@@ -83,7 +83,7 @@ await test(
           enabled: true,
           siteIds: [],
         }),
-        /挂载名/,
+        /Mount name/i,
       );
       await manager.command({ action: 'remove', name: 'deskwork-second-plugin' });
       const restored = new PluginManager(options);

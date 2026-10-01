@@ -1,3 +1,4 @@
+import { localizeMessage } from '../core/locale.ts';
 import { readRuntimeDescriptor } from '../runtime/desktop-runtime.ts';
 import { DevelopmentSession } from './development-session.ts';
 import type { DevelopmentState } from '../core/development-contracts.ts';
@@ -42,7 +43,7 @@ async function main(): Promise<void> {
       descriptor.appVersion !== app.getVersion() ||
       descriptor.electronVersion !== process.versions.electron
     )
-      throw new Error('应用与随包运行时版本不匹配');
+      throw new Error('The application version does not match its bundled runtime');
   }
   const plugins = new PluginManager({
     directory: join(directory, 'plugins'),
@@ -51,7 +52,7 @@ async function main(): Promise<void> {
     pnpmPath: join(runtimeRoot, 'node_modules/pnpm/bin/pnpm.cjs'),
     validate: async (home, plugin): Promise<void> => {
       const probeBridge = await startToolServer(() =>
-        Promise.reject(new Error('安装验证没有运行中的网站任务')),
+        Promise.reject(new Error('Installation verification has no running website task')),
       );
       const probe = new DshRuntime({
         executable: process.execPath,
@@ -91,7 +92,8 @@ async function main(): Promise<void> {
   );
   const testModelURL = testModelArgument?.slice('--test-model-url='.length);
   if (testModelURL) {
-    if (new URL(testModelURL).hostname !== '127.0.0.1') throw new Error('测试模型仅允许本机端点');
+    if (new URL(testModelURL).hostname !== '127.0.0.1')
+      throw new Error('The test model must use a local endpoint');
     apiKey = 'fixture-key-not-a-secret';
     configured = true;
   } else if (developmentUrl && process.env['DESKWORK_DEVELOPMENT_API_KEY']) {
@@ -109,7 +111,7 @@ async function main(): Promise<void> {
       configured = true;
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
-        console.error('模型设置无法读取，请在设置中重新配置。');
+        console.error('Cannot read model settings. Configure them again in Settings.');
     }
   }
   const window = new BrowserWindow({
@@ -224,7 +226,7 @@ async function main(): Promise<void> {
     const siteId = runningSite();
     const controller = siteId ? controllers.get(siteId) : undefined;
     if (!controller || controller.state.status !== 'running')
-      throw new Error('任务工具已暂停或正在等待确认');
+      throw new Error('Task tools are paused or waiting for confirmation');
     controller.state.metrics.toolCalls++;
     switch (request.name) {
       case 'native_approval': {
@@ -234,10 +236,12 @@ async function main(): Promise<void> {
         try {
           const decision = await dialog.showMessageBox(window, {
             type: 'question',
-            title: '确认更新 ERP 经验',
-            message: '是否允许这一次本地知识更新？',
+            title: localizeMessage(workspace.locale, 'Confirm ERP experience update'),
+            message: localizeMessage(workspace.locale, 'Allow this one local knowledge update?'),
             detail: request.arguments.reason,
-            buttons: ['取消', '允许一次'],
+            buttons: ['Cancel', 'Allow once'].map((label) =>
+              localizeMessage(workspace.locale, label),
+            ),
             defaultId: 0,
             cancelId: 0,
             signal: cancellation.signal,
@@ -265,7 +269,7 @@ async function main(): Promise<void> {
               entry.mountName === request.arguments.mountName &&
               (!entry.siteIds.length || entry.siteIds.includes(siteId ?? '')),
           );
-        if (!plugin) throw new Error('插件未挂载到当前任务');
+        if (!plugin) throw new Error('The plugin is not mounted on the current task');
         return controller
           .propose(request.arguments.proposal, request.arguments.effect)
           .finally(publish);
@@ -299,13 +303,14 @@ async function main(): Promise<void> {
     await previous?.close();
   }
   async function launchRuntime(siteId: string, text: string): Promise<void> {
-    if (development?.active) throw new Error('请先断开外部 AI 开发连接');
+    if (development?.active)
+      throw new Error('Disconnect the external AI development session first');
     const controller = controllers.get(siteId);
     const context = contexts.get(siteId);
-    if (!controller || !context) throw new Error('网站入口不存在');
+    if (!controller || !context) throw new Error('Website entry not found');
     const messages = context.messages;
     if (!apiKey) {
-      await controller.fail('请在设置中配置 DeepSeek 模型与密钥');
+      await controller.fail('Configure a DeepSeek model and API key in Settings');
       return;
     }
     if (!runtime) {
@@ -323,6 +328,7 @@ async function main(): Promise<void> {
         dataDirectory: join(directory, 'runtime', siteId),
         apiKey,
         model,
+        locale: workspace.locale,
         ...(testModelURL ? { baseURL: testModelURL } : {}),
         toolEndpoint: tools.endpoint,
         toolToken: tools.token,
@@ -332,7 +338,7 @@ async function main(): Promise<void> {
           ...messages,
           {
             role: 'assistant',
-            text: `宿主状态：${JSON.stringify({ target: controller.state.target, requiresVerification: controller.state.requiresVerification, detail: controller.state.detail })}`,
+            text: `Host state: ${JSON.stringify({ target: controller.state.target, requiresVerification: controller.state.requiresVerification, detail: controller.state.detail })}`,
           },
         ],
         onNotification: (method, raw): void => {
@@ -365,7 +371,8 @@ async function main(): Promise<void> {
                   ['error', 'max-tokens', 'interrupted'].includes(end.data.reason.kind)
                 )
                   await controller.fail(
-                    end.data.reason.error?.message ?? '模型本轮未完成，请核对后继续',
+                    end.data.reason.error?.message ??
+                      'The model turn did not finish. Check before continuing.',
                   );
               }
               if (event.data.event.type === 'assistant/chunk') {
@@ -416,9 +423,11 @@ async function main(): Promise<void> {
                 .object({ sessionId: z.string(), status: z.enum(['running', 'idle']) })
                 .parse(raw);
               if (status.sessionId === controller.state.id && status.status === 'idle')
-                await controller.finish('本轮对话已结束；业务结果以回读核对为准');
+                await controller.finish(
+                  'The conversation turn ended; verify business results by reading them back',
+                );
             } else if (method === 'deskwork.exit')
-              await controller.fail('DSH 已退出，请重新连接后继续');
+              await controller.fail('DSH exited. Reconnect before continuing.');
           };
           void handle().catch((error: unknown) => {
             console.error(
@@ -431,30 +440,34 @@ async function main(): Promise<void> {
     }
     await runtime.prompt(
       controller.state.id,
-      `任务网站：${workspace.sites.find((site) => site.id === siteId)?.url ?? ''}\n${text}`,
+      `Task website: ${workspace.sites.find((site) => site.id === siteId)?.url ?? ''}\n${text}`,
     );
   }
   function controllerFor(siteId: string): TaskController {
     const controller = controllers.get(siteId);
-    if (!controller) throw new Error('网站入口不存在');
+    if (!controller) throw new Error('Website entry not found');
     return controller;
   }
   function requireNoOtherTask(siteId?: string): void {
     const other = runningSite();
-    if (other && other !== siteId) throw new Error('另一个网站的任务尚未结束，请先停止或核对结果');
+    if (other && other !== siteId)
+      throw new Error('A task on another website is active. Stop it or verify its result first.');
   }
   function requireEditable(siteId: string): void {
-    if (development?.active && development.siteId === siteId) throw new Error('请先断开开发连接');
+    if (development?.active && development.siteId === siteId)
+      throw new Error('Disconnect the development session first');
     const controller = controllerFor(siteId);
     if (
       controller.isBusy() ||
       ['running', 'waiting-user', 'verifying'].includes(controller.state.status)
     )
-      throw new Error('请先停止该入口任务并核对结果，再修改或移除');
+      throw new Error('Stop this entry task and verify its result before editing or removing it');
   }
   function launch(siteId: string, text: string): void {
     void launchRuntime(siteId, text).catch((error: unknown) => {
-      void controllerFor(siteId).fail(error instanceof Error ? error.message : '模型连接失败');
+      void controllerFor(siteId).fail(
+        error instanceof Error ? error.message : 'Model connection failed',
+      );
     });
   }
   function requireShell(event: IpcMainInvokeEvent): void {
@@ -504,15 +517,19 @@ async function main(): Promise<void> {
     requireShell(event);
     const siteId = identifier.parse(raw);
     requireNoOtherTask();
-    if (commandBusy || plugins.state().busy) throw new Error('请等待当前操作完成');
+    if (commandBusy || plugins.state().busy)
+      throw new Error('Wait for the current operation to finish');
     const site = workspace.sites.find((entry) => entry.id === siteId);
-    if (!site) throw new Error('开发网站不存在');
+    if (!site) throw new Error('Development website not found');
     commandBusy = true;
     try {
       await development?.close();
       await stopRuntime();
       const controller = controllerFor(siteId);
-      await controller.start({ tabId: site.id, sessionId: site.sessionId }, '外部 AI 插件开发');
+      await controller.start(
+        { tabId: site.id, sessionId: site.sessionId },
+        'External AI plugin development',
+      );
       development = new DevelopmentSession(controller, browser, connectionPath, publish);
       try {
         await development.open();
@@ -542,12 +559,13 @@ async function main(): Promise<void> {
     requireShell(event);
     const command = pluginCommandSchema.parse(raw);
     requireNoOtherTask();
-    if (commandBusy || plugins.state().busy) throw new Error('请等待当前操作完成');
+    if (commandBusy || plugins.state().busy)
+      throw new Error('Wait for the current operation to finish');
     if (
       command.action === 'configure' &&
       command.siteIds.some((id) => !workspace.sites.some((site) => site.id === id))
     )
-      throw new Error('挂载网站不存在');
+      throw new Error('Mounted website not found');
     commandBusy = true;
     try {
       await stopRuntime();
@@ -579,12 +597,12 @@ async function main(): Promise<void> {
       await stopRuntime();
       return;
     }
-    if (commandBusy) throw new Error('正在完成上一步，请稍后再试');
+    if (commandBusy) throw new Error('Finishing the previous step. Try again shortly.');
     commandBusy = true;
     try {
       switch (command.type) {
         case 'add-site': {
-          if (workspace.sites.length >= 24) throw new Error('MVP 最多配置 24 个网站');
+          if (workspace.sites.length >= 24) throw new Error('The MVP supports up to 24 websites');
           const site: Site = {
             id: randomUUID(),
             name: command.name.trim() || new URL(command.url).hostname,
@@ -607,7 +625,7 @@ async function main(): Promise<void> {
         case 'edit-site': {
           requireEditable(command.siteId);
           const site = workspace.sites.find((entry) => entry.id === command.siteId);
-          if (!site) throw new Error('网站不存在');
+          if (!site) throw new Error('Website not found');
           const updated = {
             ...site,
             url: command.url,
@@ -650,7 +668,7 @@ async function main(): Promise<void> {
         }
         case 'select-page': {
           const site = workspace.sites.find((entry) => entry.id === activeSiteId);
-          if (!site) throw new Error('没有选中网站');
+          if (!site) throw new Error('No website selected');
           const controller = controllerFor(site.id);
           if (['running', 'waiting-user'].includes(controller.state.status)) {
             await controller.stop();
@@ -665,6 +683,13 @@ async function main(): Promise<void> {
         case 'reload':
           await pages.reload(command.siteId);
           break;
+        case 'language': {
+          const updated = workspaceSchema.parse({ ...workspace, locale: command.locale });
+          await store.saveWorkspace(updated);
+          workspace = updated;
+          publish();
+          break;
+        }
         case 'settings': {
           requireNoOtherTask();
           if (
@@ -672,7 +697,7 @@ async function main(): Promise<void> {
             (process.platform === 'linux' &&
               safeStorage.getSelectedStorageBackend() === 'basic_text')
           )
-            throw new Error('系统安全存储不可用');
+            throw new Error('System secure storage is unavailable');
           await stopRuntime();
           await writeFile(
             join(directory, 'model.json'),
@@ -689,13 +714,14 @@ async function main(): Promise<void> {
           break;
         }
         case 'send': {
-          if (development?.active) throw new Error('请先断开外部 AI 开发连接');
+          if (development?.active)
+            throw new Error('Disconnect the external AI development session first');
           requireNoOtherTask(command.tabId);
           const controller = controllerFor(command.tabId);
           const site = workspace.sites.find((entry) => entry.id === command.tabId);
           const context = contexts.get(command.tabId);
-          if (!site || !context) throw new Error('入口不存在');
-          if (!configured) throw new Error('请先配置 DeepSeek 模型与密钥');
+          if (!site || !context) throw new Error('Entry not found');
+          if (!configured) throw new Error('Configure a DeepSeek model and API key first');
           await stopRuntime();
           await controller.start({ tabId: site.id, sessionId: site.sessionId }, command.text);
           context.messages.push({ id: randomUUID(), role: 'user', text: command.text });
@@ -711,7 +737,7 @@ async function main(): Promise<void> {
           if (controller.state.status === 'running' && !development?.active)
             launch(
               command.siteId,
-              `宿主已执行用户确认动作：${JSON.stringify(controller.state.pendingAction?.proposal)}。重新观察页面，继续原任务，不要重复上一动作；如果刚刚是提交，请先 verify_result。`,
+              `The host executed the action you confirmed: ${JSON.stringify(controller.state.pendingAction?.proposal)}. Observe again and continue the original task without repeating that action. If it was a submission, call verify_result first.`,
             );
           break;
         }
@@ -723,7 +749,7 @@ async function main(): Promise<void> {
           if (controller.state.status === 'running' && !development?.active)
             launch(
               command.siteId,
-              `恢复任务，先重新观察；旧确认失效。原目标：${controller.state.title}`,
+              `Resume the task by observing again; old confirmations are invalid. Original goal: ${controller.state.title}`,
             );
           break;
         }
@@ -735,7 +761,7 @@ async function main(): Promise<void> {
           requireEditable(command.siteId);
           const context = contexts.get(command.siteId);
           const site = workspace.sites.find((entry) => entry.id === command.siteId);
-          if (!context || !site) throw new Error('入口不存在');
+          if (!context || !site) throw new Error('Entry not found');
           await store.archiveContext(context);
           addContext(site);
           await persist();

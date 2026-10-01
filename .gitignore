@@ -31,3 +31,7 @@ tests/fixtures/query-plugin/lib/
 
 packages/*/lib/
 packages/plugin-devkit/docs/sdk-contracts.txt
+
+# Private integration inputs stay local; public tests use synthetic fixtures.
+private-fixtures/
+workspace.local.json

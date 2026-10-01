@@ -14,6 +14,8 @@ export function shellLocation(appPath: string, packaged: boolean, developmentUrl
     url.search ||
     url.hash
   )
-    throw new Error('开发外壳只允许未打包应用使用本机 HTTP 根地址');
+    throw new Error(
+      'The development shell only allows an unpackaged app with a local HTTP root URL',
+    );
   return url.href;
 }

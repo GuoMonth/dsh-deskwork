@@ -27,23 +27,25 @@ export class TaskController {
     if (restored.pendingAction || restored.requiresVerification) {
       this.state.status = 'verifying';
       this.state.confirmation = null;
-      this.state.detail = '上次操作结果待核对，不会自动重新提交';
+      this.state.detail =
+        'The previous action needs verification and will not be submitted again automatically';
     } else if (['running', 'waiting-user'].includes(restored.status)) {
       this.state.status = 'paused';
       this.state.confirmation = null;
-      this.state.detail = '上次任务已中断，继续前重新观察页面';
+      this.state.detail =
+        'The previous task was interrupted. Observe the page again before continuing.';
     }
   }
   isBusy(): boolean {
     return this.busy;
   }
   target(): TaskTarget {
-    if (!this.state.target) throw new Error('任务尚未绑定网站');
+    if (!this.state.target) throw new Error('The task has no website target');
     return this.state.target;
   }
   async start(target: TaskTarget, title: string): Promise<void> {
     if (this.busy || ['running', 'waiting-user', 'verifying'].includes(this.state.status))
-      throw new Error('请先停止任务或核对结果');
+      throw new Error('Stop the task or verify its result first');
     this.generation++;
     this.state = {
       ...idleTask(),
@@ -51,31 +53,33 @@ export class TaskController {
       target,
       title,
       status: 'running',
-      detail: '正在观察网站',
+      detail: 'Observing the website',
       metrics: { modelCalls: 0, toolCalls: 0, startedAt: Date.now(), elapsedMs: 0 },
     };
     await this.save();
   }
   async observe(pageId?: string): Promise<PageObservation> {
-    if (!['running', 'verifying'].includes(this.state.status)) throw new Error('任务已暂停');
+    if (!['running', 'verifying'].includes(this.state.status)) throw new Error('Task paused');
     const generation = this.generation;
     const observation = await this.browser.observe(this.target(), pageId);
-    if (generation !== this.generation) throw new Error('任务已停止');
+    if (generation !== this.generation) throw new Error('Task stopped');
     this.state.result = observation;
-    await this.step('已观察页面：' + observation.title);
+    await this.step('Observed page: ' + observation.title);
     return observation;
   }
   async propose(
     proposal: ActionProposal,
     pluginEffect?: 'read' | 'write' | 'unknown',
   ): Promise<BrowserActionResult> {
-    if (this.busy || this.state.status !== 'running') throw new Error('任务未运行或正在等待确认');
+    if (this.busy || this.state.status !== 'running')
+      throw new Error('The task is not running or is waiting for confirmation');
     this.busy = true;
     const generation = this.generation;
     try {
       const observation = await this.browser.observe(this.target(), proposal.pageId);
-      if (generation !== this.generation) throw new Error('任务已停止');
-      if (observation.revision !== proposal.revision) throw new Error('页面已变化，请重新观察');
+      if (generation !== this.generation) throw new Error('Task stopped');
+      if (observation.revision !== proposal.revision)
+        throw new Error('The page changed. Observe it again.');
       if (
         pluginEffect === 'write' ||
         pluginEffect === 'unknown' ||
@@ -84,7 +88,7 @@ export class TaskController {
       ) {
         this.state.confirmation = { id: randomUUID(), proposal, observation };
         this.state.status = 'waiting-user';
-        this.state.detail = '请确认即将执行的操作';
+        this.state.detail = 'Confirm the action to execute';
         await this.step(proposal.summary);
         return {
           status: 'waiting-for-human-confirmation',
@@ -105,7 +109,7 @@ export class TaskController {
   async confirm(id: string): Promise<void> {
     const confirmation = this.state.confirmation;
     if (this.busy || this.state.status !== 'waiting-user' || confirmation?.id !== id)
-      throw new Error('确认已失效');
+      throw new Error('Confirmation expired');
     this.busy = true;
     const generation = this.generation;
     try {
@@ -117,8 +121,8 @@ export class TaskController {
         this.state.confirmation = null;
         this.state.status = this.state.requiresVerification ? 'verifying' : 'paused';
         this.state.detail = this.state.requiresVerification
-          ? '页面或输入已变化；先核对已发出的操作，旧确认不会执行'
-          : '页面或输入已变化，请重新观察并确认';
+          ? 'The page or input changed. Verify the action already sent; the old confirmation will not execute.'
+          : 'The page or input changed. Observe and confirm again.';
         await this.save();
         throw new Error(this.state.detail);
       }
@@ -126,7 +130,7 @@ export class TaskController {
       this.state.pendingAction = confirmation;
       this.state.requiresVerification = true;
       this.state.status = 'verifying';
-      this.state.detail = '正在执行已确认动作';
+      this.state.detail = 'Executing the confirmed action';
       await this.save();
       try {
         await this.browser.execute(
@@ -136,11 +140,12 @@ export class TaskController {
         );
         if (generation === this.generation) {
           this.state.status = 'running';
-          this.state.detail = '动作已执行；继续观察实际结果';
+          this.state.detail = 'Action executed; observe the actual result next';
         }
       } catch {
         this.state.status = 'verifying';
-        this.state.detail = '操作响应未确认，请查看页面核对，不会重复执行';
+        this.state.detail =
+          'The action response is uncertain. Check the page; the action will not be repeated.';
       }
       await this.save();
     } finally {
@@ -153,17 +158,20 @@ export class TaskController {
     this.state.status =
       this.state.requiresVerification || this.state.pendingAction ? 'verifying' : 'paused';
     this.state.detail =
-      this.state.status === 'verifying' ? '已停止；已发出的操作仍需核对' : '已停止，你可以接手页面';
+      this.state.status === 'verifying'
+        ? 'Stopped; actions already sent still need verification'
+        : 'Stopped. You can take over the page.';
     await this.save();
   }
   async resume(): Promise<void> {
-    if (this.busy) throw new Error('上一步尚未结束');
+    if (this.busy) throw new Error('The previous operation is still running');
     if (this.state.status === 'verifying') {
       const result = await this.verify();
       if (!result.verified) await this.observe();
       return;
     }
-    if (!['paused', 'failed'].includes(this.state.status)) throw new Error('当前任务不能恢复');
+    if (!['paused', 'failed'].includes(this.state.status))
+      throw new Error('The current task cannot resume');
     this.generation++;
     this.state.status = 'running';
     this.state.confirmation = null;
@@ -171,24 +179,29 @@ export class TaskController {
   }
   async verify(): Promise<{ verified: boolean; detail: string }> {
     if (!['running', 'verifying'].includes(this.state.status) || this.busy)
-      throw new Error('当前不能核对');
+      throw new Error('Cannot verify at this time');
     const pending = this.state.pendingAction;
     const expected = pending?.proposal.expectedText;
     if (!pending || !expected || pending.observation.text.includes(expected))
-      return { verified: false, detail: '没有可独立验证的预期变化，请用户在原页面核对' };
+      return {
+        verified: false,
+        detail: 'No independently verifiable expected change. Check the original page.',
+      };
     const generation = this.generation;
     this.busy = true;
     try {
       const actual = await this.browser.readback(this.target(), pending.proposal.pageId);
-      if (generation !== this.generation) throw new Error('任务已停止');
+      if (generation !== this.generation) throw new Error('Task stopped');
       this.state.result = actual;
       const verified = actual.text.includes(expected) && actual.url === pending.observation.url;
       if (verified) {
         this.state.requiresVerification = false;
         this.state.pendingAction = null;
         if (this.state.status === 'verifying') this.state.status = 'succeeded';
-        this.state.detail = '已刷新页面，回读结果符合用户确认的预期';
-      } else this.state.detail = '刷新后的页面尚未验证预期结果，请核对；不会重复提交';
+        this.state.detail = 'Refreshed page matches the expected result you confirmed';
+      } else
+        this.state.detail =
+          'The refreshed page does not yet verify the expected result. Check it; the action will not be submitted again.';
       await this.save();
       return { verified, detail: this.state.detail };
     } finally {
@@ -196,19 +209,22 @@ export class TaskController {
     }
   }
   async resolveResult(outcome: 'verified' | 'not-applied'): Promise<void> {
-    if (this.busy || this.state.status !== 'verifying') throw new Error('当前没有待核对的结果');
+    if (this.busy || this.state.status !== 'verifying')
+      throw new Error('No result awaiting verification');
     this.state.requiresVerification = false;
     this.state.pendingAction = null;
     this.state.status = outcome === 'verified' ? 'succeeded' : 'paused';
     this.state.detail =
-      outcome === 'verified' ? '用户已在原网站核对结果' : '用户确认未生效；需要继续时重新发起操作';
+      outcome === 'verified'
+        ? 'You verified the result on the original website'
+        : 'You confirmed the action was not applied. Start a new action if needed.';
     await this.save();
   }
   async finish(detail: string): Promise<void> {
     if (this.state.status !== 'running') return;
     this.state.status = this.state.requiresVerification ? 'verifying' : 'succeeded';
     this.state.detail = this.state.requiresVerification
-      ? '请在原网站重新打开或刷新结果页面，核对操作是否生效'
+      ? 'Reopen or refresh the result page on the original website to verify the action'
       : detail;
     await this.save();
   }

@@ -51,17 +51,19 @@ await test(
       const siteId = await shell.evaluate(async (url) => {
         const bridge = window.deskwork;
         if (!bridge) throw new Error('No bridge');
-        await bridge.command({ type: 'add-site', name: '开发网站', url });
+        await bridge.command({ type: 'add-site', name: 'Development website', url });
         const first = (await bridge.snapshot()).activeSiteId;
         await bridge.command({ type: 'add-site', name: '另一个网站', url: url + '/other' });
         await bridge.command({ type: 'select-site', siteId: first });
         return first;
       }, base);
       await expect.poll(() => app.windows().some((page) => page.url().startsWith(base))).toBe(true);
-      await shell.getByRole('button', { name: '插件', exact: true }).click();
-      await shell.getByRole('button', { name: '开发', exact: true }).click();
-      await shell.getByLabel('开发网站', { exact: true }).selectOption(siteId);
-      await shell.getByRole('button', { name: '允许外部 AI 开发此网站' }).click();
+      await shell.getByRole('button', { name: 'Plugins', exact: true }).click();
+      await shell.getByRole('button', { name: 'Develop', exact: true }).click();
+      await shell.getByLabel('Development website', { exact: true }).selectOption(siteId);
+      await shell
+        .getByRole('button', { name: 'Allow external AI to develop this website' })
+        .click();
       const config = z
         .object({
           mcpServers: z.object({
@@ -72,12 +74,12 @@ await test(
             }),
           }),
         })
-        .parse(JSON.parse(await shell.getByLabel('开发 MCP 配置').inputValue()));
+        .parse(JSON.parse(await shell.getByLabel('Development MCP configuration').inputValue()));
       await client.connect(new StdioClientTransport(config.mcpServers['deskwork-development']));
       assert.equal((await client.listResources()).resources.length, 5);
       await mkdir('.artifacts/desktop', { recursive: true });
       await shell.getByRole('dialog').screenshot({ path: '.artifacts/desktop/m3-development.png' });
-      await shell.getByRole('button', { name: '关闭对话框' }).click();
+      await shell.getByRole('button', { name: 'Close dialog' }).click();
       const call = async (name: string, args: Record<string, unknown> = {}): Promise<unknown> => {
         const result = await client.callTool({ name: `deskwork_browser_${name}`, arguments: args });
         assert.notEqual(result.isError, true, JSON.stringify(result));
@@ -103,7 +105,7 @@ await test(
           summary: '查询列表',
         },
       });
-      await shell.getByRole('tab', { name: /开发网站/ }).click();
+      await shell.getByRole('tab', { name: /Development website/ }).click();
       const current = observationSchema.parse(await call('observe'));
       assert.match(current.text, /查询完成/);
       const save = current.elements.find((entry) => entry.name === '保存');
@@ -121,7 +123,7 @@ await test(
         .parse(await call('act', { effect: 'write', proposal }));
       assert.ok(pending);
       assert.equal(saves, 0);
-      await shell.getByRole('button', { name: '确认并执行' }).click();
+      await shell.getByRole('button', { name: 'Confirm and execute' }).click();
       await expect.poll(() => saves).toBe(1);
       const status = z
         .object({ requiresVerification: z.boolean(), status: z.string() })
