@@ -1,5 +1,7 @@
 # 实验记录
 
+- [DSH 0.2.0 原生能力与经验分享](2026-10-01-dsh-020-native-experience.md)：Messages API、宿主 Browser Use、原生 Skill 与 ERP 制品联合验证。
+
 - [通用工作台 MVP](2026-09-06-configurable-mvp.md)：配置式双站点、真实 DSH／Electron 工具链、确认与回读边界，真实模型和用户 Mac 待验收。
 
 - [M1 集成验证](2026-09-05-m1-integration.md)：Browser Harness 范围、发布版 DSH 工具桥、真实 Electron 夹具闭环。

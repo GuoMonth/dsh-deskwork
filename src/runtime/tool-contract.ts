@@ -47,6 +47,21 @@ export const browserToolDefinitions = [
 export const toolRequestSchema = z.discriminatedUnion('name', [
   z
     .object({
+      name: z.literal('native_approval'),
+      arguments: z
+        .object({
+          toolName: z.enum([
+            'erp_experience_import',
+            'erp_knowledge_correct',
+            'erp_knowledge_confirm',
+          ]),
+          reason: z.string().min(1).max(12000),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
       name: z.literal('plugin_action'),
       arguments: z
         .object({
