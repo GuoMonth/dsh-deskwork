@@ -35,6 +35,14 @@
 - [确定性 CI](https://github.com/GuoMonth/dsh-deskwork/actions/runs/36798587029)：格式、文档、类型、lint、单元测试和仓库外 Devkit 均通过。
 - [arm64 DMG 工件](https://github.com/GuoMonth/dsh-deskwork/actions/runs/36798587064/artifacts/11134748159)：对应上述固定实现提交，工件保留 14 天。
 
+## 真实市场探针
+
+`experiments/market-runtime.integration.ts` 从既有公开目录确认 `dsh-tool-calculator`，安装社区仓库 `omdsh-dev/dsh-tool-calculator` 的固定提交 `b2007a13f06bcf75bf07b9d277ee8d434a316490`，包名 `@deepseek-ai/dsh-tool-calculator` / `0.0.1`。通过标准 DSH tarball 安装机制获取该 GitHub 归档，没有引入另一种扩展资产协议。
+
+Linux 仓库外安装包与空 PATH 下实际安装、加载、工具调用通过：受控 Messages 模型调用 `calculator` 计算 `15 + 27 * sqrt(9)`，严格断言回读文本为 `96`，两次模型请求。依赖类型与实际功能以当前 DSH `0.2.0-rc.2` 为准，不推定其他插件或历史版本可用。这是一次具体市场来源安装验收，不建设兼容矩阵。
+
+随包验证脚本也执行此探针；macOS DMG 的最终结果见 [PR #27 检查与验收记录](https://github.com/GuoMonth/dsh-deskwork/pull/27)，工件保存 `.artifacts/market-runtime/result.json`。安装及工具调用后重新核对核心清单，临时插件环境与模型服务清理。
+
 ## 范围与限制
 
-受控 Messages 模型证明协议和宿主行为，不证明真实模型质量；本轮没有使用真实 API 密钥或真实 ERP 写入。用户 Mac、真实模型/ERP、样例市场收录继续按对应任务验收。本轮标准插件通过本地原生安装链路验证；既有市场目录与信任安装入口保留，不把本地样例当成市场收录证据。宿主确认覆盖宿主介导浏览器动作，继续遵循 ADR-0006 的可执行扩展信任范围。
+受控 Messages 模型证明协议和宿主行为，不证明真实模型质量；本轮没有使用真实 API 密钥或真实 ERP 写入。用户 Mac、真实模型/ERP、样例市场收录继续按对应任务验收。除本地标准插件回归外，真实市场目录中的社区计算器插件也已在 Linux 随包 DSH 安装并实际调用；样例 ERP 插件的市场收录仍单独验收。宿主确认覆盖宿主介导浏览器动作，继续遵循 ADR-0006 的可执行扩展信任范围。
