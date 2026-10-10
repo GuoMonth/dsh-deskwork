@@ -10,7 +10,7 @@ DSH Deskwork 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepsee
 
 [macOS Apple Silicon](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64 便携包](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [发布说明与校验值](https://github.com/GuoMonth/dsh-deskwork/releases/latest)
 
-打开 macOS DMG，将应用拖入 Applications。解压 Linux 便携包后运行 `./linux-unpacked/dsh-deskwork`。macOS 应用目前使用临时签名，尚未配置 Developer ID 签名和 Apple 公证。
+打开 macOS DMG，将应用拖入 Applications。macOS 安装包仅支持 Apple Silicon（arm64）。解压 Linux 便携包后运行 `./linux-unpacked/dsh-deskwork`。macOS 应用目前使用临时签名，尚未配置 Developer ID 签名和 Apple 公证。
 
 应用默认使用 **English**。在 **模型设置 → 语言**中选择 **English** 或 **中文**。选择保存在本机，重启后恢复；后续模型任务使用所选语言。网站内容、名称和已有对话保留原文。
 
@@ -26,7 +26,7 @@ DSH Deskwork 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepsee
 
 ## 复用 ERP 经验
 
-我们的 [ERP 包](https://www.npmjs.com/package/@guosheng_047/dsh-erp) 使用标准 DSH 安装。本次源码的通用网站上下文已与 ERP **0.1.1 候选包**联合验证；npm 发布与实现合并分开进行，见[固定验证组合](docs/experiments/2026-10-10-rc2-native-convergence.md)。
+我们的 [ERP 包](https://www.npmjs.com/package/@guosheng_047/dsh-erp) 使用标准 DSH 安装。Deskwork **0.2.2** 使用 npm `latest` 提供的 ERP **0.1.1**，复用通用网站上下文与已有任务浏览器。需要可复现安装时固定精确版本，见[发布说明](docs/releases/0.2.2.md)和[原生集成验证](docs/experiments/2026-10-10-rc2-native-convergence.md)。
 
 ERP 通过原生 Browser Use 复用任务浏览器，并复用原生工具、审批、附件、Session 和 Skill。Computer Use 由 ERP 插件显式启用官方 Cua Driver Native。
 

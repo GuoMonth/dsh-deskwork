@@ -25,19 +25,12 @@ jobs:
       - run: npm ci
       - run: npm run experiment:prepare
       - run: npm run build
-      - uses: actions/checkout@v4
-        with:
-          repository: GuoMonth/dsh-erp
-          ref: d1a18feaaa334b0c70f2e960ed9a59525d228a2d
-          path: .artifacts/erp-source
-      - name: Build the fixed ERP consumer for joint verification
+      - name: Download the published ERP consumer for joint verification
         shell: bash
         run: |
-          cd .artifacts/erp-source
-          npm ci --ignore-scripts
-          npm run build
-          npm pack --ignore-scripts
-          printf 'DESKWORK_ERP_TARBALL=%s/.artifacts/erp-source/guosheng_047-dsh-erp-0.1.1.tgz\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          mkdir -p .artifacts/erp-package
+          npm pack @guosheng_047/dsh-erp@0.1.1 --ignore-scripts --pack-destination .artifacts/erp-package
+          printf 'DESKWORK_ERP_TARBALL=%s/.artifacts/erp-package/guosheng_047-dsh-erp-0.1.1.tgz\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
       - run: node --test tests/runtime.integration.ts tests/native-approval.integration.ts tests/desktop.integration.ts tests/browser-boundary.integration.ts tests/plugin-runtime.integration.ts tests/plugin-desktop.integration.ts tests/development-desktop.integration.ts tests/locale-desktop.integration.ts
       - run: node --test tests/native-erp.integration.ts
       - run: npm run package:prepare > .artifacts/package-mac.log 2>&1

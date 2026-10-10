@@ -10,7 +10,7 @@ DSH Deskwork is a local desktop workspace powered by [DeepSeek Harness](https://
 
 [macOS Apple Silicon](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64 portable archive](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [Release notes and checksums](https://github.com/GuoMonth/dsh-deskwork/releases/latest)
 
-Open the macOS DMG and drag the app into Applications. Extract the Linux archive and run `./linux-unpacked/dsh-deskwork`. The macOS app currently uses ad-hoc signing; Developer ID signing and Apple notarization are not configured.
+Open the macOS DMG and drag the app into Applications. macOS packages support Apple Silicon (arm64) only. Extract the Linux archive and run `./linux-unpacked/dsh-deskwork`. The macOS app currently uses ad-hoc signing; Developer ID signing and Apple notarization are not configured.
 
 The app defaults to **English**. Choose **English** or **中文** in **Model settings → Language**. The selection is saved locally and restored after restart; subsequent model tasks use the selected language. Website content, names and existing conversations retain their original text.
 
@@ -26,7 +26,7 @@ The runtime pins **DSH `0.2.0-rc.2`**, an upstream prerelease, and Electron **`4
 
 ## Reuse ERP experience
 
-The [ERP package](https://www.npmjs.com/package/@guosheng_047/dsh-erp) uses standard DSH installation. This source revision's generic website context is jointly verified with the ERP **0.1.1 candidate**; its npm publication is separate from merging the implementation. See the [fixed verification combination](docs/experiments/2026-10-10-rc2-native-convergence.md).
+The [ERP package](https://www.npmjs.com/package/@guosheng_047/dsh-erp) uses standard DSH installation. Deskwork **0.2.2** uses ERP **0.1.1**, available through npm `latest`, for the generic website context and existing task browser. Use the exact version for reproducible installation. See the [release notes](docs/releases/0.2.2.md) and [native integration verification](docs/experiments/2026-10-10-rc2-native-convergence.md).
 
 ERP reuses the task browser through native Browser Use, plus native tools, approvals, attachments, Sessions and Skills. Computer Use explicitly enables the official Cua Driver Native through the ERP plugin.
 
