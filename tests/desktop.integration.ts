@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { contextSchema } from '../src/core/contracts.ts';
+import { z } from 'zod';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { _electron as electron, expect } from '@playwright/test';
@@ -361,6 +363,54 @@ await test(
       assert.equal(second.writes(), 1);
       await shell.getByRole('button', { name: 'Refresh website' }).click();
       await expect(liveSecond.getByText('登录演示账号')).toBeVisible();
+      // A pre-upgrade text-only record stays readable and explicitly declares that
+      // starting fresh cannot recreate its native tool history.
+      await application.close();
+      const stored = z
+        .object({ version: z.literal(2), contexts: z.array(contextSchema) })
+        .parse(JSON.parse(await readFile(join(directory, 'task.json'), 'utf8')));
+      const legacy = stored.contexts.find((entry) => entry.siteId === expired.siteId);
+      assert.ok(legacy?.nativeSessionId);
+      const oldSessionId = legacy.nativeSessionId;
+      delete legacy.nativeSessionId;
+      await writeFile(join(directory, 'task.json'), JSON.stringify(stored));
+      application = await electron.launch(launchOptions);
+      shell = await shellPage();
+      await shell.getByRole('tab', { name: 'Settings', exact: false }).click();
+      const legacyPage = application
+        .windows()
+        .find((entry) => entry.url().startsWith(second.origin));
+      assert.ok(legacyPage);
+      await legacyPage.getByText('登录演示账号').click();
+      await shell
+        .getByRole('textbox', { name: 'Tell DSH your goal' })
+        .fill('Start a fresh task from the saved text-only conversation');
+      await shell.getByRole('button', { name: 'Send task' }).click();
+      await expect(
+        shell.getByText(
+          'Earlier messages remain visible, but their tool history is unavailable to AI. This task starts a new conversation. Check previous results before continuing.',
+        ),
+      ).toBeVisible();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
+        timeout: 30000,
+      });
+      const migrated = await shell.evaluate(async () => window.deskwork?.snapshot());
+      const migratedContext = migrated?.contexts.find((entry) => entry.siteId === expired.siteId);
+      assert.equal(migratedContext?.legacyHistory, true);
+      assert.notEqual(migratedContext.nativeSessionId, oldSessionId);
+      assert.equal(
+        JSON.stringify(model.trace().at(-1)).includes(
+          'Update Settings to Deskwork verified change',
+        ),
+        false,
+      );
+      assert.equal(
+        migratedContext.messages.filter((message) => message.role === 'user').length,
+        legacy.messages.filter((message) => message.role === 'user').length + 1,
+      );
+      assert.equal(second.writes(), 1);
+      await shell.screenshot({ path: '.artifacts/desktop/legacy-conversation.png' });
+      await shell.getByRole('button', { name: 'Stop and take over' }).click();
       first.reset();
       second.reset();
       await writeFile(
@@ -375,6 +425,7 @@ await test(
             architecture: process.arch,
             restoredContexts: restored.contexts.length,
             expiredIdentityRevokedConfirmation: true,
+            legacyTextHistoryLimitationVisible: true,
           },
           null,
           2,

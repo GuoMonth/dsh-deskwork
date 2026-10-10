@@ -4,7 +4,7 @@
 
 ## 选择与边界
 
-DSH 负责 Agent、Session、工具历史、approval 审计与 Skill。官方 rc.2 JSON-RPC 尚无恢复方法，因此保留官方传输和事件服务，用公开 `ctx.agents.resume()` 添加很薄的原生会话入口。每入口持久化 native Session ID，普通续聊保留日志，新任务创建新 ID。重启与停止后必须明确继续；缺失日志不以聊天文字替代。
+DSH 负责 Agent、Session、工具历史、approval 审计与 Skill。官方 rc.2 JSON-RPC 尚无恢复方法，因此保留官方传输和事件服务，用公开 `ctx.agents.resume()` 添加很薄的原生会话入口。每入口持久化 native Session ID，普通续聊保留日志，新任务创建新 ID。重启与停止后必须明确继续；缺失日志不以聊天文字替代。旧版纯文本记录没有可靠会话引用时保留消息，明确提示 AI 无法使用旧工具历史，新会话不伪造恢复。
 
 内置浏览器工具在原函数栈中通过 DSH approval 等待决定。允许一次后，Deskwork 仍重新观察并核对 revision，先持久化动作意图，再执行；停止、迟到回答、拒绝与失效确认不能继续写入。已提交且尚未核对的动作禁止再提议。外部开发 MCP 保留结构化暂停，不能替代用户确认。
 

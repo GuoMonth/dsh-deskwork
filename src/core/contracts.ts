@@ -145,6 +145,7 @@ export const contextSchema = z
     task: taskSchema,
     messages: z.array(messageSchema),
     nativeSessionId: identifier.optional(),
+    legacyHistory: z.literal(true).optional(),
   })
   .strict();
 export type EntryContext = z.infer<typeof contextSchema>;

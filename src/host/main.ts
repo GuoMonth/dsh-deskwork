@@ -380,6 +380,7 @@ async function main(): Promise<void> {
     }
     if (!runtime) {
       const resumeSession = context.nativeSessionId !== undefined;
+      if (!resumeSession && context.messages.length > 1) context.legacyHistory = true;
       context.nativeSessionId ??= randomUUID();
       await persist();
       const generation = ++runtimeGeneration;

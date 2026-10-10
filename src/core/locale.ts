@@ -229,6 +229,8 @@ export const chineseMessages = {
   disabled: '已禁用',
   unavailable: '不可用',
   'input / output tokens': '输入 / 输出令牌',
+  'Earlier messages remain visible, but their tool history is unavailable to AI. This task starts a new conversation. Check previous results before continuing.':
+    '旧消息仍可阅读，但 AI 无法使用其中的工具历史。本任务开启新对话，继续前请核对先前结果。',
   Cancel: '取消',
   'Allow once': '允许一次',
   'The plugin is not mounted on the current task': '插件未挂载到当前任务',

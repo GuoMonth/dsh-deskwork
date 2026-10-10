@@ -706,23 +706,32 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                       ) : null}
                     </div>
                   ) : (
-                    context.messages.map((message) => (
-                      <article key={message.id} className={`message ${message.role}`}>
-                        <small>{message.role === 'user' ? t('You') : 'DSH'}</small>
-                        {message.role === 'assistant' ? (
-                          <AssistantMessage
-                            text={message.text}
-                            locale={snapshot.workspace.locale}
-                            streaming={
-                              context.task.status === 'running' &&
-                              message === context.messages.at(-1)
-                            }
-                          />
-                        ) : (
-                          <p>{message.text}</p>
-                        )}
-                      </article>
-                    ))
+                    <>
+                      {context.legacyHistory ? (
+                        <p role="status" className="muted">
+                          {t(
+                            'Earlier messages remain visible, but their tool history is unavailable to AI. This task starts a new conversation. Check previous results before continuing.',
+                          )}
+                        </p>
+                      ) : null}
+                      {context.messages.map((message) => (
+                        <article key={message.id} className={`message ${message.role}`}>
+                          <small>{message.role === 'user' ? t('You') : 'DSH'}</small>
+                          {message.role === 'assistant' ? (
+                            <AssistantMessage
+                              text={message.text}
+                              locale={snapshot.workspace.locale}
+                              streaming={
+                                context.task.status === 'running' &&
+                                message === context.messages.at(-1)
+                              }
+                            />
+                          ) : (
+                            <p>{message.text}</p>
+                          )}
+                        </article>
+                      ))}
+                    </>
                   )}
                   <TaskCard
                     task={task}
