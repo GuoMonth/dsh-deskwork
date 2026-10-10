@@ -1,4 +1,4 @@
-import { nodeEnvironment } from '../runtime/node-environment.ts';
+import { desktopEnvironment, nodeEnvironment } from '../runtime/node-environment.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -6,7 +6,12 @@ import { mkdir, readFile, writeFile, rename, rm, symlink } from 'node:fs/promise
 import { join, dirname } from 'node:path';
 import { z } from 'zod';
 import { installedPluginSchema, packageNameSchema } from '../core/plugin-contracts.ts';
-import type { InstalledPlugin, PluginCommand, PluginState } from '../core/plugin-contracts.ts';
+import type {
+  InstalledPlugin,
+  PluginCommand,
+  PluginState,
+  PluginLoad,
+} from '../core/plugin-contracts.ts';
 
 const manifestSchema = z.object({
   name: packageNameSchema,
@@ -37,6 +42,7 @@ export class PluginManager {
   private closed = false;
   private child: ChildProcess | undefined;
   private progress = '';
+  private runtime: PluginState['runtime'];
   private readonly options: PluginManagerOptions;
   constructor(options: PluginManagerOptions) {
     this.options = options;
@@ -51,7 +57,16 @@ export class PluginManager {
     }
   }
   state(): PluginState {
-    return { installed: structuredClone(this.installed), busy: this.busy, progress: this.progress };
+    return {
+      installed: structuredClone(this.installed),
+      busy: this.busy,
+      progress: this.progress,
+      ...(this.runtime ? { runtime: structuredClone(this.runtime) } : {}),
+    };
+  }
+  reportRuntime(siteId: string, plugins?: readonly PluginLoad[]): void {
+    this.runtime = plugins ? { siteId, plugins: [...plugins] } : undefined;
+    this.options.onProgress?.();
   }
   private registryPath(): string {
     return join(this.options.directory, 'installed.json');
@@ -206,15 +221,14 @@ export class PluginManager {
     }
   }
   private async run(args: string[], home: string, bin: string): Promise<void> {
+    const environment = await desktopEnvironment();
     await new Promise<void>((resolve, reject) => {
       let output = '';
       const child = spawn(this.options.executable, args, {
         cwd: home,
         env: nodeEnvironment(
           {
-            PATH: process.env['PATH'],
-            HOME: process.env['HOME'],
-            TMPDIR: process.env['TMPDIR'],
+            ...environment,
             DSH_HOME: home,
             CI: 'true',
           },

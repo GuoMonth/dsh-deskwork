@@ -2,6 +2,7 @@ import { useI18n } from './locale.tsx';
 import type { ReactElement } from 'react';
 import type { TaskState } from '../core/contracts.ts';
 import { Icon } from './icon.tsx';
+import { Button, StateDot } from '@deepseek-ai/dsh-client-ui-primitives';
 const labels = {
   idle: 'Ready',
   running: 'Working',
@@ -35,7 +36,17 @@ export function TaskCard({
   return (
     <section className={`task-card state-${task.status}`} aria-label={t('Task status')}>
       <div className="task-card-heading">
-        <Icon name={task.status === 'succeeded' ? 'check' : 'sparkle'} />
+        <StateDot
+          state={
+            task.status === 'running'
+              ? 'ongoing'
+              : task.status === 'succeeded'
+                ? 'done'
+                : task.status === 'failed'
+                  ? 'error'
+                  : 'warning'
+          }
+        />
         <strong>{t(labels[task.status])}</strong>
       </div>
       <p>{t(task.detail)}</p>
@@ -75,7 +86,8 @@ export function TaskCard({
               </div>
             </>
           ) : null}
-          <button
+          <Button
+            variant="primary"
             className="primary full"
             onClick={() => {
               confirm(change.id);
@@ -83,7 +95,7 @@ export function TaskCard({
           >
             <Icon name="check" />
             {t('Confirm and execute')}
-          </button>
+          </Button>
         </div>
       ) : null}
       {task.status === 'verifying' ? (
@@ -129,6 +141,9 @@ export function TaskCard({
           {t('Model requests')}
           {task.metrics.modelCalls} {t('· Tool calls')}
           {task.metrics.toolCalls} · {Math.round(task.metrics.elapsedMs / 1000)} {t('seconds')}
+          {task.metrics.inputTokens + task.metrics.outputTokens
+            ? ` · ${String(task.metrics.inputTokens)} / ${String(task.metrics.outputTokens)} ${t('input / output tokens')}`
+            : ''}
         </p>
       </details>
     </section>

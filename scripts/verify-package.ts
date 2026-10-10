@@ -74,6 +74,7 @@ try {
   let code = await runChecks([
     '--test',
     'tests/runtime.integration.ts',
+    'tests/native-approval.integration.ts',
     'tests/desktop.integration.ts',
     'tests/plugin-runtime.integration.ts',
     'tests/plugin-desktop.integration.ts',

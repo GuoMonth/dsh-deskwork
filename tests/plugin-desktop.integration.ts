@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, rm, mkdir, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile, readdir, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:http';
@@ -13,6 +13,8 @@ await test(
   { timeout: 90000 },
   async () => {
     const directory = await mkdtemp(join(tmpdir(), 'deskwork-plugin-desktop-'));
+    const pluginSource = join(directory, 'plugin-source');
+    await cp(resolve('tests/fixtures/query-plugin'), pluginSource, { recursive: true });
     const site = createServer((request, response) => {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       response.end(
@@ -71,9 +73,7 @@ await test(
       assert.ok(shell);
       await shell.getByRole('button', { name: 'Plugins', exact: true }).click();
       await shell.getByRole('button', { name: 'Discover', exact: true }).click();
-      await shell
-        .getByLabel('Plugin installation source')
-        .fill(`file:${resolve('tests/fixtures/query-plugin')}`);
+      await shell.getByLabel('Plugin installation source').fill(`file:${pluginSource}`);
       await expect(
         shell.getByRole('button', { name: 'Install plugin', exact: true }),
       ).toBeDisabled();
@@ -81,7 +81,7 @@ await test(
       await expect(shell.getByLabel('Plugin installation source')).toBeHidden();
       await shell.getByRole('button', { name: 'Discover', exact: true }).click();
       await expect(shell.getByLabel('Plugin installation source')).toHaveValue(
-        `file:${resolve('tests/fixtures/query-plugin')}`,
+        `file:${pluginSource}`,
       );
       await shell.getByRole('checkbox').check();
       await shell.getByRole('button', { name: 'Install plugin', exact: true }).click();
@@ -143,6 +143,41 @@ await test(
         [1, 3],
       );
       await shell.getByRole('button', { name: 'Plugins', exact: true }).click();
+      await expect(shell.getByLabel('Runtime loading status').last()).toContainText('loaded');
+      const broken = pluginSource;
+      await writeFile(
+        join(broken, 'package.json'),
+        JSON.stringify({
+          name: 'deskwork-query-fixture',
+          version: '2.0.0',
+          type: 'module',
+          exports: './index.js',
+          dsh: { bundle: { patch: './cordis.patch.yml' } },
+        }),
+      );
+      await writeFile(
+        join(broken, 'cordis.patch.yml'),
+        '- insert:\n    - id: broken-fixture\n      name: deskwork-query-fixture\n',
+      );
+      await writeFile(
+        join(broken, 'index.js'),
+        "export function apply() { throw new Error('Generated startup failure'); }",
+      );
+      const updateFailure = await shell.evaluate(async () => {
+        try {
+          await window.deskwork?.plugins.command({
+            action: 'update',
+            name: 'deskwork-query-fixture',
+          });
+          return '';
+        } catch (error: unknown) {
+          return String(error);
+        }
+      });
+      assert.match(updateFailure, /Plugin did not load.*Generated startup failure/s);
+      const kept = await shell.evaluate(() => window.deskwork?.plugins.state());
+      assert.equal(kept?.installed[0]?.version, '1.0.0');
+      assert.equal(kept.installed[0].installationId, installationId);
       await shell.getByRole('button', { name: 'Unmount', exact: true }).click();
       await expect(shell.getByText(/1.0.0 · Disabled/)).toBeVisible();
       await shell.getByRole('button', { name: 'Uninstall', exact: true }).click();

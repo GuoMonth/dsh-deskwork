@@ -19,13 +19,14 @@ DSH Deskwork 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepsee
 ## 使用网站
 
 - 从空工作台添加网址，每个入口保留独立对话和持久浏览器身份。
+- 对话使用原生 DSH 会话日志。重启后任务保持暂停，明确选择重新观察并继续后才恢复，旧确认失效；新建任务使用独立会话。
 - 在原网站手动登录，向 AI 说明目标、观察过程，必要时停止或接手。
 - 执行关键操作前审阅确认，重新打开或刷新结果页面，核对变更是否保存。
 - 通过现有 DSH 插件市场安装可信本地扩展。扩展可以在本机执行代码、访问文件和网络。
 
 ## 复用 ERP 经验
 
-插件安装来源填入 `@guosheng_047/dsh-erp@latest`，安装我们发布的最新 [ERP 包](https://www.npmjs.com/package/@guosheng_047/dsh-erp)。使用 `@guosheng_047/dsh-erp@0.1.0` 可复现已发布的固定组合。
+我们的 [ERP 包](https://www.npmjs.com/package/@guosheng_047/dsh-erp) 使用标准 DSH 安装。本次源码的通用网站上下文已与 ERP **0.1.1 候选包**联合验证；npm 发布与实现合并分开进行，见[固定验证组合](docs/experiments/2026-10-10-rc2-native-convergence.md)。
 
 ERP 通过原生 Browser Use 复用任务浏览器，并复用原生工具、审批、附件、Session 和 Skill。Computer Use 由 ERP 插件显式启用官方 Cua Driver Native。
 

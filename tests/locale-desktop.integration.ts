@@ -33,7 +33,7 @@ await test(
         modelCalls++;
         writeMessagesResponse(
           response,
-          expectedLocale === 'en' ? 'English fixture answer' : '中文夹具回复',
+          `${expectedLocale === 'en' ? 'English fixture answer' : '中文夹具回复'}\n\n## Native Markdown\n\n| Field | Value |\n| --- | --- |\n| Generated | fixture |\n\n\`\`\`js\nconst generated = true;\n\`\`\`\n\n<script>window.untrustedMarkdown = true</script>`,
           `locale-${String(modelCalls)}`,
         );
       };
@@ -78,6 +78,16 @@ await test(
       await expect(shell.getByText('English fixture answer', { exact: true })).toBeVisible({
         timeout: 25000,
       });
+      await expect(shell.getByRole('heading', { name: 'Native Markdown' })).toBeVisible();
+      await expect(shell.getByRole('table')).toContainText('Generated');
+      await expect(shell.getByRole('button', { name: 'Copy', exact: true })).toBeVisible();
+      assert.equal(
+        await shell.evaluate(() => {
+          const value: unknown = Reflect.get(window, 'untrustedMarkdown');
+          return value;
+        }),
+        undefined,
+      );
       await expect(shell.getByRole('button', { name: 'Send task' })).toBeDisabled();
       await expect
         .poll(async () => (await shell.evaluate(() => window.deskwork?.snapshot()))?.runningSiteId)
@@ -86,6 +96,7 @@ await test(
       await shell.getByLabel('Language').selectOption('zh');
       expectedLocale = 'zh';
       await expect(shell.getByLabel('语言')).toHaveValue('zh');
+      await expect(shell.getByRole('button', { name: '复制', exact: true })).toBeVisible();
       assert.equal(await shell.locator('html').getAttribute('lang'), 'zh-CN');
       await shell.getByRole('button', { name: '关闭对话框' }).click();
       await shell.getByRole('button', { name: '插件', exact: true }).click();

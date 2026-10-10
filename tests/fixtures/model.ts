@@ -6,6 +6,7 @@ import {
   messagesText,
 } from './messages.ts';
 import { observationSchema } from '../../src/core/contracts.ts';
+import { z } from 'zod';
 import type { PageObservation } from '../../src/core/contracts.ts';
 function findObservation(value: unknown, depth = 0): PageObservation | undefined {
   if (depth > 8) return undefined;
@@ -34,12 +35,15 @@ function findObservation(value: unknown, depth = 0): PageObservation | undefined
 export async function startModel(): Promise<{
   url: string;
   calls: () => number;
+  trace: () => readonly unknown[];
   close: () => Promise<void>;
 }> {
   let calls = 0;
+  const trace: unknown[] = [];
   const server = createServer((request, response) => {
     const handle = async (): Promise<void> => {
       const parsed = await readMessagesRequest(request);
+      trace.push(parsed);
       calls++;
       const last = parsed.messages.at(-1);
       const observation = hasToolResult(last?.content) ? findObservation(last?.content) : undefined;
@@ -47,8 +51,30 @@ export async function startModel(): Promise<{
       let arguments_: unknown = {};
       let text = '';
       const lastText = JSON.stringify(last?.content);
-      if (hasToolResult(last?.content) && lastText.includes('waiting-for-human-confirmation'))
+      const turnStart = parsed.messages.findLastIndex(
+        (message) =>
+          message.role === 'user' && messagesText(message.content).includes('Task website:'),
+      );
+      const submitted = parsed.messages.slice(Math.max(0, turnStart)).some(
+        (message) =>
+          message.role === 'assistant' &&
+          Array.isArray(message.content) &&
+          message.content.some(
+            (block) =>
+              z
+                .object({
+                  type: z.literal('tool_use'),
+                  name: z.literal('mcp__deskwork__act_on_page'),
+                  input: z.object({ action: z.object({ kind: z.literal('click') }) }),
+                })
+                .safeParse(block).success,
+          ),
+      );
+      if (messagesText(last?.content).includes('Task website:')) name = 'observe_page';
+      else if (hasToolResult(last?.content) && lastText.includes('waiting-for-human-confirmation'))
         text = '操作已准备，请在工作台确认。';
+      else if (hasToolResult(last?.content) && lastText.includes('executed-observe-again'))
+        name = 'observe_page';
       else if (hasToolResult(last?.content) && /verified[^a-z]+true/.test(lastText))
         text = '已刷新页面，回读结果符合预期。';
       else if (observation) {
@@ -59,13 +85,7 @@ export async function startModel(): Promise<{
         const save = observation.elements.find(
           (element) => element.tag === 'button' && /save|publish/i.test(element.name),
         );
-        if (
-          observation.text.includes(`Stored value: ${desired}`) ||
-          parsed.messages.some(
-            (message) =>
-              message.role === 'user' && messagesText(message.content).includes('"kind":"click"'),
-          )
-        )
+        if (observation.text.includes(`Stored value: ${desired}`) || submitted)
           name = 'verify_result';
         else if (field && save) {
           name = 'act_on_page';
@@ -103,6 +123,7 @@ export async function startModel(): Promise<{
   return {
     url: `http://127.0.0.1:${String(address.port)}`,
     calls: () => calls,
+    trace: () => trace,
     close: async (): Promise<void> => {
       server.closeAllConnections();
       await new Promise<void>((resolve) => {

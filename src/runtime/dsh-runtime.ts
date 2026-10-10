@@ -1,23 +1,14 @@
 import { assistantInstructions } from './assistant-instructions.ts';
 import type { Locale } from '../core/locale.ts';
-import { nodeEnvironment } from './node-environment.ts';
+import { desktopEnvironment, nodeEnvironment } from './node-environment.ts';
 import type { InstalledPlugin } from '../core/plugin-contracts.ts';
+import { pluginLoadSchema } from '../core/plugin-contracts.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { createInterface } from 'node:readline';
+import { JsonRpcLineTransport } from '@deepseek-ai/dsh-sdk-protocol';
 import { z } from 'zod';
-import { randomUUID } from 'node:crypto';
-
-const rpcSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.union([z.string(), z.number()]).optional(),
-  result: z.unknown().optional(),
-  error: z.object({ message: z.string() }).loose().optional(),
-  method: z.string().optional(),
-  params: z.unknown().optional(),
-});
 export interface RuntimeOptions {
   executable: string;
   cliPath: string;
@@ -31,22 +22,15 @@ export interface RuntimeOptions {
   locale?: Locale;
   plugins?: readonly InstalledPlugin[];
   site?: { id: string; name: string; url: string };
-  recoveryContext?: readonly { role: 'user' | 'assistant'; text: string }[];
+  resumeSession?: boolean;
   onNotification: (method: string, params: unknown) => void;
-}
-interface PendingRequest {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
 }
 
 export class DshRuntime {
   private child: ChildProcessWithoutNullStreams | undefined;
-  private readonly pending = new Map<string, PendingRequest>();
-  private sequence = 0;
+  private transport: JsonRpcLineTransport | undefined;
   private stderr = '';
   private closed = false;
-  private readonly wireSessions = new Map<string, string>();
   private readonly options: RuntimeOptions;
   constructor(options: RuntimeOptions) {
     this.options = options;
@@ -155,27 +139,8 @@ export class DshRuntime {
         },
       ],
     });
-    if (options.plugins?.some((plugin) => plugin.name === '@guosheng_047/dsh-erp')) {
-      patch.push({
-        id: 'erp',
-        inject: ['tools', 'llm', 'agents', 'systemPrompt', 'browserUse', 'deskworkBrowser'],
-        config: {
-          browserMode: 'native',
-          ...(options.site
-            ? {
-                system: {
-                  url: options.site.url,
-                  baseUrl: new URL('.', options.site.url).href,
-                  name: options.site.name,
-                  account: options.site.id,
-                },
-              }
-            : {}),
-          dataDir: join(options.dataDirectory, 'erp'),
-        },
-      });
-    }
     await writeFile(patchPath, JSON.stringify(patch), { mode: 0o600 });
+    const environment = await desktopEnvironment();
     this.assertOpen();
     // Cordis resolves out-of-tree plugins through Node internals; Electron needs the explicit flag.
     const child = spawn(
@@ -184,15 +149,15 @@ export class DshRuntime {
       {
         cwd: options.dataDirectory,
         env: nodeEnvironment({
-          PATH: process.env['PATH'],
-          HOME: process.env['HOME'],
-          TMPDIR: process.env['TMPDIR'],
-          LANG: process.env['LANG'],
+          ...environment,
           DSH_HOME: options.dataDirectory,
           DEEPSEEK_API_KEY: options.apiKey,
           DESKWORK_TOOL_ENDPOINT: options.toolEndpoint,
           DESKWORK_TOOL_TOKEN: options.toolToken,
           DESKWORK_PLUGINS: JSON.stringify(options.plugins ?? []),
+          DESKWORK_HOST: '1',
+          DESKWORK_SITE_CONTEXT: JSON.stringify(options.site ?? null),
+          DESKWORK_DATA_DIRECTORY: options.dataDirectory,
           DSH_SYSTEM_PROMPT: assistantInstructions(options.locale ?? 'en'),
         }),
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -204,39 +169,17 @@ export class DshRuntime {
     child.stderr.on('data', (chunk: string) => {
       this.stderr = (this.stderr + chunk).slice(-6000);
     });
-    child.on('error', (error) => {
-      this.rejectPending(error);
-    });
-    const lines = createInterface({ input: child.stdout });
-    lines.on('line', (line) => {
-      try {
-        const message = rpcSchema.parse(JSON.parse(line));
-        if (message.id !== undefined) {
-          const pending = this.pending.get(String(message.id));
-          if (!pending) return;
-          clearTimeout(pending.timer);
-          this.pending.delete(String(message.id));
-          if (message.error) pending.reject(new Error(message.error.message));
-          else pending.resolve(message.result);
-        } else if (message.method) {
-          const scoped = z.object({ sessionId: z.string() }).loose().safeParse(message.params);
-          if (scoped.success) {
-            const logicalId = [...this.wireSessions].find(
-              ([, wire]) => wire === scoped.data.sessionId,
-            )?.[0];
-            if (logicalId)
-              options.onNotification(message.method, { ...scoped.data, sessionId: logicalId });
-          } else options.onNotification(message.method, message.params);
-        }
-      } catch {
-        this.rejectPending(new Error('DSH returned incompatible protocol data'));
-      }
+    const transport = new JsonRpcLineTransport(child.stdout, child.stdin);
+    this.transport = transport;
+    transport.onNotification(options.onNotification);
+    transport.start();
+    child.on('error', () => {
+      transport.close();
     });
     child.on('close', (code) => {
-      lines.close();
+      transport.close();
       if (this.child === child) this.child = undefined;
-      this.rejectPending(new Error(`DSH exited (${String(code)})`));
-      options.onNotification('deskwork.exit', { code });
+      if (!this.closed) options.onNotification('deskwork.exit', { code });
     });
     try {
       const initialized = await this.request('initialize', {
@@ -251,6 +194,12 @@ export class DshRuntime {
           version: z.string(),
         }),
       }).parse(initialized);
+      const status = z.array(pluginLoadSchema).parse(
+        await this.request('deskwork/plugins/status', {
+          names: (options.plugins ?? []).map((plugin) => plugin.name),
+        }),
+      );
+      options.onNotification('deskwork.plugins', status);
     } catch (error) {
       await this.close();
       const detail = this.stderr
@@ -265,23 +214,10 @@ export class DshRuntime {
 
   async prompt(sessionId: string, text: string): Promise<void> {
     await this.start();
-    let wireId = this.wireSessions.get(sessionId);
-    const fresh = !wireId;
-    if (!wireId) {
-      wireId = randomUUID();
-      this.wireSessions.set(sessionId, wireId);
-    }
-    const context = fresh
-      ? this.options.recoveryContext
-          ?.slice(-12)
-          .map((message) => ({ ...message, text: message.text.slice(0, 6000) }))
-      : undefined;
-    const prompt = context?.length
-      ? `The following saved Deskwork context may be stale. Observe again and verify the current business state; previous confirmations cannot be reused.\n${JSON.stringify(context)}\n\nCurrent request:\n${text}`
-      : text;
-    const receipt = await this.request('session/prompt', {
-      sessionId: wireId,
-      contentBlocks: [{ type: 'text', text: prompt }],
+    const receipt = await this.request('deskwork/session/prompt', {
+      sessionId,
+      text,
+      mustResume: this.options.resumeSession ?? false,
     });
     z.object({ messageId: z.string() }).parse(receipt);
   }
@@ -290,18 +226,19 @@ export class DshRuntime {
     this.closed = true;
     const child = this.child;
     if (!child) return;
-    this.rejectPending(new Error('Task stopped'));
     if (child.exitCode !== null) return;
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
         child.kill('SIGKILL');
-      }, 1500);
+      }, 2500);
       child.once('close', () => {
         clearTimeout(timer);
         resolve();
       });
-      child.stdin.end();
-      child.kill('SIGTERM');
+      // Native teardown drains its append-only log before releasing session ownership.
+      void this.request('shutdown', {}, 1500).catch(() => {
+        child.kill('SIGTERM');
+      });
     });
   }
 
@@ -309,30 +246,8 @@ export class DshRuntime {
     if (this.closed) throw new Error('DSH runtime closed');
   }
 
-  private request(method: string, params: unknown): Promise<unknown> {
-    const child = this.child;
-    if (!child) return Promise.reject(new Error('DSH not started'));
-    const id = String(++this.sequence);
-    return new Promise((resolve, reject: (error: Error) => void) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`DSH ${method} timed out`));
-      }, 15000);
-      this.pending.set(id, { resolve, reject, timer });
-      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n', (error) => {
-        if (error) {
-          clearTimeout(timer);
-          this.pending.delete(id);
-          reject(error);
-        }
-      });
-    });
-  }
-  private rejectPending(error: Error): void {
-    for (const pending of this.pending.values()) {
-      clearTimeout(pending.timer);
-      pending.reject(error);
-    }
-    this.pending.clear();
+  private request(method: string, params: object, timeout = 15000): Promise<unknown> {
+    if (!this.transport) return Promise.reject(new Error('DSH not started'));
+    return this.transport.request(method, params, AbortSignal.timeout(timeout));
   }
 }

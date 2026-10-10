@@ -7,6 +7,7 @@ import type {
   PluginState,
   MarketPlugin,
   InstalledPlugin,
+  PluginLoad,
 } from '../core/plugin-contracts.ts';
 import type { Site } from '../core/contracts.ts';
 import { DevelopmentPanel } from './development-panel.tsx';
@@ -43,7 +44,7 @@ export function PluginPanel({
         });
     };
     refresh();
-    const timer = working ? setInterval(refresh, 1200) : undefined;
+    const timer = setInterval(refresh, 1200);
     return (): void => {
       disposed = true;
       clearInterval(timer);
@@ -187,6 +188,13 @@ export function PluginPanel({
             {t('Installed ·')}
             {state.installed.length}
           </h3>
+          {state.runtime ? (
+            <p className="muted">
+              {t('Runtime loading status')} ·{' '}
+              {sites.find((site) => site.id === state.runtime?.siteId)?.name ??
+                state.runtime.siteId}
+            </p>
+          ) : null}
           {!state.installed.length ? (
             <div className="plugin-empty">
               <p>{t('No plugins installed. Your websites are ready to use.')}</p>
@@ -207,6 +215,7 @@ export function PluginPanel({
               sites={sites}
               busy={working || state.busy}
               run={run}
+              load={state.runtime?.plugins.find((entry) => entry.name === plugin.name)}
             />
           ))}
         </section>
@@ -233,11 +242,13 @@ function PluginSettings({
   sites,
   busy,
   run,
+  load,
 }: {
   plugin: InstalledPlugin;
   sites: readonly Site[];
   busy: boolean;
   run: (command: PluginCommand) => Promise<void>;
+  load: PluginLoad | undefined;
 }): ReactElement {
   const t = useI18n();
   const [mountName, setMountName] = useState(plugin.mountName);
@@ -250,6 +261,18 @@ function PluginSettings({
         {plugin.version} · {plugin.enabled ? t('Enabled') : t('Disabled')}
       </span>
       <p className="muted plugin-source">{plugin.source}</p>
+      <div className="muted" aria-label={t('Runtime loading status')}>
+        {load ? (
+          load.entries.map((entry) => (
+            <p key={entry.id}>
+              {entry.id} · {t(entry.status)}
+              {entry.detail ? ` · ${entry.detail}` : ''}
+            </p>
+          ))
+        ) : (
+          <p>{t('Not loaded in a current task')}</p>
+        )}
+      </div>
       <label>
         {t('Unique mount name')}
         <input

@@ -33,11 +33,30 @@ export const installedPluginSchema = z
   })
   .strict();
 export type InstalledPlugin = z.infer<typeof installedPluginSchema>;
+export const pluginLoadSchema = z
+  .object({
+    name: packageNameSchema,
+    entries: z.array(
+      z
+        .object({
+          id: z.string(),
+          status: z.enum(['loaded', 'pending', 'failed', 'disabled', 'unavailable']),
+          detail: z.string().optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type PluginLoad = z.infer<typeof pluginLoadSchema>;
 export const pluginStateSchema = z
   .object({
     installed: z.array(installedPluginSchema),
     busy: z.boolean(),
     progress: z.string(),
+    runtime: z
+      .object({ siteId: z.string(), plugins: z.array(pluginLoadSchema) })
+      .strict()
+      .optional(),
   })
   .strict();
 export type PluginState = z.infer<typeof pluginStateSchema>;

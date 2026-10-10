@@ -54,7 +54,14 @@ export class TaskController {
       title,
       status: 'running',
       detail: 'Observing the website',
-      metrics: { modelCalls: 0, toolCalls: 0, startedAt: Date.now(), elapsedMs: 0 },
+      metrics: {
+        modelCalls: 0,
+        toolCalls: 0,
+        startedAt: Date.now(),
+        elapsedMs: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+      },
     };
     await this.save();
   }
@@ -73,6 +80,8 @@ export class TaskController {
   ): Promise<BrowserActionResult> {
     if (this.busy || this.state.status !== 'running')
       throw new Error('The task is not running or is waiting for confirmation');
+    if (this.state.requiresVerification && this.state.pendingAction?.proposal.expectedText)
+      throw new Error('The previous submission needs verification before another action');
     this.busy = true;
     const generation = this.generation;
     try {

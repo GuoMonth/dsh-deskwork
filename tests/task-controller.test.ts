@@ -59,14 +59,14 @@ function setup(): {
     },
   };
 }
-async function propose(controller: TaskController): Promise<string> {
+async function propose(controller: TaskController, expectedText = true): Promise<string> {
   await controller.start(target, 'Update page');
   await controller.propose({
     pageId: 'page-one',
     revision: 'r1',
     action: { kind: 'click', ref: 'element-one' },
     summary: 'Submit updated form',
-    expectedText: 'Stored: changed',
+    ...(expectedText ? { expectedText: 'Stored: changed' } : {}),
     risk: 'consequential',
   });
   const id = controller.state.confirmation?.id;
@@ -83,6 +83,23 @@ await test('generic action requires confirmation; writes persist intent and cann
   assert.equal(env.controller.state.status, 'verifying');
   assert.equal(env.controller.state.requiresVerification, true);
 });
+await test('an unverified submitted action cannot be proposed again in the same native turn', async () => {
+  const env = setup();
+  const id = await propose(env.controller);
+  await env.controller.confirm(id);
+  await assert.rejects(
+    env.controller.propose({
+      pageId: 'page-one',
+      revision: 'r1',
+      action: { kind: 'click', ref: 'element-one' },
+      summary: 'Retry submission',
+      expectedText: 'Stored: changed',
+      risk: 'consequential',
+    }),
+    /previous submission needs verification/,
+  );
+  assert.equal(env.writes(), 1);
+});
 await test('page changes invalidate confirmation before dispatch', async () => {
   const env = setup();
   const id = await propose(env.controller);
@@ -93,7 +110,7 @@ await test('page changes invalidate confirmation before dispatch', async () => {
 });
 await test('stale confirmation cannot discard an earlier action that still needs verification', async () => {
   const env = setup();
-  await env.controller.confirm(await propose(env.controller));
+  await env.controller.confirm(await propose(env.controller, false));
   const pending = env.controller.state.pendingAction;
   assert.ok(pending);
   await env.controller.propose(pending.proposal);

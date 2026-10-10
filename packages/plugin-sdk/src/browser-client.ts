@@ -15,16 +15,22 @@ export class PluginBrowserClient {
   private readonly mountName: string;
   private readonly endpoint: string;
   private readonly token: string;
-  constructor(packageName: string, signal: AbortSignal) {
+  private readonly confirm: ((id: string) => Promise<BrowserActionResult>) | undefined;
+  constructor(
+    packageName: string,
+    signal: AbortSignal,
+    confirm?: (id: string) => Promise<BrowserActionResult>,
+  ) {
     const plugins = z
       .array(mountedPluginSchema)
       .parse(JSON.parse(process.env['DESKWORK_PLUGINS'] ?? '[]'));
     const plugin = plugins.find((entry) => entry.name === packageName && entry.enabled);
     if (!plugin) throw new Error('插件未挂载到当前任务');
     this.mountName = plugin.mountName;
-    this.signal = AbortSignal.any([signal, AbortSignal.timeout(45000)]);
+    this.signal = signal;
     this.endpoint = z.url().parse(process.env['DESKWORK_TOOL_ENDPOINT']);
     this.token = z.string().min(1).parse(process.env['DESKWORK_TOOL_TOKEN']);
+    this.confirm = confirm;
   }
   private async call(name: string, args: unknown): Promise<unknown> {
     this.signal.throwIfAborted();
@@ -33,7 +39,7 @@ export class PluginBrowserClient {
       method: 'POST',
       headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ name, arguments: args }),
-      signal: this.signal,
+      signal: AbortSignal.any([this.signal, AbortSignal.timeout(45000)]),
     });
     const raw: unknown = await response.json();
     if (!response.ok) throw new Error(z.object({ error: z.string() }).parse(raw).error);
@@ -55,8 +61,11 @@ export class PluginBrowserClient {
       summary,
       risk: effect === 'write' ? 'consequential' : 'ordinary',
     });
-    return actionResultSchema.parse(
+    const result = actionResultSchema.parse(
       await this.call('plugin_action', { mountName: this.mountName, effect, proposal }),
     );
+    return result.status === 'waiting-for-human-confirmation' && this.confirm
+      ? this.confirm(result.confirmationId)
+      : result;
   }
 }

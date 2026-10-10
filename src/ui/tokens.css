@@ -32,6 +32,7 @@
   --radius-control: 6px;
   --radius-panel: 8px;
   --radius-pill: 999px;
+  --font-code-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-family:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Noto Sans CJK SC',
     sans-serif;
@@ -45,4 +46,46 @@
   --size-titlebar: 42px;
   --size-sidebar: 204px;
   --size-ai-panel: 400px;
+  --dsw-alias-label-primary: var(--color-text);
+  --dsw-alias-label-secondary: var(--color-text-muted);
+  --dsw-alias-label-tertiary: var(--color-text-muted);
+  --dsw-alias-label-caption: var(--color-text-muted);
+  --dsw-alias-label-primary-foreground: var(--color-on-brand);
+  --dsw-alias-bg-base: var(--color-surface);
+  --dsw-alias-border-l1: var(--color-border);
+  --dsw-alias-border-l2: var(--color-border);
+  --dsw-alias-border-l3: var(--color-control-border);
+  --dsw-alias-link: var(--color-brand);
+  --dsw-alias-button-primary-fill: var(--color-brand);
+  --dsw-alias-button-primary-hover: var(--color-brand-hover);
+  --dsw-alias-button-tool-bar-fill: var(--color-surface-subtle);
+  --dsw-alias-button-tool-bar-hover: var(--color-hover);
+  --dsw-alias-interactive-bg-hover: var(--color-hover);
+  --dsw-alias-interactive-bg-active: var(--color-selected);
+  --dsw-alias-state-success-primary: var(--color-success);
+  --dsw-alias-state-warn-primary: var(--color-warning);
+  --dsw-alias-state-error-primary: var(--color-danger);
+  --dsw-alias-state-idle-primary: var(--color-text-muted);
+  --dsw-alias-state-business-primary: var(--color-agent);
+  --dsw-alias-markdown-inline-code: var(--color-surface-subtle);
+  --dsw-alias-markdown-code-block: var(--color-surface-subtle);
+  --dsw-alias-markdown-code-block-banner: var(--color-canvas);
+  --dsw-radius-xs: var(--radius-control);
+  --dsw-radius-sm: var(--radius-control);
+  --dsw-radius-md: var(--radius-control);
+  --dsw-radius-lg: var(--radius-panel);
+  --dsw-font-family: var(--font-family);
+  --dsw-font-xs-13: 400 var(--font-small)/1.5 var(--font-family);
+  --dsw-font-markdown-base: 400 var(--font-body)/1.6 var(--font-family);
+  --dsw-font-markdown-base-strong: 600 var(--font-body)/1.6 var(--font-family);
+  --dsw-font-markdown-h1: 600 var(--font-title)/1.5 var(--font-family);
+  --dsw-font-markdown-h2: 600 var(--font-title)/1.5 var(--font-family);
+  --dsw-font-markdown-h3: 600 var(--font-body)/1.5 var(--font-family);
+  --dsw-font-markdown-h4: 600 var(--font-body)/1.5 var(--font-family);
+  --dsw-font-markdown-table: 400 var(--font-small)/1.5 var(--font-family);
+  --dsw-font-markdown-table-head: 600 var(--font-small)/1.5 var(--font-family);
+  --dsw-font-markdown-code: 400 var(--font-small)/1.5 var(--font-code-family);
+  --dsw-font-markdown-code-block: 400 var(--font-small)/1.5 var(--font-code-family);
+  --dsw-focus-ring-color: var(--color-brand);
+  --dsw-focus-ring-width: calc(var(--space-one) / 2);
 }

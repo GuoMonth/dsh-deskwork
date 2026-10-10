@@ -19,10 +19,14 @@ await test(
     const notifications: { method: string; params: unknown }[] = [];
     const bridge = await startToolServer((request) => {
       calls.push(request.name);
-      return Promise.resolve({ page: '测试商品 EX-1001，备注为原值' });
+      return Promise.resolve({
+        page: '测试商品 EX-1001，备注为原值',
+        resultToken: 'native-tool-result-72f6',
+      });
     });
     let requests = 0;
     let restoredContext = false;
+    let continuousContext = false;
     let receivedDeskworkPersona = false;
     const model = createServer((request, response) => {
       const handle = async (): Promise<void> => {
@@ -51,7 +55,16 @@ await test(
         );
         if (requests === 3)
           restoredContext =
-            body.includes('读取页面，说明结果') && body.includes('已读取测试商品，尚未修改。');
+            body.includes('读取页面，说明结果') &&
+            body.includes('已读取测试商品，尚未修改。') &&
+            body.includes('native-tool-result-72f6') &&
+            parsed.messages.some(
+              (message) =>
+                message.role === 'user' && JSON.stringify(message.content).includes('tool_result'),
+            );
+        if (requests === 4)
+          continuousContext =
+            body.includes('恢复后继续说明') && body.includes('native-tool-result-72f6');
         writeMessagesResponse(
           response,
           requests === 1
@@ -124,13 +137,7 @@ await test(
       completed = new Promise<void>((resolve) => {
         complete = resolve;
       });
-      runtime = new DshRuntime({
-        ...options,
-        recoveryContext: [
-          { role: 'user', text: '读取页面，说明结果' },
-          { role: 'assistant', text: '已读取测试商品，尚未修改。' },
-        ],
-      });
+      runtime = new DshRuntime(options);
       await runtime.prompt('deskwork-test', '恢复后继续说明');
       await Promise.race([
         completed,
@@ -144,9 +151,20 @@ await test(
       assert.equal(
         restoredContext,
         true,
-        'Host-provided recovery context must reach the restarted runtime',
+        'Native tool results must reach the restarted runtime as structured history without chat replay',
       );
       assert.ok(JSON.stringify(notifications).includes('已读取测试商品'));
+      sawRunning = false;
+      completed = new Promise<void>((resolve) => {
+        complete = resolve;
+      });
+      await runtime.prompt('deskwork-test', '继续同一原生对话');
+      await completed;
+      assert.equal(
+        continuousContext,
+        true,
+        'Follow-up turns retain native history within the same process',
+      );
       await mkdir('.artifacts/runtime', { recursive: true });
       await writeFile('.artifacts/runtime/events.json', JSON.stringify(notifications, null, 2));
     } finally {
@@ -158,6 +176,36 @@ await test(
           resolve();
         });
       });
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+await test(
+  'a saved native reference never silently creates a text-only replacement when its log is missing',
+  { timeout: 15000 },
+  async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'deskwork-missing-session-'));
+    const resources = resolve(process.env['DESKWORK_TEST_RESOURCES'] ?? '.');
+    const runtime = new DshRuntime({
+      executable: process.env['DESKWORK_TEST_EXECUTABLE'] ?? process.execPath,
+      cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      mcpPath: join(resources, 'dist/runtime/mcp-server.mjs'),
+      dataDirectory: directory,
+      apiKey: 'fixture-key',
+      model: 'deepseek-v4-flash',
+      toolEndpoint: 'http://127.0.0.1:1',
+      toolToken: 'fixture-token',
+      resumeSession: true,
+      onNotification: (): void => {},
+    });
+    try {
+      await assert.rejects(
+        runtime.prompt('missing-conversation', '继续'),
+        /native conversation log is missing/,
+      );
+    } finally {
+      await runtime.close();
       await rm(directory, { recursive: true, force: true });
     }
   },

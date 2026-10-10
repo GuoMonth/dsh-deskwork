@@ -19,13 +19,14 @@ The runtime pins **DSH `0.2.0-rc.2`**, an upstream prerelease, and Electron **`4
 ## Work with websites
 
 - Add URLs to an empty workspace. Each entry keeps its own conversation and persistent browser identity.
+- Conversations use native DSH session logs. Restarted tasks stay paused until you choose to observe and continue; previous confirmations expire. A new task starts a separate conversation.
 - Sign in manually on the original website. Tell AI your goal, observe its progress, and stop or take over when needed.
 - Review consequential actions before execution. Reopen or refresh result pages to verify that changes were saved.
 - Use the existing DSH plugin marketplace for trusted local extensions. Extensions can execute code and access files and the network on your computer.
 
 ## Reuse ERP experience
 
-Enter `@guosheng_047/dsh-erp@latest` as the plugin installation source to install our latest [ERP package](https://www.npmjs.com/package/@guosheng_047/dsh-erp). Use `@guosheng_047/dsh-erp@0.1.0` to reproduce the published fixed combination.
+The [ERP package](https://www.npmjs.com/package/@guosheng_047/dsh-erp) uses standard DSH installation. This source revision's generic website context is jointly verified with the ERP **0.1.1 candidate**; its npm publication is separate from merging the implementation. See the [fixed verification combination](docs/experiments/2026-10-10-rc2-native-convergence.md).
 
 ERP reuses the task browser through native Browser Use, plus native tools, approvals, attachments, Sessions and Skills. Computer Use explicitly enables the official Cua Driver Native through the ERP plugin.
 

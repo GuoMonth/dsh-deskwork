@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { WebContents } from 'electron';
 import { z } from 'zod';
 import { observationSchema } from '../core/contracts.ts';
@@ -11,7 +12,7 @@ import type {
 } from '../core/contracts.ts';
 
 const evaluationSchema = z.object({
-  result: z.object({ value: z.unknown() }),
+  result: z.object({ value: z.unknown().optional() }),
   exceptionDetails: z.unknown().optional(),
 });
 export async function evaluate(contents: WebContents, expression: string): Promise<unknown> {
@@ -95,7 +96,32 @@ export class ElectronBrowser implements BrowserAdapter {
   }
   async observe(target: TaskTarget, pageId?: string): Promise<PageObservation> {
     const handle = this.resolve(target, pageId);
-    const raw = await evaluate(handle.contents, collectExpression);
+    // A native tool can observe immediately after a click starts navigation. Retry
+    // only this read, and only while its document is changing; never retry an action.
+    const deadline = Date.now() + 5000;
+    let raw: unknown;
+    let observed = false;
+    while (Date.now() < deadline) {
+      const epoch = handle.epoch;
+      try {
+        if (handle.contents.isLoadingMainFrame()) throw new Error('Page is loading');
+        raw = await evaluate(handle.contents, collectExpression);
+        if (epoch === handle.epoch && raw !== undefined) {
+          observed = true;
+          break;
+        }
+      } catch (error) {
+        if (
+          Date.now() >= deadline ||
+          (!handle.contents.isLoadingMainFrame() && epoch === handle.epoch)
+        )
+          throw error;
+      }
+      if (Date.now() >= deadline) throw new Error('The page is still changing. Observe again.');
+      await delay(50);
+      this.resolve(target, pageId);
+    }
+    if (!observed) throw new Error('The page is still changing. Observe again.');
     const observation = observationSchema.parse({
       ...z.record(z.string(), z.unknown()).parse(raw),
       pageId: handle.page.id,
