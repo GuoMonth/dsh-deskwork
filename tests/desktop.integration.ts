@@ -203,6 +203,76 @@ await test(
         .find((entry) => entry.url().startsWith(first.origin));
       assert.ok(restoredPage);
       await expect(restoredPage.getByText('已登录测试账号')).toBeVisible();
+      // Restart while approval is pending: preserve native history, discard its approval,
+      // and wait for an explicit continuation before making another model call.
+      await shell.getByRole('tab', { name: 'Directory', exact: false }).click();
+      first.reset();
+      const interruptedWrites = first.writes();
+      await shell.getByRole('button', { name: 'Refresh website' }).click();
+      await expect(restoredPage.locator('input')).toHaveValue('Original');
+      await shell
+        .getByRole('textbox', { name: 'Tell DSH your goal' })
+        .fill('Update Directory after interruption');
+      await shell.getByRole('button', { name: 'Send task' }).click();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
+        timeout: 30000,
+      });
+      const interrupted = await shell.evaluate(async () => window.deskwork?.snapshot());
+      const interruptedContext = interrupted?.contexts.find(
+        (entry) => entry.siteId === interrupted.activeSiteId,
+      );
+      assert.ok(interruptedContext?.nativeSessionId && interruptedContext.task.confirmation);
+      assert.equal(
+        interruptedContext.nativeSessionId,
+        before.contexts.find((entry) => entry.siteId === interruptedContext.siteId)
+          ?.nativeSessionId,
+      );
+      const interruptedCommand = {
+        type: 'confirm' as const,
+        siteId: interruptedContext.siteId,
+        confirmationId: interruptedContext.task.confirmation.id,
+      };
+      await application.close();
+      const pausedModelCalls = model.calls();
+      application = await electron.launch(launchOptions);
+      shell = await shellPage();
+      await expect(shell.getByText('Paused · You can take over', { exact: true })).toBeVisible();
+      assert.equal(model.calls(), pausedModelCalls);
+      assert.equal(first.writes(), interruptedWrites);
+      const restoredError = await shell.evaluate(async (command) => {
+        try {
+          await window.deskwork?.command(command);
+          return '';
+        } catch (error: unknown) {
+          return String(error);
+        }
+      }, interruptedCommand);
+      assert.match(restoredError, /Confirmation expired/);
+      await shell.getByRole('button', { name: 'Observe again and continue' }).click();
+      await expect(shell.getByRole('button', { name: 'Confirm and execute' })).toBeVisible({
+        timeout: 30000,
+      });
+      const continued = await shell.evaluate(async () => window.deskwork?.snapshot());
+      const continuedContext = continued?.contexts.find(
+        (entry) => entry.siteId === interruptedContext.siteId,
+      );
+      assert.equal(continuedContext?.nativeSessionId, interruptedContext.nativeSessionId);
+      assert.notEqual(continuedContext.task.confirmation?.id, interruptedCommand.confirmationId);
+      assert.equal(first.writes(), interruptedWrites);
+      await shell.evaluate(
+        async (siteId) => window.deskwork?.command({ type: 'stop', siteId }),
+        interruptedContext.siteId,
+      );
+      await shell.evaluate(
+        async (siteId) => window.deskwork?.command({ type: 'new-task', siteId }),
+        interruptedContext.siteId,
+      );
+      const fresh = await shell.evaluate(async () => window.deskwork?.snapshot());
+      assert.equal(
+        fresh?.contexts.find((entry) => entry.siteId === interruptedContext.siteId)
+          ?.nativeSessionId,
+        undefined,
+      );
       // A failed server save with a changed input must remain unverified, without a repeated write.
       second.rejectWrites();
       second.reset();
@@ -311,6 +381,11 @@ await test(
         ),
       );
     } finally {
+      await mkdir('.artifacts/desktop', { recursive: true });
+      await writeFile(
+        '.artifacts/desktop/model-requests.json',
+        JSON.stringify(model.trace(), null, 2),
+      );
       await application.close();
       await model.close();
       await first.close();

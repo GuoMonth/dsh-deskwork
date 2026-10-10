@@ -1,5 +1,7 @@
 # 实验记录
 
+- [rc.2 原生能力收敛](2026-10-10-rc2-native-convergence.md)：原生恢复、连续审批、通用插件上下文、登录 shell 和官方 UI 组件。
+
 - [DSH 0.2.0 原生能力与经验分享](2026-10-01-dsh-020-native-experience.md)：Messages API、宿主 Browser Use、原生 Skill 与 ERP 制品联合验证。
 
 - [DSH 0.2.0-rc.2 升级](2026-10-01-dsh-020-alignment.md)：Messages、提供方启用检查、自包含桌面运行时与新版回归。

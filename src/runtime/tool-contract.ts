@@ -50,14 +50,19 @@ export const toolRequestSchema = z.discriminatedUnion('name', [
       name: z.literal('native_approval'),
       arguments: z
         .object({
-          toolName: z.enum([
-            'erp_experience_import',
-            'erp_knowledge_correct',
-            'erp_knowledge_confirm',
-          ]),
+          toolName: z.string().min(1).max(200),
           reason: z.string().min(1).max(12000),
+          agentId: identifier,
+          callId: identifier.optional(),
+          confirmationId: identifier.optional(),
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      name: z.literal('execute_confirmed_action'),
+      arguments: z.object({ confirmationId: identifier }).strict(),
     })
     .strict(),
   z

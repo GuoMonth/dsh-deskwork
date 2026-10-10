@@ -32,15 +32,16 @@ export async function searchDocuments(
 }
 
 export const developmentCapabilities = {
-  version: '0.1.0-alpha.2',
+  version: '0.1.0-alpha.3',
   dshVersion: '0.2.0-rc.2',
   sdkPackage: '@guomonth/deskwork-plugin-sdk',
-  sdkVersion: '0.1.0-alpha.2',
+  sdkVersion: '0.1.0-alpha.3',
   documentation: 'offline',
   browserConnection: 'explicit-desktop-connection',
   browserSdk: ['observe', 'act'],
   builtinDshService: 'deskworkBrowser',
   bundledDevelopmentSkill: true,
   automaticConfirmationResume: false,
+  nativeToolConfirmation: 'dsh-approval-in-place',
   compatibilityPromise: false,
 } as const;

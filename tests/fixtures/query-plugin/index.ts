@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import type {} from '@deepseek-ai/dsh-skill';
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-tools';
-import { PluginBrowserClient } from '../../../packages/plugin-sdk/src/index.ts';
-export const inject = ['tools', 'skills'];
+import type {} from '../../../packages/plugin-sdk/src/dsh.ts';
+export const inject = ['tools', 'skills', 'deskworkBrowser'];
 export function apply(ctx: Context): void {
   ctx.effect(() =>
     ctx.skills.register({
@@ -28,7 +28,7 @@ export function apply(ctx: Context): void {
         ],
       },
       async execute(_args, exec) {
-        const client = new PluginBrowserClient('deskwork-query-fixture', exec.signal);
+        const client = ctx.deskworkBrowser.connect('deskwork-query-fixture', exec.signal);
         let page = await client.observe();
         const filter = page.elements.find((element) => element.name === 'Category');
         if (!filter) throw new Error('Page changed: missing category filter');

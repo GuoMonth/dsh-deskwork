@@ -1,6 +1,6 @@
 {
   "name": "@guomonth/deskwork-plugin-devkit",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Offline guides, DSH development skill, scaffold and MCP stdio for Deskwork plugin authors",
   "type": "module",
   "license": "MIT",

@@ -5,6 +5,7 @@ import type { DevelopmentState } from '../core/development-contracts.ts';
 import { PluginManager } from './plugin-manager.ts';
 import { PluginMarket } from './plugin-market.ts';
 import { pluginCommandSchema } from '../core/plugin-contracts.ts';
+import { pluginLoadSchema } from '../core/plugin-contracts.ts';
 import { app, BrowserWindow, ipcMain, safeStorage, Menu, dialog } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
     cliPath: join(runtimeRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
     pnpmPath: join(runtimeRoot, 'node_modules/pnpm/bin/pnpm.cjs'),
     validate: async (home, plugin): Promise<void> => {
+      let loading: z.infer<typeof pluginLoadSchema>[] = [];
       const probeBridge = await startToolServer(() =>
         Promise.reject(new Error('Installation verification has no running website task')),
       );
@@ -64,10 +66,18 @@ async function main(): Promise<void> {
         model: 'deepseek-v4-flash',
         toolEndpoint: probeBridge.endpoint,
         toolToken: probeBridge.token,
-        onNotification: (): void => {},
+        onNotification: (method, raw): void => {
+          if (method === 'deskwork.plugins') loading = z.array(pluginLoadSchema).parse(raw);
+        },
       });
       try {
         await probe.start();
+        const entries = loading.flatMap((entry) => entry.entries);
+        const failure = entries.find((entry) =>
+          ['failed', 'pending', 'unavailable'].includes(entry.status),
+        );
+        if (!entries.length || failure)
+          throw new Error(`Plugin did not load: ${failure?.detail ?? failure?.id ?? plugin.name}`);
       } finally {
         await probe.close();
         await probeBridge.close();
@@ -82,8 +92,31 @@ async function main(): Promise<void> {
   let activeSiteId = workspace.sites[0]?.id ?? '';
   let closing = false;
   let runtime: DshRuntime | undefined;
+  let runtimeSiteId: string | undefined;
+  let runtimeLocale: typeof workspace.locale | undefined;
   let runtimeGeneration = 0;
   const nativeApprovals = new Set<AbortController>();
+  type BrowserApproval = {
+    promise: Promise<'allowed-once' | 'cancelled'>;
+    resolve: (outcome: 'allowed-once' | 'cancelled') => void;
+    decided: boolean;
+    consumed: boolean;
+  };
+  const browserApprovals = new Map<string, BrowserApproval>();
+  function pendingBrowserApproval(id: string): BrowserApproval {
+    let pending = browserApprovals.get(id);
+    if (!pending) {
+      let resolveDecision: (outcome: 'allowed-once' | 'cancelled') => void = () => {
+        throw new Error('Approval was not initialized');
+      };
+      const promise = new Promise<'allowed-once' | 'cancelled'>((resolve) => {
+        resolveDecision = resolve;
+      });
+      pending = { promise, resolve: resolveDecision, decided: false, consumed: false };
+      browserApprovals.set(id, pending);
+    }
+    return pending;
+  }
   let model = 'deepseek-v4-flash';
   let apiKey = '';
   let configured = false;
@@ -225,20 +258,36 @@ async function main(): Promise<void> {
   const tools = await startToolServer(async (request) => {
     const siteId = runningSite();
     const controller = siteId ? controllers.get(siteId) : undefined;
-    if (!controller || controller.state.status !== 'running')
+    if (
+      !controller ||
+      (!['native_approval', 'execute_confirmed_action'].includes(request.name) &&
+        controller.state.status !== 'running')
+    )
       throw new Error('Task tools are paused or waiting for confirmation');
     controller.state.metrics.toolCalls++;
     switch (request.name) {
       case 'native_approval': {
+        if (request.arguments.agentId !== contexts.get(siteId ?? '')?.nativeSessionId)
+          throw new Error('The approval does not belong to the active native conversation');
+        if (request.arguments.confirmationId) {
+          if (
+            controller.state.status !== 'waiting-user' ||
+            controller.state.confirmation?.id !== request.arguments.confirmationId
+          )
+            return { outcome: 'cancelled' };
+          const pending = pendingBrowserApproval(request.arguments.confirmationId);
+          return { outcome: await pending.promise };
+        }
+        if (controller.state.status !== 'running') return { outcome: 'cancelled' };
         const generation = runtimeGeneration;
         const cancellation = new AbortController();
         nativeApprovals.add(cancellation);
         try {
           const decision = await dialog.showMessageBox(window, {
             type: 'question',
-            title: localizeMessage(workspace.locale, 'Confirm ERP experience update'),
-            message: localizeMessage(workspace.locale, 'Allow this one local knowledge update?'),
-            detail: request.arguments.reason,
+            title: localizeMessage(workspace.locale, 'Confirm plugin action'),
+            message: localizeMessage(workspace.locale, 'Allow this one plugin action?'),
+            detail: `${request.arguments.toolName}\n${request.arguments.reason}`,
             buttons: ['Cancel', 'Allow once'].map((label) =>
               localizeMessage(workspace.locale, label),
             ),
@@ -258,6 +307,17 @@ async function main(): Promise<void> {
           };
         } finally {
           nativeApprovals.delete(cancellation);
+        }
+      }
+      case 'execute_confirmed_action': {
+        const pending = browserApprovals.get(request.arguments.confirmationId);
+        if (!pending?.decided || pending.consumed) throw new Error('Confirmation expired');
+        pending.consumed = true;
+        try {
+          await controller.confirm(request.arguments.confirmationId);
+          return { status: 'executed-observe-again' };
+        } finally {
+          browserApprovals.delete(request.arguments.confirmationId);
         }
       }
       case 'plugin_action': {
@@ -297,9 +357,14 @@ async function main(): Promise<void> {
   async function stopRuntime(): Promise<void> {
     runtimeGeneration++;
     for (const pending of nativeApprovals) pending.abort();
+    for (const pending of browserApprovals.values()) pending.resolve('cancelled');
+    browserApprovals.clear();
     tools.revoke();
     const previous = runtime;
     runtime = undefined;
+    runtimeSiteId = undefined;
+    runtimeLocale = undefined;
+    plugins.reportRuntime('');
     await previous?.close();
   }
   async function launchRuntime(siteId: string, text: string): Promise<void> {
@@ -314,6 +379,9 @@ async function main(): Promise<void> {
       return;
     }
     if (!runtime) {
+      const resumeSession = context.nativeSessionId !== undefined;
+      context.nativeSessionId ??= randomUUID();
+      await persist();
       const generation = ++runtimeGeneration;
       const selectedPlugins = await plugins.prepareRuntime(
         join(directory, 'runtime', siteId),
@@ -334,13 +402,7 @@ async function main(): Promise<void> {
         toolToken: tools.token,
         plugins: selectedPlugins,
         ...(runtimeSite ? { site: runtimeSite } : {}),
-        recoveryContext: [
-          ...messages,
-          {
-            role: 'assistant',
-            text: `Host state: ${JSON.stringify({ target: controller.state.target, requiresVerification: controller.state.requiresVerification, detail: controller.state.detail })}`,
-          },
-        ],
+        resumeSession,
         onNotification: (method, raw): void => {
           if (generation !== runtimeGeneration) return;
           const handle = async (): Promise<void> => {
@@ -352,7 +414,7 @@ async function main(): Promise<void> {
                 })
                 .safeParse(raw);
               if (!event.success) return;
-              if (event.data.sessionId !== controller.state.id) return;
+              if (event.data.sessionId !== context.nativeSessionId) return;
               if (event.data.event.type === 'step/start') {
                 controller.state.metrics.modelCalls++;
                 publish();
@@ -398,6 +460,12 @@ async function main(): Promise<void> {
                 const message = z
                   .object({
                     step: z.number(),
+                    usage: z
+                      .object({
+                        inputTokens: z.number().nonnegative(),
+                        outputTokens: z.number().nonnegative(),
+                      })
+                      .optional(),
                     message: z.object({
                       content: z.array(
                         z.object({ type: z.string(), text: z.string().optional() }).loose(),
@@ -406,6 +474,8 @@ async function main(): Promise<void> {
                   })
                   .safeParse(event.data.event.data);
                 if (message.success) {
+                  controller.state.metrics.inputTokens += message.data.usage?.inputTokens ?? 0;
+                  controller.state.metrics.outputTokens += message.data.usage?.outputTokens ?? 0;
                   const text = message.data.message.content
                     .filter((block) => block.type === 'text')
                     .map((block) => block.text ?? '')
@@ -418,16 +488,20 @@ async function main(): Promise<void> {
                   publish();
                 }
               }
+            } else if (method === 'deskwork.plugins') {
+              plugins.reportRuntime(siteId, z.array(pluginLoadSchema).parse(raw));
             } else if (method === 'session.status') {
               const status = z
                 .object({ sessionId: z.string(), status: z.enum(['running', 'idle']) })
                 .parse(raw);
-              if (status.sessionId === controller.state.id && status.status === 'idle')
+              if (status.sessionId === context.nativeSessionId && status.status === 'idle')
                 await controller.finish(
                   'The conversation turn ended; verify business results by reading them back',
                 );
-            } else if (method === 'deskwork.exit')
+            } else if (method === 'deskwork.exit') {
+              await stopRuntime();
               await controller.fail('DSH exited. Reconnect before continuing.');
+            }
           };
           void handle().catch((error: unknown) => {
             console.error(
@@ -437,9 +511,11 @@ async function main(): Promise<void> {
           });
         },
       });
+      runtimeSiteId = siteId;
+      runtimeLocale = workspace.locale;
     }
     await runtime.prompt(
-      controller.state.id,
+      context.nativeSessionId ?? controller.state.id,
       `Task website: ${workspace.sites.find((site) => site.id === siteId)?.url ?? ''}\n${text}`,
     );
   }
@@ -464,10 +540,12 @@ async function main(): Promise<void> {
       throw new Error('Stop this entry task and verify its result before editing or removing it');
   }
   function launch(siteId: string, text: string): void {
-    void launchRuntime(siteId, text).catch((error: unknown) => {
-      void controllerFor(siteId).fail(
-        error instanceof Error ? error.message : 'Model connection failed',
-      );
+    const taskId = controllerFor(siteId).state.id;
+    void launchRuntime(siteId, text).catch(async (error: unknown) => {
+      const controller = controllerFor(siteId);
+      if (controller.state.id !== taskId || controller.state.status !== 'running') return;
+      if (runtimeSiteId === siteId) await stopRuntime();
+      await controller.fail(error instanceof Error ? error.message : 'Model connection failed');
     });
   }
   function requireShell(event: IpcMainInvokeEvent): void {
@@ -722,7 +800,7 @@ async function main(): Promise<void> {
           const context = contexts.get(command.tabId);
           if (!site || !context) throw new Error('Entry not found');
           if (!configured) throw new Error('Configure a DeepSeek model and API key first');
-          await stopRuntime();
+          if (runtimeSiteId !== site.id || runtimeLocale !== workspace.locale) await stopRuntime();
           await controller.start({ tabId: site.id, sessionId: site.sessionId }, command.text);
           context.messages.push({ id: randomUUID(), role: 'user', text: command.text });
           await persist();
@@ -732,6 +810,18 @@ async function main(): Promise<void> {
         case 'confirm': {
           requireNoOtherTask(command.siteId);
           const controller = controllerFor(command.siteId);
+          if (runtimeSiteId === command.siteId && !development?.active) {
+            if (
+              controller.state.status !== 'waiting-user' ||
+              controller.state.confirmation?.id !== command.confirmationId
+            )
+              throw new Error('Confirmation expired');
+            const pending = pendingBrowserApproval(command.confirmationId);
+            if (pending.decided) throw new Error('Confirmation expired');
+            pending.decided = true;
+            pending.resolve('allowed-once');
+            break;
+          }
           await stopRuntime();
           await controller.confirm(command.confirmationId);
           if (controller.state.status === 'running' && !development?.active)
@@ -762,6 +852,7 @@ async function main(): Promise<void> {
           const context = contexts.get(command.siteId);
           const site = workspace.sites.find((entry) => entry.id === command.siteId);
           if (!context || !site) throw new Error('Entry not found');
+          await stopRuntime();
           await store.archiveContext(context);
           addContext(site);
           await persist();

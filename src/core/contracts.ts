@@ -106,6 +106,8 @@ export const taskSchema = z
         toolCalls: z.number(),
         startedAt: z.number(),
         elapsedMs: z.number(),
+        inputTokens: z.number().nonnegative().default(0),
+        outputTokens: z.number().nonnegative().default(0),
       })
       .strict(),
   })
@@ -123,7 +125,14 @@ export function idleTask(): TaskState {
     result: null,
     requiresVerification: false,
     steps: [],
-    metrics: { modelCalls: 0, toolCalls: 0, startedAt: 0, elapsedMs: 0 },
+    metrics: {
+      modelCalls: 0,
+      toolCalls: 0,
+      startedAt: 0,
+      elapsedMs: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    },
   };
 }
 export const messageSchema = z
@@ -131,7 +140,12 @@ export const messageSchema = z
   .strict();
 export type ChatMessage = z.infer<typeof messageSchema>;
 export const contextSchema = z
-  .object({ siteId: identifier, task: taskSchema, messages: z.array(messageSchema) })
+  .object({
+    siteId: identifier,
+    task: taskSchema,
+    messages: z.array(messageSchema),
+    nativeSessionId: identifier.optional(),
+  })
   .strict();
 export type EntryContext = z.infer<typeof contextSchema>;
 export const snapshotSchema = z

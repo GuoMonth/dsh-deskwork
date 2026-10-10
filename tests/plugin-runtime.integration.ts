@@ -13,6 +13,15 @@ import { startToolServer } from '../src/runtime/tool-server.ts';
 
 for (const scenario of [
   {
+    label: 'native SDK action continues in its original tool after DSH approval',
+    skill: 'fixture-query',
+    tool: 'fixture_query',
+    arguments: '{}',
+    evidence: 'Option A',
+    install: true,
+    confirmation: true,
+  },
+  {
     label: 'installed browser service plugin',
     skill: 'fixture-query',
     tool: 'fixture_query',
@@ -41,6 +50,20 @@ for (const scenario of [
       calls.push(request.name);
       if (request.name === 'plugin_action') {
         assert.equal(request.arguments.effect, 'read');
+        if ('confirmation' in scenario && scenario.confirmation)
+          return Promise.resolve({
+            status: 'waiting-for-human-confirmation',
+            confirmationId: 'fixture-confirmation',
+          });
+        return Promise.resolve({ status: 'executed-observe-again' });
+      }
+      if (request.name === 'native_approval') {
+        assert.equal(request.arguments.agentId, 'plugin-test');
+        assert.equal(request.arguments.confirmationId, 'fixture-confirmation');
+        return Promise.resolve({ outcome: 'allowed-once' });
+      }
+      if (request.name === 'execute_confirmed_action') {
+        assert.equal(request.arguments.confirmationId, 'fixture-confirmation');
         return Promise.resolve({ status: 'executed-observe-again' });
       }
       return Promise.resolve({
@@ -106,6 +129,7 @@ for (const scenario of [
       pnpmPath: join(resources, 'node_modules/pnpm/bin/pnpm.cjs'),
     });
     let runtime: DshRuntime | undefined;
+    const notifications: string[] = [];
     try {
       await manager.load();
       if (scenario.install) await manager.install(`file:${resolve('tests/fixtures/query-plugin')}`);
@@ -122,7 +146,9 @@ for (const scenario of [
         baseURL: `http://127.0.0.1:${String(address.port)}`,
         toolEndpoint: bridge.endpoint,
         toolToken: bridge.token,
-        onNotification: (): void => {},
+        onNotification: (method, raw): void => {
+          notifications.push(JSON.stringify({ method, raw }));
+        },
       });
       await runtime.prompt(
         'plugin-test',
@@ -139,8 +165,26 @@ for (const scenario of [
       ]);
       assert.deepEqual(
         calls,
-        scenario.install ? ['observe_page', 'plugin_action', 'observe_page'] : [],
+        scenario.install
+          ? 'confirmation' in scenario && scenario.confirmation
+            ? [
+                'observe_page',
+                'plugin_action',
+                'native_approval',
+                'execute_confirmed_action',
+                'observe_page',
+              ]
+            : ['observe_page', 'plugin_action', 'observe_page']
+          : [],
       );
+      if (scenario.install)
+        assert.ok(
+          notifications.some((raw) => raw.includes('deskwork.plugins') && raw.includes('loaded')),
+        );
+      if ('confirmation' in scenario && scenario.confirmation) {
+        assert.equal(notifications.filter((raw) => raw.includes('approval/asked')).length, 1);
+        assert.equal(notifications.filter((raw) => raw.includes('approval/decided')).length, 1);
+      }
       assert.equal(modelCalls, 3);
     } finally {
       await runtime?.close();
