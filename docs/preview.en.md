@@ -6,7 +6,9 @@
 
 Download the macOS Apple Silicon DMG or Linux x64 archive from [Releases](https://github.com/GuoMonth/dsh-deskwork/releases) and follow the [quick start](../README.md#download). macOS uses ad-hoc signing. If Gatekeeper blocks the app, check its source and SHA-256, then follow [Apple's instructions](https://support.apple.com/en-us/102445).
 
-The first workspace is empty. Add a website URL; enter your DeepSeek model and API key in Model settings and select a language. The OS secure store holds the key. Sign in to the website yourself.
+The first workspace is empty. Add a website URL; enter your DeepSeek model and API key in Settings. The OS secure store holds the key. Sign in to the website yourself.
+
+The current source defaults to System: it selects Chinese or English in the OS preferred-language order, falling back to English when none is supported. Settings can also fix Chinese or English; updates preserve existing language choices. Restart Deskwork after changing the OS language. Conversation history and website content retain their original text. These desktop changes are included in the next release.
 
 ## Tasks and confirmation
 
@@ -15,6 +17,8 @@ Each website saves its conversation and browser identity separately. Copilot sho
 Critical actions use native DSH approval. Inputs may autosave, so filling a field can require confirmation. Stop/takeover or manual interaction pauses the task; observe again before continuing. Check the page when a submission result is unclear; it is not submitted again automatically.
 
 Native DSH logs preserve tool history. After restart, tasks stay paused until Observe and continue; old approvals expire. New task starts a new session. If logs are missing or an older conversation has only text, it remains visible but requires a new task.
+
+Closing the window hides it to the tray while preserving the task and pending confirmation. Open Deskwork in the tray restores the same window, and the tray shows task status. Exit Deskwork stops the runtime, saves the task and exits. When the tray is unavailable, closing the window performs exit cleanup.
 
 ## Plugins
 

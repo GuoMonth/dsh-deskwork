@@ -14,10 +14,12 @@ On macOS, open the DMG and drag the app into Applications. On Linux, extract the
 
 ## Use
 
-1. Add a website, sign in manually and configure a model in **Model settings**. Select **English** or **中文** there; the default is English.
+1. Add a website, sign in manually and configure a model in **Settings**. The UI follows the system language by default; select **English** or **中文** to override it.
 2. Tell AI your goal. Each website keeps its own conversation and browser identity; one automated task runs at a time.
 3. Review critical actions and check the result on the page. Stop or take over when needed.
 4. After restart, observe the page and explicitly continue. Previous approvals expire; a new task starts a separate conversation.
+
+The current source adds a tray menu for opening Deskwork, checking task status and exiting. Closing the window keeps the task running; choose **Exit Deskwork** to stop and save it. These desktop changes are included in the next release; published packages follow their release notes.
 
 The existing DSH marketplace installs trusted local plugins. They can execute code and access your files and network. The [ERP plugin](https://github.com/GuoMonth/dsh-erp) reuses the task browser and can export experience as a Skill for another user to review and import.
 
