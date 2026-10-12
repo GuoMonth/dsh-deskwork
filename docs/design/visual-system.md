@@ -1,6 +1,6 @@
 # Deskwork 视觉与交互原则
 
-状态：2026-09-09 更新为清晰、紧凑的 PC 浅色工作台，待本轮 PR 视觉审阅。品牌语义为「清晰、可信、高效，少一些操作、多一些完成」。颜色和尺寸的事实来源是 `src/ui/design-tokens.ts`，组件和可交互预览表达实现；本文只维护原则和取舍。
+外壳采用紧凑的 PC 浅色布局。颜色和尺寸由 `src/ui/design-tokens.ts` 定义，组件与可交互预览表达实现；本文记录设计取舍。
 
 [审阅当前界面](previews/README.md)。
 
@@ -8,7 +8,7 @@
 
 [Fluent 语义 Token](https://fluent2.microsoft.design/design-tokens)提供主要方法：基础值到语义角色，再由组件消费。以中性灰外壳和白色内容面划分区域，蓝色用于主操作、选中和焦点，青色仅作 AI 活动状态。文字、可操作控件和装饰分隔线使用不同的语义角色，避免通过大面积浅灰表达所有层次。
 
-[SAP 企业设计](https://www.sap.com/design/design-system)提供角色、业务状态、简单一致的原则；[Oracle Design](https://design.oracle.com/)作为企业任务体验的辅助参考。保持适度信息密度，让业务对象、变更与结果比装饰更醒目。
+SAP 企业设计提供角色、业务状态、简单一致的原则；[Oracle Design](https://design.oracle.com/)作为企业任务体验的辅助参考。保持适度信息密度，让业务对象、变更与结果比装饰更醒目。
 
 参考 [Cursor 侧栏 Agent](https://cursor.com/docs/agent/overview) 的页面与对话分工，采用 [VS Code 工作台](https://code.visualstudio.com/docs/editing/getting-started/userinterface)的区域分工：工作区导航、业务标签、辅助对话与命令入口。Copilot 和 Agent 是同一工作的两种视图。示例 ERP等第三方业务页面保留原样，统一设计覆盖 Deskwork 自有外壳。
 

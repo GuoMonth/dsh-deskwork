@@ -10,4 +10,4 @@ Build assets from a fixed, verified source tree. Check packaged installation and
 
 Distribute desktop packages, SDK/Devkit packages and checksums only. Private integration plugins, business screenshots and account data stay outside source, CI artifacts and public releases. Public regressions use synthetic fixtures.
 
-Reference: [upstream documentation pairing](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/i18n/README.md) and [bilingual upstream release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2).
+Reference: [bilingual upstream release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2).

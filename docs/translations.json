@@ -1,10 +1,38 @@
 {
   "README": {
-    "en": "3bbe3e3561722481a2693e305d819d0f74b11f8ab1725994cc006d31e1a9b534",
-    "zh": "00394acdd21d4245ce1213e095e3332e3782c65f0398208e5e1bece0cfd09461"
+    "en": "54a4f3df4beae3335d8c33ecb3f6345078a3f2d237ab8a6ad005781039690f71",
+    "zh": "bc8c4ac1bc6ee0713aaf56b13b27b3469f7d2ea7fe0b1ae1a41f3b1cdfa17000"
   },
   "docs/releases/README": {
-    "en": "ed570b4cb9706776f1f8f57b8d3299ccd8d4070347a5b2915edf53938ebbcd3a",
-    "zh": "10407a7e7c514e4d006d2bd35dfc8dc97607560ef79a26b115dd9bbedf755328"
+    "en": "904656efe19036e6a68d6bebc1bff1f6080ad9ff7a69d2a8bce734b3557853c0",
+    "zh": "ed41ef36da85bf7f075ef3d8dad3a003c10c9f6881dbb6d076624c2eeba49a59"
+  },
+  "docs/README": {
+    "en": "00bc85bc090ccaab2e620f14a73ec25cea0b465fc295800f81bf9e8800236a51",
+    "zh": "1c010f15ab928d9be2f6184245752c4fd0eb4e50734e27662bae33ac41a424ce"
+  },
+  "docs/preview": {
+    "en": "31749cf69c2fb74c7cf051e814b59d379caac38015f90300503b92c5351d26b8",
+    "zh": "08e7689ff9f3a3afaca370479b0d49ae168ddafc385ff1fe384ea418e9c1a54d"
+  },
+  "docs/roadmap": {
+    "en": "cdfcdbf3fa6beaa8d0ca28fecc74c68fb0d78df6f0a53c3182c07a98cc6fb3d3",
+    "zh": "b1b7272656c4ccfcb9234edee956ace59721b3624fe53628c01f153d1a3560d4"
+  },
+  "packages/plugin-sdk/README": {
+    "en": "8edd72221e3cd9fb4193f2c75aababa7283098562769237abac92d4650fd6115",
+    "zh": "99c3af75b288b70d35f213d69a9177ea84a07275a6a089ada901abcdcf7aa847"
+  },
+  "packages/plugin-devkit/README": {
+    "en": "50de65ea755bbe93d00b7c38d1b47ae4a6d681be5ac414f753dd10e0d97084a4",
+    "zh": "884538699ed975f6017f4421c84d51603ded8d9ae0d1d7aa02dcc69fb4629238"
+  },
+  "packages/plugin-devkit/docs/workflow": {
+    "en": "502d9dc2ae471b1c9d5757b6c490ac8acc49027c988f0a2801eb473d279e865b",
+    "zh": "0fa48a13fff70fd240969f649d8eac1c74116a91efa52245177ec00b44f22398"
+  },
+  "packages/plugin-devkit/docs/contract": {
+    "en": "b5c9c8581360db8ba9f728b5bdcd3c36cf0a788d5728b4ece44e5d5cc1e5c46e",
+    "zh": "eac884c10c4350c3c22c99b462fb767b5496a43a40e5231a37de48e49219f82e"
   }
 }

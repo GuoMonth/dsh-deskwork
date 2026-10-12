@@ -1,32 +1,39 @@
 # Contributing / 参与贡献
 
-DSH Deskwork 由 AI 主导开发。人主要提供业务规格、必要决策和审核；AI 负责代码、测试、实验、文档维护与 PR。
-
-给人看的入口：[产品介绍](README.md)、[原则](docs/principles/product.md)、[设计](docs/design/workspace.md)、[决策](docs/decisions/README.md)。编码代理从 [AGENTS.md](AGENTS.md) 按需加载规范，无需每次阅读全部文档。
-
-## 开发入口（供 AI 使用）
-
-首次准备使用 [.node-version](.node-version) 指定的 Node.js 和 npm 11，执行 `npm ci`。已有匹配锁文件的依赖直接复用。
-
-| 场景                         | 命令                                           |
-| ---------------------------- | ---------------------------------------------- |
-| 编辑期间                     | 相关测试或 `npm run typecheck`                 |
-| 仅文档                       | `npm run check:docs`                           |
-| 代码改动完成                 | `npm run check`                                |
-| CI / 排查缓存                | `npm run check:fresh`                          |
-| 调整格式                     | `npm exec -- prettier --write path/to/file`    |
-| 首次下载 Electron            | `npm run experiment:prepare`                   |
-| 已隔离开发环境中的实验       | `npm run experiment:electron-session`          |
-| 验证 Chromium sandbox 的实验 | `npm run experiment:electron-session:chromium` |
-
-当前提供的账号已是隔离开发环境，默认本地实验使用外层隔离，不再配置嵌套 Chromium sandbox。输出记录隔离模式；该结果不证明产品发布环境的安全或兼容性。Linux 无显示环境仍需 Xvfb。实验只运行模拟 ERP，使用临时 profile 并清理进程。
-
-成功检查输出简短摘要，完整日志见 `.artifacts/check-latest.json`；实验输出见 `.artifacts/electron-session-control/latest.json`。详细执行约定见[验证规范](docs/standards/verification.md)。
-
-贡献需拥有相应权利，并同意采用本仓库 [MIT License](LICENSE)。
+[English](#english) | [中文](#中文)
 
 ## English
 
-AI owns implementation, tests, experiments, documentation maintenance, and PR updates. Humans provide specifications, consequential decisions, and review. Agents load [AGENTS.md](AGENTS.md) and only relevant context.
+Use the Node version in [.node-version](.node-version) and npm 11. Install with `npm ci` for a fresh setup; reuse dependencies when the lockfile is unchanged.
 
-Reuse the pinned toolchain. Use `check:docs` for documentation, `check` at a code-change boundary, and `check:fresh` for CI or cache diagnosis. The default Electron fixture experiment uses host isolation on the supplied isolated development account; the separate `:chromium` command tests nested Chromium isolation. Reports distinguish these modes. Contributions are licensed under MIT.
+| Change           | Check                                                       |
+| ---------------- | ----------------------------------------------------------- |
+| Documentation    | `npm run check:docs`                                        |
+| Code             | Relevant tests while editing; `npm run check` at completion |
+| Checks or caches | `npm run check:fresh`                                       |
+
+Format changed files with Prettier. Update both public README languages together and record reviewed hashes with `node scripts/check-translations.ts --write`.
+
+Agents start with [AGENTS.md](AGENTS.md). Humans review product intent, consequential decisions and outcomes; AI handles routine implementation, tests and PR maintenance.
+
+For Electron experiments, use [verification](docs/standards/verification.md). The supplied isolated development account uses host isolation; Linux without a display needs Xvfb. Keep business data, credentials and screenshots outside public source and artifacts.
+
+Contributions must be yours to license under [MIT](LICENSE).
+
+## 中文
+
+使用 [.node-version](.node-version) 指定的 Node 和 npm 11。首次安装运行 `npm ci`；锁文件未变时复用已有依赖。
+
+| 改动       | 检查                                           |
+| ---------- | ---------------------------------------------- |
+| 文档       | `npm run check:docs`                           |
+| 代码       | 编辑时运行相关测试，完成后运行 `npm run check` |
+| 检查或缓存 | `npm run check:fresh`                          |
+
+用 Prettier 格式化改动文件。公开 README 双语同步修改，审阅后用 `node scripts/check-translations.ts --write` 记录摘要。
+
+编码代理从 [AGENTS.md](AGENTS.md) 开始。人审阅产品目标、重要取舍与结果；AI 负责日常实现、测试和 PR 维护。
+
+Electron 实验按[验证约定](docs/standards/verification.md)执行。当前隔离开发账号使用 host 隔离；Linux 无显示环境时需 Xvfb。业务数据、凭据和截图保存在公开源码与制品之外。
+
+贡献者须有权将提交内容按 [MIT](LICENSE) 许可发布。

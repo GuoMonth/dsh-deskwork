@@ -1,25 +1,14 @@
-# 文档导航
+# 文档目录
 
-第三方 AI 插件开发从 [Devkit](../packages/plugin-devkit/README.md) 开始；开发计划见 [M3 规格](specs/m3-plugin-development-kit.md)。
+[English](README.en.md)
 
-M3 骨架已通过 PR #19 合并；内置浏览器服务与外部开发连接的本地结果见 [阶段二验证](experiments/2026-09-08-development-connection.md)。
+| 要做什么                 | 文档                                                             |
+| ------------------------ | ---------------------------------------------------------------- |
+| 安装、配置模型和使用网站 | [使用指南](preview.md)                                           |
+| 查看版本变化与下载       | [0.2.2 发布说明](releases/0.2.2.md#中文)                         |
+| 开发桌面应用             | [参与开发](../CONTRIBUTING.md)                                   |
+| 制作网站插件             | [Devkit](../packages/plugin-devkit/README.md)                    |
+| 了解后续工作             | [路线图](roadmap.md)                                             |
+| 核对本版集成结果         | [原生能力验证](experiments/2026-10-10-rc2-native-convergence.md) |
 
-Issue #31 的原生会话、审批、通用插件上下文与官方组件收敛见 [rc.2 原生能力验证](experiments/2026-10-10-rc2-native-convergence.md)。
-
-M1 alpha.2 已交付并获用户本地使用反馈；[M2 开发计划](specs/m2-dsh-plugins.md)已落实插件功能并进入预览交付。M1 入口：[规格](specs/m1-configurable-workspace.md)、[视觉与交互](design/visual-system.md)、[预览使用与限制](preview.md)、[本轮验证](experiments/2026-09-06-configurable-mvp.md)、[范围决策](decisions/0005-configurable-workspace-scope.md)、[执行计划](roadmap.md)。
-
-大部分文档面向 AI 执行与按需检索；人主要阅读产品规格、架构选择与结论。文档记录「为什么、约束、选择和证据」；类型、命名、实现与测试表达「现在如何工作」。不维护逐函数解释或已实现功能的平行文档。
-
-| 目录                                  | 内容                         | 更新时机             |
-| ------------------------------------- | ---------------------------- | -------------------- |
-| [principles](principles/product.md)   | 产品与工程的长期原则         | 原则发生变化         |
-| [standards](standards/engineering.md) | 可以执行和审查的开发约定     | 开发流程或约束变化   |
-| [design](design/workspace.md)         | 尚在讨论的产品设计           | 目标、边界与方案变化 |
-| [decisions](decisions/README.md)      | 有状态、理由、替代方案的决策 | 接受或替代重要选择   |
-| [hypotheses](hypotheses/README.md)    | 未知问题、判据和验证状态     | 提出或验证一个假设   |
-| [experiments](experiments/README.md)  | 固定环境下的结果与结论边界   | 完成一次有意义的实验 |
-| [roadmap](roadmap.md)                 | 阶段目标                     | 阶段或优先级变化     |
-
-AI 从 [AGENTS.md](../AGENTS.md) 的任务路由读取必要材料，不要求顺序通读本索引或所有规范。`standards/`、假设和实验明细主要供 AI 使用；原则、设计、ADR 的决策摘要与路线图供人决策和审核。
-
-新增文档前确认已有归属，避免为同一个事实创建第二份可变副本。实验源码在仓库根目录 `experiments/`；原始运行输出在被忽略的 `.artifacts/`，可公开的精简证据随实验记录提交。
+[规格](specs/m1-configurable-workspace.md)描述目标与验收条件，[决策](decisions/README.md)记录取舍，[实验](experiments/README.md)保留指定版本的历史结果。当前任务状态以 GitHub Issue 为准。

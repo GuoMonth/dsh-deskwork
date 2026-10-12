@@ -10,4 +10,4 @@
 
 仅分发桌面包、SDK/Devkit 包与校验值。私有集成插件、业务截图及账号数据保存在源码、CI 资产和公开 Release 之外；公开回归使用合成夹具。
 
-参考：[上游文档配对](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/i18n/README.md)和[上游双语 Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2)。
+参考：[上游双语 Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2)。

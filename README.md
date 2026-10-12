@@ -1,40 +1,31 @@
 # DSH Deskwork
 
-English | [中文](./README.zh.md)
+[中文](./README.zh.md) · [Releases](https://github.com/GuoMonth/dsh-deskwork/releases)
 
-**Sign in to your business systems. Let AI help get the work done.**
+Sign in to your business systems and work with AI in the same browser session. Deskwork is a local desktop workspace powered by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Copilot shows the page beside the conversation; Agent expands the conversation while keeping the same task.
 
-DSH Deskwork is a local desktop workspace powered by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Add a website, sign in as usual, and work with AI in the same browser session. Copilot places the page next to the conversation; Agent expands the conversation while keeping the same task and browser identity.
+Current release: **0.2.2**, with **DSH 0.2.0-rc.2** (upstream prerelease). ERP integration uses **0.1.1**. See [release notes](docs/releases/0.2.2.md#english).
 
 ## Download
 
-[macOS Apple Silicon](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64 portable archive](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [Release notes and checksums](https://github.com/GuoMonth/dsh-deskwork/releases/latest)
+[macOS Apple Silicon](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-mac-arm64.dmg) · [Linux x64](https://github.com/GuoMonth/dsh-deskwork/releases/latest/download/DSH-Deskwork-linux-x64.tar.gz) · [Checksums](https://github.com/GuoMonth/dsh-deskwork/releases/latest)
 
-Open the macOS DMG and drag the app into Applications. macOS packages support Apple Silicon (arm64) only. Extract the Linux archive and run `./linux-unpacked/dsh-deskwork`. The macOS app currently uses ad-hoc signing; Developer ID signing and Apple notarization are not configured.
+On macOS, open the DMG and drag the app into Applications. On Linux, extract the archive and run `./linux-unpacked/dsh-deskwork`. Both include their runtime and pnpm. macOS uses ad-hoc signing; Apple notarization is pending.
 
-The app defaults to **English**. Choose **English** or **中文** in **Model settings → Language**. The selection is saved locally and restored after restart; subsequent model tasks use the selected language. Website content, names and existing conversations retain their original text.
+## Use
 
-The runtime pins **DSH `0.2.0-rc.2`**, an upstream prerelease, and Electron **`44.0.0`**. Packages include an independent runtime, Node-mode and pnpm. Verification uses real DSH and Electron with deterministic models and synthetic websites; live-model business tasks and user macOS acceptance remain pending.
+1. Add a website, sign in manually and configure a model in **Model settings**. Select **English** or **中文** there; the default is English.
+2. Tell AI your goal. Each website keeps its own conversation and browser identity; one automated task runs at a time.
+3. Review critical actions and check the result on the page. Stop or take over when needed.
+4. After restart, observe the page and explicitly continue. Previous approvals expire; a new task starts a separate conversation.
 
-## Work with websites
+The existing DSH marketplace installs trusted local plugins. They can execute code and access your files and network. The [ERP plugin](https://github.com/GuoMonth/dsh-erp) reuses the task browser and can export experience as a Skill for another user to review and import.
 
-- Add URLs to an empty workspace. Each entry keeps its own conversation and persistent browser identity.
-- Conversations use native DSH session logs. Restarted tasks stay paused until you choose to observe and continue; previous confirmations expire. A new task starts a separate conversation.
-- Sign in manually on the original website. Tell AI your goal, observe its progress, and stop or take over when needed.
-- Review consequential actions before execution. Reopen or refresh result pages to verify that changes were saved.
-- Use the existing DSH plugin marketplace for trusted local extensions. Extensions can execute code and access files and the network on your computer.
-
-## Reuse ERP experience
-
-The [ERP package](https://www.npmjs.com/package/@guosheng_047/dsh-erp) uses standard DSH installation. Deskwork **0.2.2** uses ERP **0.1.1**, available through npm `latest`, for the generic website context and existing task browser. Use the exact version for reproducible installation. See the [release notes](docs/releases/0.2.2.md) and [native integration verification](docs/experiments/2026-10-10-rc2-native-convergence.md).
-
-ERP reuses the task browser through native Browser Use, plus native tools, approvals, attachments, Sessions and Skills. Computer Use explicitly enables the official Cua Driver Native through the ERP plugin.
-
-Export and import experience through a single tool call in the conversation. The exported directory contains standard `SKILL.md` and `references/knowledge.json`, so another user can import it and reuse it through DSH Skills. Imported knowledge binds to the recipient's ERP scope and requires review. Structured identities, raw evidence and business samples are excluded from sharing; review free text before sharing it.
+Tests use real DSH/Electron with deterministic models and synthetic websites. Live-model business tasks and user macOS acceptance remain pending. Setup, data and limitations are in the [user guide](docs/preview.en.md).
 
 ## Develop
 
-Use the pinned Node 24 and npm 11 versions:
+Use the repository's pinned Node and npm versions:
 
 ```sh
 npm ci
@@ -42,12 +33,6 @@ npm run experiment:prepare
 npm run dev
 ```
 
-`npm run dev` opens a synthetic UI preview. Use `npm start` for the desktop app, `npm run check` for standard checks, and `npm run test:devkit` for external SDK/Devkit consumers. Public tests use generated data and reserved example domains. Keep private integration inputs outside the repository.
+`npm run dev` opens the UI preview; `npm start` launches the desktop app. See [Contributing](CONTRIBUTING.md) for checks and the [Devkit](packages/plugin-devkit/README.en.md) for plugin development.
 
-[Preview guide](./docs/preview.md) · [Contributor guide](./CONTRIBUTING.md) · [Documentation index](./docs/README.md) · [Product specification](./docs/specs/m1-configurable-workspace.md) · [Runtime verification](./docs/experiments/2026-10-01-dsh-020-native-experience.md)
-
-Public README pairs and bilingual release notes follow the [upstream documentation convention](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/i18n/README.md): English source, a `.zh.md` counterpart, language links, and checks that require both sides to be updated. Release notes provide linked English and Chinese sections; see [release authoring](./docs/releases/README.md).
-
-## License
-
-[MIT](./LICENSE). Third-party runtime dependencies retain their own licenses.
+[Documentation](docs/README.en.md) · [Roadmap](docs/roadmap.en.md) · [MIT](LICENSE)
