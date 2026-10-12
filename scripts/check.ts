@@ -15,6 +15,8 @@ const formattingTargets = docsOnly
       'AGENTS.md',
       'README.md',
       'README.zh.md',
+      'packages/plugin-sdk/*.md',
+      'packages/plugin-devkit/**/*.md',
       'CONTRIBUTING.md',
       'docs',
       '.github/pull_request_template.md',

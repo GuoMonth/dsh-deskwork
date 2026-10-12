@@ -1,5 +1,7 @@
 # Deskwork Plugin SDK
 
+[English](README.en.md)
+
 任务绑定的浏览器观察和动作接口，供标准 DSH 插件调用。需要 Deskwork 提供运行环境；开发版本不承诺兼容性。
 
 类型和 Schema 随包提供。标准插件声明 `deskworkBrowser` 依赖，并通过 `ctx.deskworkBrowser.connect(包名, exec.signal)` 获得客户端；类型从 `@guomonth/deskwork-plugin-sdk/dsh` 导入。`ctx.deskworkBrowser.context()` 提供当前网站的 `id`、`name` 和 `url`，业务配置和存储由插件自行管理。

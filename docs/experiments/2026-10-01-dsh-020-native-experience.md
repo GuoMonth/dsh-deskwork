@@ -14,7 +14,7 @@ API-Key 适配器的原生 Messages helper `@deepseek-ai/dsh-llm-deepseek` 显�
 
 新增按入口隔离的原生 filesystem Skill 根目录，关闭全局默认目录发现。ERP 自己注册导入的经验 Skill；现有浏览器插件与开发指南继续用同一个原生 Skill 服务。
 
-ERP 提供一次调用导出/导入：生成标准 `SKILL.md` 和 JSON 引用目录；接收者范围下的知识和关系原子写入，标为待核验，重复导入保留本地修正。数据边界及操作示例见 [ERP 原生分享指南](https://github.com/GuoMonth/dsh-erp/blob/issue-122-native-erp/docs/native-and-sharing.md)。导出不上传或发布，分享者仍需检查描述里的自由文本。
+ERP 提供一次调用导出/导入：生成标准 `SKILL.md` 和 JSON 引用目录；接收者范围下的知识和关系原子写入，标为待核验，重复导入保留本地修正。数据边界及操作示例见 [ERP 原生分享指南](https://github.com/GuoMonth/dsh-erp/blob/50ddda1c4dc134d38403b089f504601c69627e13/docs/native-and-sharing.md)。导出不上传或发布，分享者仍需检查描述里的自由文本。
 
 Deskwork 使用 DSH 原生 approval 服务和一次调用的审批事件/审计，由 Electron 确认对话框回答经验导入和知识更正/确认请求。取消为默认；停止运行时撤销未决对话框，晚到的回答不能被新任务使用。该桥不自动批准浏览器或桌面工具。
 

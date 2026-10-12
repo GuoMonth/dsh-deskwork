@@ -2,10 +2,12 @@
 
 English | [中文](./README.zh.md)
 
-Keep public README pairs and release notes aligned. Write notes in `docs/releases/<version>.md`, with English first and a complete Chinese section. Cover delivered behavior, downloads, verification and remaining limits. Keep upstream prerelease and macOS signing status accurate.
+Keep English as the default public documentation language. Maintain public README pairs together: `README.md` and `README.zh.md`, with links to each other and matching sections. Record reviewed content hashes with `node scripts/check-translations.ts --write`; `npm run docs:check` rejects stale pairs.
 
-Build from a fixed, verified source tree. Test the packaged installation and compare uploaded SHA256 values before publishing. A stable release is neither draft nor prerelease and is set as latest. Fixed desktop asset names keep `releases/latest/download` working.
+Write release notes in `docs/releases/<version>.md` with `[English](#english) | [中文](#中文)`, English first, and complete sections for both languages. Describe delivered behavior, platform downloads, checksums, verification and real limitations. Keep the runtime's upstream prerelease status and macOS signing status accurate.
 
-Publish desktop binaries, SDK/Devkit packages and integrity metadata. Keep private plugins, screenshots and account data outside public source, CI and Releases.
+Build assets from a fixed, verified source tree. Check packaged installation and uploaded SHA256 values before publishing a GitHub Release. A stable release is published without the draft or prerelease flag and set as latest. Keep fixed desktop asset names so `releases/latest/download` resolves to the project's newest published release.
 
-After reviewing both README languages, record their hashes with `node scripts/check-translations.ts --write`. Run `npm run check:docs` before committing. See [0.2.2](0.2.2.md) for a bilingual release note.
+Distribute desktop packages, SDK/Devkit packages and checksums only. Private integration plugins, business screenshots and account data stay outside source, CI artifacts and public releases. Public regressions use synthetic fixtures.
+
+Reference: [bilingual upstream release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2).

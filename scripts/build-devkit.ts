@@ -24,7 +24,15 @@ await build({
   target: 'node24',
 });
 await mkdir('dist/runtime/devkit', { recursive: true });
-for (const entry of ['lib', 'docs', 'skills', 'templates', 'README.md', 'package.json']) {
+for (const entry of [
+  'lib',
+  'docs',
+  'skills',
+  'templates',
+  'README.md',
+  'README.en.md',
+  'package.json',
+]) {
   await cp(`packages/plugin-devkit/${entry}`, `dist/runtime/devkit/${entry}`, {
     recursive: true,
     force: true,

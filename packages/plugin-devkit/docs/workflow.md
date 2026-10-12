@@ -1,5 +1,7 @@
 # AI 插件开发流程
 
+[English](workflow.en.md)
+
 目标：在独立项目中，仅依赖公开 SDK 和标准 DSH 插件机制完成可安装插件。不引用 Deskwork 的 `src/` 文件，不把业务逻辑加进宿主。
 
 ## 读取与选型
