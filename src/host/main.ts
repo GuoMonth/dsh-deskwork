@@ -1,4 +1,4 @@
-import { localizeMessage } from '../core/locale.ts';
+import { localizeMessage, resolveLocale } from '../core/locale.ts';
 import { readRuntimeDescriptor } from '../runtime/desktop-runtime.ts';
 import { DevelopmentSession } from './development-session.ts';
 import type { DevelopmentState } from '../core/development-contracts.ts';
@@ -6,7 +6,7 @@ import { PluginManager } from './plugin-manager.ts';
 import { PluginMarket } from './plugin-market.ts';
 import { pluginCommandSchema } from '../core/plugin-contracts.ts';
 import { pluginLoadSchema } from '../core/plugin-contracts.ts';
-import { app, BrowserWindow, ipcMain, safeStorage, Menu, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -21,6 +21,8 @@ import { Pages } from './pages.ts';
 import { startToolServer } from '../runtime/tool-server.ts';
 import { DshRuntime } from '../runtime/dsh-runtime.ts';
 import { shellLocation } from './shell-location.ts';
+import { createDesktopShell } from './desktop-shell.ts';
+import type { DesktopShell } from './desktop-shell.ts';
 
 const profileArgument = process.argv.find((argument) =>
   argument.startsWith('--profile-directory='),
@@ -86,11 +88,13 @@ async function main(): Promise<void> {
   });
   await plugins.load();
   const market = new PluginMarket();
-  const store = new StateStore(directory);
+  const preferredSystemLanguages = app.getPreferredSystemLanguages();
+  const store = new StateStore(directory, preferredSystemLanguages);
   let workspace = await store.loadWorkspace();
   const saved = await store.load();
   let activeSiteId = workspace.sites[0]?.id ?? '';
   let closing = false;
+  let desktopShell: DesktopShell | undefined;
   let runtime: DshRuntime | undefined;
   let runtimeSiteId: string | undefined;
   let runtimeLocale: typeof workspace.locale | undefined;
@@ -154,6 +158,7 @@ async function main(): Promise<void> {
     minHeight: 680,
     backgroundColor: '#f5f7fa',
     title: 'DSH Deskwork',
+    icon: join(app.getAppPath(), 'dist/brand/app.png'),
     titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: join(app.getAppPath(), 'dist/host/preload.cjs'),
@@ -162,14 +167,8 @@ async function main(): Promise<void> {
       nodeIntegration: false,
     },
   });
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      { role: 'appMenu' },
-      { role: 'editMenu' },
-      { role: 'viewMenu' },
-      { role: 'windowMenu' },
-    ]),
-  );
+  if (process.platform === 'darwin' && !app.isPackaged)
+    app.dock?.setIcon(join(app.getAppPath(), 'dist/brand/app.png'));
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
     if (url !== shellURL) event.preventDefault();
@@ -202,6 +201,7 @@ async function main(): Promise<void> {
     clearTimeout(streamPublishTimer);
     streamPublishTimer = undefined;
     if (!window.isDestroyed()) window.webContents.send('deskwork:state', snapshot());
+    desktopShell?.refresh();
   }
   function publishStream(): void {
     streamPublishTimer ??= setTimeout(publish, 80);
@@ -763,7 +763,11 @@ async function main(): Promise<void> {
           await pages.reload(command.siteId);
           break;
         case 'language': {
-          const updated = workspaceSchema.parse({ ...workspace, locale: command.locale });
+          const updated = workspaceSchema.parse({
+            ...workspace,
+            languagePreference: command.preference,
+            locale: resolveLocale(command.preference, preferredSystemLanguages),
+          });
           await store.saveWorkspace(updated);
           workspace = updated;
           publish();
@@ -865,13 +869,23 @@ async function main(): Promise<void> {
       publish();
     }
   });
-  window.on('close', (event) => {
-    if (closing) return;
-    event.preventDefault();
-    closing = true;
-    const cleanup = async (): Promise<void> => {
+  desktopShell = createDesktopShell({
+    window,
+    iconDirectory: join(app.getAppPath(), 'dist/brand'),
+    getLocale: () => workspace.locale,
+    getTaskStatus: () => {
+      if (development?.active) return 'development';
+      return controllers.get(runningSite() ?? activeSiteId)?.state.status ?? 'idle';
+    },
+    onQuit: async (): Promise<void> => {
+      closing = true;
+      clearTimeout(streamPublishTimer);
       for (const controller of controllers.values())
-        if (['running', 'waiting-user'].includes(controller.state.status)) await controller.stop();
+        if (
+          controller.isBusy() ||
+          ['running', 'waiting-user', 'verifying'].includes(controller.state.status)
+        )
+          await controller.stop();
       await stopRuntime();
       await development?.close();
       await plugins.close();
@@ -879,16 +893,13 @@ async function main(): Promise<void> {
       await persist();
       await pages.close();
       window.destroy();
-      app.quit();
-    };
-    void cleanup().catch((error: unknown) => {
-      console.error(error);
-      app.exit(1);
-    });
+    },
   });
   await window.loadURL(shellURL);
 }
-void main().catch((error: unknown) => {
-  console.error(error);
-  app.exit(1);
-});
+if (app.requestSingleInstanceLock()) {
+  void main().catch((error: unknown) => {
+    console.error(error);
+    app.exit(1);
+  });
+} else app.quit();
