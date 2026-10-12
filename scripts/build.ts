@@ -4,5 +4,8 @@ import { build as bundle } from 'esbuild';
 import { build as buildUi } from 'vite';
 import { desktopBuildOptions } from './desktop-build-options.ts';
 import './generate-tokens.ts';
+import './generate-brand-assets.ts';
+import { cp } from 'node:fs/promises';
 await Promise.all([...desktopBuildOptions.map((options) => bundle(options)), buildUi()]);
+await cp('packaging/brand', 'dist/brand', { recursive: true });
 console.log('Desktop, preload, tool bridge and UI built.');

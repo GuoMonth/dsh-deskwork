@@ -1,0 +1,11 @@
+import type { ReactElement, SVGProps } from 'react';
+
+export function BrandMark(props: SVGProps<SVGSVGElement>): ReactElement {
+  return (
+    <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false" {...props}>
+      <rect width="256" height="256" rx="48" fill="currentColor" />
+      <path fill="var(--brand-mark-foreground, #fff)" d="M54 44h58c53 0 86 32 86 84s-33 84-86 84H54V44zm47 38v92h12c26 0 42-17 42-46s-16-46-42-46h-12z" />
+      <circle cx="174" cy="61" r="13" fill="var(--brand-mark-accent, #4ac7c2)" />
+    </svg>
+  );
+}

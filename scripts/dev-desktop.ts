@@ -5,8 +5,12 @@ import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { cp, mkdir } from 'node:fs/promises';
 import { desktopBuildOptions } from './desktop-build-options.ts';
 import './generate-tokens.ts';
+import './generate-brand-assets.ts';
+await mkdir('dist', { recursive: true });
+await cp('packaging/brand', 'dist/brand', { recursive: true });
 
 const executable: unknown = createRequire(import.meta.url)('electron');
 if (typeof executable !== 'string') throw new Error('请先运行 npm run experiment:prepare');

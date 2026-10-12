@@ -83,6 +83,7 @@ try {
   await mkdir(application, { recursive: true });
   await cp('dist/host', join(application, 'dist/host'), { recursive: true });
   await cp('dist/ui', join(application, 'dist/ui'), { recursive: true });
+  await cp('dist/brand', join(application, 'dist/brand'), { recursive: true });
   await writeFile(
     join(application, 'package.json'),
     JSON.stringify({ ...manifest, dependencies: {}, devDependencies: undefined }, null, 2),

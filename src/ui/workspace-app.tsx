@@ -13,6 +13,7 @@ import type {
 import { idleTask } from '../core/contracts.ts';
 import { Icon } from './icon.tsx';
 import { TaskCard } from './task-card.tsx';
+import { BrandMark } from './brand/mark.tsx';
 
 type DialogState =
   | { kind: 'site'; site?: Site }
@@ -369,9 +370,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
           {sidebar ? (
             <aside className="sidebar">
               <div className="brand">
-                <span className="brand-mark">
-                  D<span>·</span>
-                </span>
+                <BrandMark className="brand-mark" />
                 <span>Deskwork</span>
               </div>
               <div className="section-label">
