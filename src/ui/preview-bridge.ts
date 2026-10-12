@@ -1,6 +1,9 @@
 import { defaultWorkspace, idleTask } from '../core/contracts.ts';
+import { resolveLocale } from '../core/locale.ts';
 import type { DeskworkBridge, WorkspaceSnapshot, WorkspaceCommand } from '../core/contracts.ts';
-export function createPreviewBridge(): DeskworkBridge {
+export function createPreviewBridge(
+  preferredSystemLanguages: readonly string[] = [],
+): DeskworkBridge {
   const snapshot: WorkspaceSnapshot = {
     workspace: structuredClone(defaultWorkspace),
     contexts: [],
@@ -47,7 +50,8 @@ export function createPreviewBridge(): DeskworkBridge {
         snapshot.activeSiteId = siteId;
         break;
       case 'language':
-        snapshot.workspace.locale = command.locale;
+        snapshot.workspace.languagePreference = command.preference;
+        snapshot.workspace.locale = resolveLocale(command.preference, preferredSystemLanguages);
         break;
       case 'settings':
         snapshot.runtimeConfigured = true;

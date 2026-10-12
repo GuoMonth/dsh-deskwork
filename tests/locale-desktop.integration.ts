@@ -92,7 +92,7 @@ await test(
       await expect
         .poll(async () => (await shell.evaluate(() => window.deskwork?.snapshot()))?.runningSiteId)
         .toBeNull();
-      await shell.getByRole('button', { name: 'Model settings', exact: true }).click();
+      await shell.getByRole('button', { name: 'Settings', exact: true }).click();
       await shell.getByLabel('Language').selectOption('zh');
       expectedLocale = 'zh';
       await expect(shell.getByLabel('语言')).toHaveValue('zh');
@@ -121,11 +121,11 @@ await test(
         .toBe(true);
       const restored = app.windows().find((page) => page.url().startsWith('file:'));
       assert.ok(restored);
-      await expect(restored.getByRole('button', { name: '模型设置', exact: true })).toBeVisible();
+      await expect(restored.getByRole('button', { name: '设置', exact: true })).toBeVisible();
       assert.equal(await restored.locator('html').getAttribute('lang'), 'zh-CN');
       await expect(restored.getByText('English fixture answer', { exact: true })).toBeVisible();
       await expect(restored.getByRole('tab', { name: '原名', exact: true })).toBeVisible();
-      await restored.getByRole('button', { name: '模型设置', exact: true }).click();
+      await restored.getByRole('button', { name: '设置', exact: true }).click();
       await restored.getByLabel('语言').selectOption('en');
       await expect(restored.getByLabel('Language')).toHaveValue('en');
       await restored.getByRole('button', { name: 'Close dialog' }).click();

@@ -1,4 +1,5 @@
 import { useI18n, LocaleProvider } from './locale.tsx';
+import { languagePreferenceSchema } from '../core/locale.ts';
 import { AssistantMessage } from './assistant-message.tsx';
 import { PluginPanel } from './plugin-panel.tsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -417,7 +418,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   }}
                 >
                   <Icon name="settings" />
-                  {t('Model settings')}
+                  {t('Settings')}
                 </button>
               </div>
             </aside>
@@ -875,7 +876,7 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   ? t('Website settings')
                   : t('Add website')
                 : dialog.kind === 'settings'
-                  ? t('Connect DeepSeek')
+                  ? t('Settings')
                   : dialog.kind === 'plugins'
                     ? t('Plugins')
                     : t('Commands')
@@ -917,13 +918,14 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   {t('Language')}
                   <select
                     aria-label={t('Language')}
-                    value={snapshot.workspace.locale}
+                    value={snapshot.workspace.languagePreference}
                     onChange={(event) => {
-                      const locale = event.target.value;
-                      if (locale === 'en' || locale === 'zh')
-                        sendCommand({ type: 'language', locale });
+                      const preference = languagePreferenceSchema.safeParse(event.target.value);
+                      if (preference.success)
+                        sendCommand({ type: 'language', preference: preference.data });
                     }}
                   >
+                    <option value="system">{t('System')}</option>
                     <option value="en">English</option>
                     <option value="zh">中文</option>
                   </select>

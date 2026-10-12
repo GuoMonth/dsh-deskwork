@@ -2,16 +2,31 @@ import { mkdir, readFile, rename, writeFile, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { contextSchema, defaultWorkspace, workspaceSchema } from '../core/contracts.ts';
+import {
+  defaultLanguagePreference,
+  languagePreferenceSchema,
+  resolveLocale,
+} from '../core/locale.ts';
 import type { EntryContext, Workspace } from '../core/contracts.ts';
 const savedSchema = z.object({ version: z.literal(2), contexts: z.array(contextSchema) }).strict();
 function missing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
+function hasOwn(value: unknown, key: string): boolean {
+  return typeof value === 'object' && value !== null && Object.hasOwn(value, key);
+}
 export class StateStore {
   private readonly directory: string;
+  private readonly preferredSystemLanguages: readonly string[];
   private queue = Promise.resolve();
-  constructor(directory: string) {
+  /**
+   * `preferredSystemLanguages` is captured by the host at startup. It is used
+   * whenever a system preference is resolved, so changing the OS setting while
+   * the app is open does not change the current session.
+   */
+  constructor(directory: string, preferredSystemLanguages: readonly string[] = []) {
     this.directory = directory;
+    this.preferredSystemLanguages = [...preferredSystemLanguages];
   }
   private async read(name: string): Promise<unknown> {
     try {
@@ -33,11 +48,36 @@ export class StateStore {
       if (!missing(error)) throw error;
     }
   }
-  async loadWorkspace(): Promise<Workspace> {
+  async loadWorkspace(
+    preferredSystemLanguages: readonly string[] = this.preferredSystemLanguages,
+  ): Promise<Workspace> {
     const raw = await this.read('workspace.json');
-    if (raw === undefined) return structuredClone(defaultWorkspace);
+    if (raw === undefined)
+      return workspaceSchema.parse({
+        ...structuredClone(defaultWorkspace),
+        locale: resolveLocale(defaultLanguagePreference, preferredSystemLanguages),
+      });
     const version = z.object({ version: z.number() }).parse(raw).version;
-    if (version === 2) return workspaceSchema.parse(raw);
+    if (version === 2) {
+      const parsed = workspaceSchema.parse(raw);
+      const preference = hasOwn(raw, 'languagePreference')
+        ? languagePreferenceSchema.parse(parsed.languagePreference)
+        : defaultLanguagePreference;
+      const workspace = workspaceSchema.parse({
+        ...parsed,
+        languagePreference: preference,
+        locale: resolveLocale(preference, preferredSystemLanguages),
+      });
+      // Version 2 files written before the separate preference existed were
+      // valid enough to parse, but their locale must not become an implicit
+      // manual choice. Archive and rewrite them with an explicit system
+      // preference while retaining every site field unchanged.
+      if (!hasOwn(raw, 'languagePreference') || !hasOwn(raw, 'locale')) {
+        await this.archive('workspace.json');
+        await this.saveWorkspace(workspace);
+      }
+      return workspace;
+    }
     if (version !== 1)
       throw new Error('Unsupported configuration version. Keep the original file.');
     const old = z
@@ -54,6 +94,8 @@ export class StateStore {
     const workspace = workspaceSchema.parse({
       version: 2,
       name: old.name,
+      languagePreference: defaultLanguagePreference,
+      locale: resolveLocale(defaultLanguagePreference, preferredSystemLanguages),
       sites: old.sites.map(({ id, name, url, sessionId }) => ({ id, name, url, sessionId })),
     });
     await this.archive('workspace.json');

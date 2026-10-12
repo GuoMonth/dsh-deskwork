@@ -1,4 +1,10 @@
-import { localeSchema } from './locale.ts';
+import {
+  defaultLanguagePreference,
+  defaultLocale,
+  languagePreferenceSchema,
+  localeSchema,
+} from './locale.ts';
+export { languagePreferenceSchema, localeSchema } from './locale.ts';
 import {
   identifier,
   websiteUrl,
@@ -35,7 +41,9 @@ export type Site = z.infer<typeof siteSchema>;
 export const workspaceSchema = z
   .object({
     version: z.literal(2),
-    locale: localeSchema.default('en'),
+    /** Effective locale resolved from languagePreference at startup. */
+    locale: localeSchema.default(defaultLocale),
+    languagePreference: languagePreferenceSchema.default(defaultLanguagePreference),
     name: z.string(),
     sites: z.array(siteSchema).max(24),
   })
@@ -47,7 +55,8 @@ export const workspaceSchema = z
 export type Workspace = z.infer<typeof workspaceSchema>;
 export const defaultWorkspace: Workspace = {
   version: 2,
-  locale: 'en',
+  locale: defaultLocale,
+  languagePreference: defaultLanguagePreference,
   name: 'My workspace',
   sites: [],
 };
@@ -162,7 +171,7 @@ export const snapshotSchema = z
   .strict();
 export type WorkspaceSnapshot = z.infer<typeof snapshotSchema>;
 export const commandSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('language'), locale: localeSchema }).strict(),
+  z.object({ type: z.literal('language'), preference: languagePreferenceSchema }).strict(),
   z.object({ type: z.literal('add-site'), url: websiteUrl, name: z.string().max(100) }).strict(),
   z
     .object({

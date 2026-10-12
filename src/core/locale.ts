@@ -3,10 +3,33 @@ import { z } from 'zod';
 export const localeSchema = z.enum(['en', 'zh']);
 export type Locale = z.infer<typeof localeSchema>;
 export const defaultLocale: Locale = 'en';
+/**
+ * The persisted choice is deliberately separate from the effective locale.
+ * `system` is resolved once at application startup from Electron's ordered
+ * preferred-language list; the resolved value remains an ordinary Locale for
+ * renderers and model tasks.
+ */
+export const languagePreferenceSchema = z.enum(['system', 'en', 'zh']);
+export type LanguagePreference = z.infer<typeof languagePreferenceSchema>;
+export const defaultLanguagePreference: LanguagePreference = 'system';
+
+/** Resolve a persisted preference against the startup language list. */
+export function resolveLocale(
+  preference: LanguagePreference,
+  preferredSystemLanguages: readonly string[] = [],
+): Locale {
+  if (preference !== 'system') return preference;
+  for (const language of preferredSystemLanguages) {
+    const primary = language.trim().toLowerCase().replace(/_/g, '-').split('-')[0] ?? '';
+    if (primary === 'en' || primary === 'zh') return primary;
+  }
+  return defaultLocale;
+}
 
 // English is the authored source. Interpolation preserves user and website content.
 export const chineseMessages = {
   Language: '语言',
+  System: '跟随系统',
   Settings: '设置',
   'Close dialog': '关闭对话框',
   'Add the websites you use every day. Sign in on the original website.':
