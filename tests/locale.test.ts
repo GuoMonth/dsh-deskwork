@@ -4,23 +4,32 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { commandSchema } from '../src/core/contracts.ts';
-import { localizeMessage, translate } from '../src/core/locale.ts';
+import {
+  languagePreferenceSchema,
+  localizeMessage,
+  resolveLocale,
+  translate,
+} from '../src/core/locale.ts';
 import { StateStore } from '../src/host/state-store.ts';
 
-await test('fresh and existing workspaces default to English; language survives a new store instance', async () => {
+await test('system preference resolves at startup and explicit language survives a restart', async () => {
   const root = await mkdtemp(join(tmpdir(), 'deskwork-locale-'));
   try {
-    const store = new StateStore(root);
-    assert.equal((await store.loadWorkspace()).locale, 'en');
+    const store = new StateStore(root, ['zh-CN', 'en-US']);
+    const fresh = await store.loadWorkspace();
+    assert.equal(fresh.languagePreference, 'system');
+    assert.equal(fresh.locale, 'zh');
     const sites = [{ id: 'one', name: '原名', url: 'https://example.test/', sessionId: 'account' }];
     await writeFile(
       join(root, 'workspace.json'),
       JSON.stringify({ version: 2, name: '原名', sites }),
     );
-    const workspace = await store.loadWorkspace();
+    const workspace = await new StateStore(root, ['en-US']).loadWorkspace();
+    assert.equal(workspace.languagePreference, 'system');
     assert.equal(workspace.locale, 'en');
-    await store.saveWorkspace({ ...workspace, locale: 'zh' });
-    const restored = await new StateStore(root).loadWorkspace();
+    await store.saveWorkspace({ ...workspace, languagePreference: 'zh', locale: 'zh' });
+    const restored = await new StateStore(root, ['en-US']).loadWorkspace();
+    assert.equal(restored.languagePreference, 'zh');
     assert.equal(restored.locale, 'zh');
     assert.equal(restored.name, '原名');
     assert.deepEqual(restored.sites, sites);
@@ -30,15 +39,28 @@ await test('fresh and existing workspaces default to English; language survives 
 });
 
 await test('language commands reject unknown locales and extra configuration fields', () => {
-  assert.deepEqual(commandSchema.parse({ type: 'language', locale: 'zh' }), {
+  assert.deepEqual(commandSchema.parse({ type: 'language', preference: 'zh' }), {
     type: 'language',
-    locale: 'zh',
+    preference: 'zh',
   });
   for (const value of [
-    { type: 'language', locale: 'fr' },
-    { type: 'language', locale: 'en', apiKey: 'unexpected' },
+    { type: 'language', preference: 'fr' },
+    { type: 'language', locale: 'en' },
+    { type: 'language', preference: 'en', apiKey: 'unexpected' },
   ])
     assert.throws(() => commandSchema.parse(value));
+  assert.deepEqual(languagePreferenceSchema.parse('system'), 'system');
+});
+
+await test('system resolver follows supported preferred-language order and falls back to English', () => {
+  assert.equal(resolveLocale('system', ['fr-FR', 'zh-CN', 'en-US']), 'zh');
+  assert.equal(resolveLocale('system', ['zh-Hans', 'en-US']), 'zh');
+  assert.equal(resolveLocale('system', ['zh-TW']), 'zh');
+  assert.equal(resolveLocale('system', ['en-GB', 'zh-CN']), 'en');
+  assert.equal(resolveLocale('system', ['fr-FR', 'de-DE']), 'en');
+  assert.equal(resolveLocale('system', []), 'en');
+  assert.equal(resolveLocale('zh', ['en-US']), 'zh');
+  assert.equal(resolveLocale('en', ['zh-CN']), 'en');
 });
 
 await test('host messages localize interpolated values without modifying opaque content', () => {
