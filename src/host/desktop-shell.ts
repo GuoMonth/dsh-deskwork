@@ -68,6 +68,9 @@ export const desktopShellTranslationKeys = [
   'Turn completed',
   'Needs attention',
   'Cancelled',
+  'Edit',
+  'View',
+  'Window',
 ] as const;
 
 const shellTranslations: Readonly<Record<(typeof desktopShellTranslationKeys)[number], string>> = {
@@ -83,6 +86,9 @@ const shellTranslations: Readonly<Record<(typeof desktopShellTranslationKeys)[nu
   'Turn completed': '本轮已完成',
   'Needs attention': '需要处理',
   Cancelled: '已取消',
+  Edit: '编辑',
+  View: '视图',
+  Window: '窗口',
 };
 
 const defaultRuntime: DesktopShellRuntime = {
@@ -171,6 +177,8 @@ export function createDesktopShell(options: DesktopShellOptions): DesktopShell {
   let quitPromise: Promise<void> | undefined;
   let tray: DesktopShellTray | undefined;
   let trayAvailable = false;
+  let menuLocale: Locale | undefined;
+  let menuStatus: DesktopShellTaskStatus | undefined;
 
   const restore = (): void => {
     if (disposed || !isUsableWindow(window)) return;
@@ -208,17 +216,22 @@ export function createDesktopShell(options: DesktopShellOptions): DesktopShell {
   const buildMenus = (): void => {
     if (disposed) return;
     const locale = options.getLocale();
-    const status = shellLabel(locale, statusMessage(options.getTaskStatus()));
+    const taskStatus = options.getTaskStatus();
+    if (menuLocale === locale && menuStatus === taskStatus) return;
+    menuLocale = locale;
+    menuStatus = taskStatus;
+    const status = shellLabel(locale, statusMessage(taskStatus));
     const statusLabel = `${shellLabel(locale, 'Task status')}: ${status}`;
     const openLabel = shellLabel(locale, 'Open Deskwork');
     const exitLabel = shellLabel(locale, 'Exit Deskwork');
     const shellMenu: MenuItemConstructorOptions = {
       label: 'DSH Deskwork',
       submenu: [
-        { label: openLabel, accelerator: 'CmdOrCtrl+Shift+O', click: restore },
-        { label: statusLabel, enabled: false },
+        { id: 'deskwork-open', label: openLabel, accelerator: 'CmdOrCtrl+Shift+O', click: restore },
+        { id: 'deskwork-status', label: statusLabel, enabled: false },
         { type: 'separator' },
         {
+          id: 'deskwork-quit',
           label: exitLabel,
           accelerator: 'CmdOrCtrl+Q',
           click: (): void => {
@@ -229,19 +242,21 @@ export function createDesktopShell(options: DesktopShellOptions): DesktopShell {
     };
     runtime.setApplicationMenu(
       runtime.buildMenu([
+        // Preserve native macOS services/hide affordances and platform window behavior.
+        { role: 'appMenu' },
         shellMenu,
-        // Keep native roles so platform edit, view and window keyboard behaviour remains intact.
-        { role: 'editMenu' },
-        { role: 'viewMenu' },
-        { role: 'windowMenu' },
+        { role: 'editMenu', label: shellLabel(locale, 'Edit') },
+        { role: 'viewMenu', label: shellLabel(locale, 'View') },
+        { role: 'windowMenu', label: shellLabel(locale, 'Window') },
       ]),
     );
     if (!tray) return;
     const trayMenu = runtime.buildMenu([
-      { label: openLabel, accelerator: 'CmdOrCtrl+Shift+O', click: restore },
-      { label: statusLabel, enabled: false },
+      { id: 'deskwork-open', label: openLabel, accelerator: 'CmdOrCtrl+Shift+O', click: restore },
+      { id: 'deskwork-status', label: statusLabel, enabled: false },
       { type: 'separator' },
       {
+        id: 'deskwork-quit',
         label: exitLabel,
         accelerator: 'CmdOrCtrl+Q',
         click: (): void => {
@@ -255,9 +270,11 @@ export function createDesktopShell(options: DesktopShellOptions): DesktopShell {
 
   const closeWindow = (event: Electron.Event): void => {
     if (quitting || disposed) return;
-    // If the native tray could not be created, allowing close to proceed gives Linux users a
-    // reliable exit path instead of leaving an invisible process with no way to restore it.
-    if (!trayAvailable) return;
+    if (!trayAvailable) {
+      event.preventDefault();
+      void requestQuit();
+      return;
+    }
     event.preventDefault();
     window.hide();
   };
@@ -279,7 +296,9 @@ export function createDesktopShell(options: DesktopShellOptions): DesktopShell {
   const removeSecondInstance = runtime.onSecondInstance(secondInstance);
 
   try {
-    tray = runtime.createTray(createTrayImage(options.iconDirectory, runtime));
+    const image = createTrayImage(options.iconDirectory, runtime);
+    if (image.isEmpty()) throw new Error('Tray image is empty');
+    tray = runtime.createTray(image);
     trayAvailable = true;
     tray.on('click', restore);
   } catch (error: unknown) {
