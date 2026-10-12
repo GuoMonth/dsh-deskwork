@@ -1,17 +1,37 @@
 import { mkdir, readFile, rename, writeFile, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { contextSchema, defaultWorkspace, workspaceSchema } from '../core/contracts.ts';
+import { contextSchema, defaultWorkspace, siteSchema, workspaceSchema } from '../core/contracts.ts';
+import {
+  defaultLanguagePreference,
+  languagePreferenceSchema,
+  localeSchema,
+  resolveLocale,
+} from '../core/locale.ts';
 import type { EntryContext, Workspace } from '../core/contracts.ts';
 const savedSchema = z.object({ version: z.literal(2), contexts: z.array(contextSchema) }).strict();
+const legacyWorkspaceSchema = z
+  .object({
+    version: z.literal(2),
+    locale: z.unknown().optional(),
+    languagePreference: z.unknown().optional(),
+    name: z.string(),
+    sites: z.array(siteSchema).max(24),
+  })
+  .strict();
 function missing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
+function hasOwn(value: unknown, key: string): boolean {
+  return typeof value === 'object' && value !== null && Object.hasOwn(value, key);
+}
 export class StateStore {
   private readonly directory: string;
+  private readonly preferredSystemLanguages: readonly string[];
   private queue = Promise.resolve();
-  constructor(directory: string) {
+  constructor(directory: string, preferredSystemLanguages: readonly string[] = []) {
     this.directory = directory;
+    this.preferredSystemLanguages = [...preferredSystemLanguages];
   }
   private async read(name: string): Promise<unknown> {
     try {
@@ -33,11 +53,54 @@ export class StateStore {
       if (!missing(error)) throw error;
     }
   }
-  async loadWorkspace(): Promise<Workspace> {
+  async loadWorkspace(
+    preferredSystemLanguages: readonly string[] = this.preferredSystemLanguages,
+  ): Promise<Workspace> {
     const raw = await this.read('workspace.json');
-    if (raw === undefined) return structuredClone(defaultWorkspace);
+    if (raw === undefined)
+      return workspaceSchema.parse({
+        ...structuredClone(defaultWorkspace),
+        locale: resolveLocale(defaultLanguagePreference, preferredSystemLanguages),
+      });
     const version = z.object({ version: z.number() }).parse(raw).version;
-    if (version === 2) return workspaceSchema.parse(raw);
+    if (version === 2) {
+      const legacy = legacyWorkspaceSchema.parse(raw);
+      const rawHasPreference = hasOwn(raw, 'languagePreference');
+      const rawHasLocale = hasOwn(raw, 'locale');
+      const parsedPreference = rawHasPreference
+        ? languagePreferenceSchema.safeParse(legacy.languagePreference)
+        : undefined;
+      const parsedLocale = rawHasLocale ? localeSchema.safeParse(legacy.locale) : undefined;
+      // Before languagePreference existed, a known locale was the only safe signal of a manual
+      // choice. Unknown values are discarded and return to the supported system default.
+      const preference = parsedPreference?.success
+        ? parsedPreference.data
+        : !rawHasPreference && parsedLocale?.success
+          ? parsedLocale.data
+          : defaultLanguagePreference;
+      const locale =
+        !rawHasPreference && parsedLocale?.success
+          ? parsedLocale.data
+          : resolveLocale(preference, preferredSystemLanguages);
+      const workspace = workspaceSchema.parse({
+        version: 2,
+        name: legacy.name,
+        sites: legacy.sites,
+        languagePreference: preference,
+        locale,
+      });
+      const needsMigration =
+        !rawHasPreference ||
+        !rawHasLocale ||
+        !parsedPreference?.success ||
+        !parsedLocale?.success ||
+        legacy.locale !== locale;
+      if (needsMigration) {
+        await this.archive('workspace.json');
+        await this.saveWorkspace(workspace);
+      }
+      return workspace;
+    }
     if (version !== 1)
       throw new Error('Unsupported configuration version. Keep the original file.');
     const old = z
@@ -54,6 +117,8 @@ export class StateStore {
     const workspace = workspaceSchema.parse({
       version: 2,
       name: old.name,
+      languagePreference: defaultLanguagePreference,
+      locale: resolveLocale(defaultLanguagePreference, preferredSystemLanguages),
       sites: old.sites.map(({ id, name, url, sessionId }) => ({ id, name, url, sessionId })),
     });
     await this.archive('workspace.json');

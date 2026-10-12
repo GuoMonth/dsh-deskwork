@@ -47,7 +47,8 @@ export function createPreviewBridge(): DeskworkBridge {
         snapshot.activeSiteId = siteId;
         break;
       case 'language':
-        snapshot.workspace.locale = command.locale;
+        snapshot.workspace.languagePreference = command.preference;
+        snapshot.workspace.locale = command.preference === 'system' ? 'en' : command.preference;
         break;
       case 'settings':
         snapshot.runtimeConfigured = true;

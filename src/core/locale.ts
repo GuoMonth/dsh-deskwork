@@ -4,9 +4,30 @@ export const localeSchema = z.enum(['en', 'zh']);
 export type Locale = z.infer<typeof localeSchema>;
 export const defaultLocale: Locale = 'en';
 
+/** The persisted preference is separate from the effective locale used by UI and runtime. */
+export const languagePreferenceSchema = z.enum(['system', 'en', 'zh']);
+export type LanguagePreference = z.infer<typeof languagePreferenceSchema>;
+export const defaultLanguagePreference: LanguagePreference = 'system';
+
+/** Resolve a persisted preference against the ordered system language list captured at startup. */
+export function resolveLocale(
+  preference: LanguagePreference,
+  preferredSystemLanguages: readonly string[] = [],
+): Locale {
+  if (preference !== 'system') return preference;
+  for (const language of preferredSystemLanguages) {
+    const primary = language.trim().toLowerCase().replace(/_/g, '-').split('-')[0] ?? '';
+    if (primary === 'en' || primary === 'zh') return primary;
+  }
+  return defaultLocale;
+}
+
 // English is the authored source. Interpolation preserves user and website content.
 export const chineseMessages = {
   Language: '语言',
+  System: '跟随系统',
+  'Open Deskwork': '打开 Deskwork',
+  'Exit Deskwork': '退出 Deskwork',
   Settings: '设置',
   'Close dialog': '关闭对话框',
   'Add the websites you use every day. Sign in on the original website.':
