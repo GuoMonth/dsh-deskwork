@@ -1,55 +1,48 @@
-# 使用 MVP 预览版
+# 使用 Deskwork
 
-Alpha 预览版面向 macOS Apple Silicon，使用临时签名（ad-hoc），没有 Developer ID 签名和 Apple 公证。安装包及对应验证提交见 [GitHub Releases](https://github.com/GuoMonth/dsh-deskwork/releases)。旧版业务切片安装包不代表当前产品。
+下载和平台要求见 [README](../README.zh.md#下载)，精确版本、校验值和验证范围见[最新 Release](https://github.com/GuoMonth/dsh-deskwork/releases/latest)。
 
 ## 安装与配置
 
-下载 Release 中的 macOS arm64 DMG，打开后将 DSH Deskwork.app 拖入 Applications，再从 Applications 启动。
+macOS 打开 DMG，将应用拖入 Applications 后启动。若系统拦截，在核对来源和 SHA-256 后，按 [Apple 指引](https://support.apple.com/en-us/102445)从「隐私与安全性」允许打开。若仍提示已损坏，记录提示和 macOS 版本以便排查。
 
-DMG 提供拖放安装；临时签名用于校验应用包完整性，不能替代 Apple 对开发者身份的验证。首次打开仍可能受到 Gatekeeper 拦截。在核对下载来源和 Release 中的 SHA-256 后，可按 [Apple 指引](https://support.apple.com/en-us/102445)在「隐私与安全性」中允许打开。若提示「已损坏」且无法允许打开，请保留提示与 macOS 版本用于定位，不代表已证明文件损坏或仅缺少签名。
+Linux 解压便携包，运行 `./linux-unpacked/dsh-deskwork`。
 
-面向正常分发、减少未验证开发者／未公证拦截，需要 Developer ID Application 证书及 Apple 公证；本 Alpha 尚未具备。CI 验证 DMG 挂载、复制后的签名完整性与应用启动，不等于用户 Mac 上 Gatekeeper 放行。
+首次启动点击「添加网站」，填写网址，名称可选。每个网站形成一个固定标签，直接在原页面登录。打开「模型设置」，填写 DeepSeek 模型名称和 API 密钥；密钥使用系统安全存储。语言可选 English 或中文，默认 English。
 
-首次启动为空工作台。点击「添加网站」，填写网址，名称可选；添加几个就有几个固定标签。用户直接在原网站登录。点击「模型设置」，填写 DeepSeek 模型名称和 API 密钥；密钥由系统安全存储保存。
+## 任务、确认与恢复
 
-每个网站有独立对话与登录会话。Copilot 展示页面和对话，Agent 展开对话并保留「查看页面」。同一时间运行一个自动任务；切换标签不会把任务转移到另一个网站。
+每个网站有独立登录和对话。Copilot 并排显示页面与对话；Agent 展开对话，保留「查看页面」。同一时间运行一个自动任务，切换标签不会改变它的目标。
 
-当前源码使用原生 DSH 会话日志保存上下文。同一网站继续对话沿用会话；重启后任务保持暂停，点击「重新观察并继续」才恢复，旧确认失效。「新建任务」归档原对话并使用新会话。若原生日志丢失，保留可见对话并提示新建任务，不用聊天文本重建执行历史。已发送但结果不明的动作先核对，不自动重复提交。
+关键操作会请求确认。填写、选择和按键也可能触发自动保存，不能仅凭按钮名称判断是否只读。点击「停止并接手」或在页面中操作键鼠会暂停自动任务；恢复前重新观察。
 
-## M2 插件预览
+重启后任务保持暂停，点击「重新观察并继续」才恢复，旧确认失效。「新建任务」归档原对话并创建独立会话。原生会话日志丢失时，仍可查看聊天，但需要新建任务。
 
-在左侧「插件」中搜索 DSH 社区市场，或填入 npm 包名／GitHub Release 插件地址。核对来源并主动信任后安装。已安装插件可修改唯一挂载名、绑定网站、取消挂载、更新或卸载；影响任务的变更前先停止任务。开发时也可安装标准 `file:/` 插件目录，无 ZIP 资产导入。
+工具返回成功后，仍需核对网站结果。能按已确认的预期正文回读时，宿主刷新页面检查；其余情况显示「结果待核对」。请求已发出但结果不明时，先观察，不自动重复提交。
 
-公开自动化验证使用 [synthetic query fixture](../tests/fixtures/query-plugin/README.md)，仅包含生成的类别数据。私有集成插件和业务截图保存在仓库外，不随源码或 Release 分发。
+## 安装插件
 
-## 操作与核对
+在左侧「插件」搜索社区市场，或填写 npm 包名、GitHub Release 插件地址。核对来源并信任后安装；已安装插件可命名、绑定网站、更新或卸载。影响当前任务的变更需先停止任务。更新失败会保留原安装。
 
-确认卡片展示即将执行的动作，能读取到前后值时显示差异。未经验证的输入框可能自动保存，因此填写也可能需要确认。点击「停止并接手」或直接在页面中使用键盘／鼠标，会暂停该网站的自动任务；恢复前重新观察。
+开发插件可从标准 `file:/` 目录安装；外部 AI 调试见 [Devkit](../packages/plugin-devkit/README.md)。
 
-工具执行成功不等于业务保存成功。有明确的预期正文结果时，宿主刷新页面回读；其他情况显示「结果待核对」。请重新打开或刷新结果页面后再选择核对结论，不要仅凭输入框的新值确认。结果不明时不会自动重复提交。
+## 本地数据与限制
 
-本轮主要支持普通 DOM 表单、链接、按钮、原生选择框和入口内的弹窗。跨域 iframe、封闭 Shadow DOM、canvas、复杂自定义控件、文件上传下载与通用 SSO 尚未验收，遇到这些情况请在页面中接手。网站若使用关闭即失效的会话 Cookie，重启后可能需要重新登录；已验证的是网站设置了有效期的持久 Cookie。
+macOS 用户数据位于 `~/Library/Application Support/dsh-deskwork`。更新应用保留网址、对话及登录资料。网站的会话 Cookie 若随关闭失效，重启后仍需登录。旧配置迁移前会备份，旧动作不会自动执行。
 
-真实 DeepSeek 与已登录网站的只读链路已通过[功能冒烟](experiments/2026-09-08-desktop-smoke.md)；业务写入和用户 Mac 验收仍待完成，单次功能样本不能证明模型完成率。
+当前回归覆盖普通 DOM 表单、链接、按钮、原生选择框和入口内弹窗。跨域 iframe、封闭 Shadow DOM、canvas、复杂控件、文件传输和通用 SSO 尚未验收，遇到缺口可在页面中接手。真实模型业务任务和用户 Mac 验收见 Release 中的待办。
 
-## 本地开发与数据
+## 本地开发
 
-按仓库固定 Node/npm 版本安装依赖，首次执行 `npm ci` 与 `npm run experiment:prepare`。
+依赖准备与检查见[贡献指南](../CONTRIBUTING.md)。常用运行命令：
 
 ```sh
-npm run dev             # 外壳交互预览，不连接网站或模型
-npm run dev:desktop     # 真实桌面热更新，开发配置与正式用户数据分开
-npm start               # 真实桌面；从空配置开始
-npm run start:fixture   # 配置两个本地测试网站，模型仍需自行设置
-npm run test:runtime    # 真实 DSH 进程与可控模型
-npm run test:desktop    # 真实 DSH + Electron + 两个配置网站
-npm run package:mac     # macOS arm64 DMG
+npm run dev             # 界面预览
+npm run dev:desktop     # 桌面热更新
+npm start               # 桌面应用
+npm run start:fixture   # 两个本地测试网站
 ```
 
-Linux 无显示环境时，桌面测试加 `xvfb-run -a`。夹具手工运行在已授权 host 隔离环境可使用 `npm run start:fixture -- --no-sandbox`。夹具配置与状态使用临时目录，不写入正常用户配置。
+Linux 无显示环境时使用 `xvfb-run -a`。已授权的隔离开发账号可运行 `npm run start:fixture -- --no-sandbox`，记录隔离模式。测试配置使用临时目录。
 
-macOS 用户数据位于 `~/Library/Application Support/dsh-deskwork`。网址和对话自动保存；更新应用保留此目录。旧版网址与会话引用会先备份再迁移，旧任务确认、字段适配及技能文件进入 `archive/`，不自动执行。无需维护字段映射文件。
-
-[示例 ERP配置样例](../examples/workspace.json)只用于测试或开发参考，产品不会自动导入。实验依据与限制见 [本轮验证](experiments/2026-09-06-configurable-mvp.md)。
-
-开发环境可通过 `DESKWORK_DEVELOPMENT_API_KEY` 向宿主临时注入测试密钥；仅在未打包且启用本机开发外壳时读取，不保存到配置文件。正常客户端仍使用模型设置与系统安全存储。开发模式默认使用 `.artifacts/development-profile`，支持 `--profile-directory` 指定私有目录。
+开发模式默认使用 `.artifacts/development-profile`，可用 `--profile-directory` 指定私有目录。`DESKWORK_DEVELOPMENT_API_KEY` 仅供未打包开发外壳临时读取，不写入配置；正常客户端使用模型设置。

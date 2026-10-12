@@ -1,22 +1,15 @@
 # 实验记录
 
-- [rc.2 原生能力收敛](2026-10-10-rc2-native-convergence.md)：原生恢复、连续审批、通用插件上下文、登录 shell 和官方 UI 组件。
+记录保留当时的版本、环境、结果与限制。当前发布状态见[最新 Release](https://github.com/GuoMonth/dsh-deskwork/releases/latest)。
 
-- [DSH 0.2.0 原生能力与经验分享](2026-10-01-dsh-020-native-experience.md)：Messages API、宿主 Browser Use、原生 Skill 与 ERP 制品联合验证。
+| 日期       | 记录                                                                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-10 | [原生会话、审批与插件集成](2026-10-10-rc2-native-convergence.md)                                                                                                                   |
+| 2026-10-01 | [原生能力与 ERP 分享](2026-10-01-dsh-020-native-experience.md)、[运行时与打包升级](2026-10-01-dsh-020-alignment.md)、[官方桌面调研](2026-10-01-official-desktop-research.md)       |
+| 2026-09-19 | [DSH 0.1.6-alpha.2 对齐](2026-09-19-dsh-016-alignment.md)                                                                                                                          |
+| 2026-09-09 | [PC 视觉调整](2026-09-09-pc-visual-refresh.md)                                                                                                                                     |
+| 2026-09-08 | [插件](2026-09-08-m2-plugins.md)、[Devkit 骨架](2026-09-08-plugin-devkit-foundation.md)、[开发连接](2026-09-08-development-connection.md)、[桌面冒烟](2026-09-08-desktop-smoke.md) |
+| 2026-09-06 | [通用工作台 MVP](2026-09-06-configurable-mvp.md)                                                                                                                                   |
+| 2026-09-05 | [会话与 CDP](2026-09-05-electron-session-control.md)、[旧业务切片](2026-09-05-m1-integration.md)、[反馈成本与隔离](2026-09-05-ai-feedback-loop.md)                                 |
 
-- [DSH 0.2.0-rc.2 升级](2026-10-01-dsh-020-alignment.md)：Messages、提供方启用检查、自包含桌面运行时与新版回归。
-- [通用工作台 MVP](2026-09-06-configurable-mvp.md)：配置式双站点、真实 DSH／Electron 工具链、确认与回读边界，真实模型和用户 Mac 待验收。
-
-- [M1 集成验证](2026-09-05-m1-integration.md)：Browser Harness 范围、发布版 DSH 工具桥、真实 Electron 夹具闭环。
-
-源码位于根目录 `experiments/`，与产品实现隔离。每份结果记录注明假设、日期、代码身份、工具版本、命令、观察与局限。后续结果追加记录，不覆盖旧结论。
-
-| 日期                                                 | 假设  | 结果                                                                 |
-| ---------------------------------------------------- | ----- | -------------------------------------------------------------------- |
-| [2026-09-05](2026-09-05-electron-session-control.md) | H-001 | 原始 sandbox 启动失败；适配后会话/CDP 判据通过；隔离负对照按预期失败 |
-
-- [AI 反馈成本与 host 隔离](2026-09-05-ai-feedback-loop.md)：同源码完整检查约快 59%，跨文件类型负对照有效；host 模式通过，chromium 模式失败未自动降级。
-
-- [DSH 0.1.6-alpha.2 对齐](2026-09-19-dsh-016-alignment.md)：运行时、Electron 加载器与插件回归。
-
-- [官方桌面端与浏览器复用调研](2026-10-01-official-desktop-research.md)：DSH 0.2.0-rc.2 的真实附加实验、协议迁移发现与升级方案。
+实验源码在 `experiments/`，原始输出在忽略的 `.artifacts/`。公开记录只保留可复查的结论与必要失败。
