@@ -4,8 +4,10 @@ import type { DeskworkBridge, WorkspaceSnapshot, WorkspaceCommand } from '../cor
 export function createPreviewBridge(
   preferredSystemLanguages: readonly string[] = [],
 ): DeskworkBridge {
+  const workspace = structuredClone(defaultWorkspace);
+  workspace.locale = resolveLocale(workspace.languagePreference, preferredSystemLanguages);
   const snapshot: WorkspaceSnapshot = {
-    workspace: structuredClone(defaultWorkspace),
+    workspace,
     contexts: [],
     pages: [],
     activeSiteId: '',

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { commandSchema } from '../src/core/contracts.ts';
@@ -11,6 +11,7 @@ import {
   translate,
 } from '../src/core/locale.ts';
 import { StateStore } from '../src/host/state-store.ts';
+import { createPreviewBridge } from '../src/ui/preview-bridge.ts';
 
 await test('system preference resolves at startup and explicit language survives a restart', async () => {
   const root = await mkdtemp(join(tmpdir(), 'deskwork-locale-'));
@@ -33,6 +34,29 @@ await test('system preference resolves at startup and explicit language survives
     assert.equal(restored.locale, 'zh');
     assert.equal(restored.name, '原名');
     assert.deepEqual(restored.sites, sites);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+await test('a legacy effective locale without a preference migrates to system', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'deskwork-locale-migration-'));
+  try {
+    const sites = [{ id: 'one', name: '原名', url: 'https://example.test/', sessionId: 'account' }];
+    await writeFile(
+      join(root, 'workspace.json'),
+      JSON.stringify({ version: 2, locale: 'zh', name: '原名', sites }),
+    );
+    const workspace = await new StateStore(root, ['en-US']).loadWorkspace();
+    assert.equal(workspace.languagePreference, 'system');
+    assert.equal(workspace.locale, 'en');
+    assert.deepEqual(workspace.sites, sites);
+    const persisted = JSON.parse(await readFile(join(root, 'workspace.json'), 'utf8')) as {
+      languagePreference?: unknown;
+      locale?: unknown;
+    };
+    assert.equal(persisted.languagePreference, 'system');
+    assert.equal(persisted.locale, 'en');
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -61,6 +85,21 @@ await test('system resolver follows supported preferred-language order and falls
   assert.equal(resolveLocale('system', []), 'en');
   assert.equal(resolveLocale('zh', ['en-US']), 'zh');
   assert.equal(resolveLocale('en', ['zh-CN']), 'en');
+});
+
+await test('preview keeps system preference separate from manual locale overrides', async () => {
+  const bridge = createPreviewBridge(['zh-CN', 'en-US']);
+  let snapshot = await bridge.snapshot();
+  assert.equal(snapshot.workspace.languagePreference, 'system');
+  assert.equal(snapshot.workspace.locale, 'zh');
+  await bridge.command({ type: 'language', preference: 'en' });
+  snapshot = await bridge.snapshot();
+  assert.equal(snapshot.workspace.languagePreference, 'en');
+  assert.equal(snapshot.workspace.locale, 'en');
+  await bridge.command({ type: 'language', preference: 'system' });
+  snapshot = await bridge.snapshot();
+  assert.equal(snapshot.workspace.languagePreference, 'system');
+  assert.equal(snapshot.workspace.locale, 'zh');
 });
 
 await test('host messages localize interpolated values without modifying opaque content', () => {
