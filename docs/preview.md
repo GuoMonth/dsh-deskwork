@@ -20,7 +20,7 @@
 
 在「插件」中搜索 DSH 市场，或输入 npm 包名、GitHub Release 地址、本地 `file:/` 目录。核对来源后安装、绑定网站；更改影响任务的插件前先停止任务。插件是可信本地代码，可访问文件和网络。
 
-ERP 使用当前网站与任务浏览器，配置和存储由插件管理。经验分享见 [ERP 指南](https://github.com/GuoMonth/dsh-erp/blob/main/docs/native-and-sharing.md)。第三方开发使用 [Devkit](../packages/plugin-devkit/README.md)。
+ERP 使用当前网站与任务浏览器，配置和存储由插件管理。经验分享见 [ERP 指南](https://github.com/GuoMonth/dsh-erp/blob/60d82ea4763cdc4fab3f452c1b33c76ec24c5ea4/docs/native-and-sharing.md)。第三方开发使用 [Devkit](../packages/plugin-devkit/README.md)。
 
 ## 数据与限制
 

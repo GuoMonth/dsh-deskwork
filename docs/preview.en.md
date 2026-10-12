@@ -20,7 +20,7 @@ Native DSH logs preserve tool history. After restart, tasks stay paused until Ob
 
 Search the DSH marketplace in Plugins, or supply an npm name, GitHub Release URL or local `file:/` directory. Review the source, install and bind it to a website. Stop the task before changes that affect its plugins. Plugins are trusted local code with file and network access.
 
-ERP uses the current website and task browser; it owns configuration and storage. Sharing is covered in the [ERP guide](https://github.com/GuoMonth/dsh-erp/blob/main/docs/native-and-sharing.en.md). Plugin authors use the [Devkit](../packages/plugin-devkit/README.en.md).
+ERP uses the current website and task browser; it owns configuration and storage. Sharing is covered in the [ERP guide](https://github.com/GuoMonth/dsh-erp/blob/60d82ea4763cdc4fab3f452c1b33c76ec24c5ea4/docs/native-and-sharing.en.md). Plugin authors use the [Devkit](../packages/plugin-devkit/README.en.md).
 
 ## Data and limits
 
