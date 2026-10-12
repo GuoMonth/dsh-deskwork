@@ -60,19 +60,29 @@ export class StateStore {
     const version = z.object({ version: z.number() }).parse(raw).version;
     if (version === 2) {
       const parsed = workspaceSchema.parse(raw);
-      const preference = hasOwn(raw, 'languagePreference')
+      const hasPreference = hasOwn(raw, 'languagePreference');
+      const hasLocale = hasOwn(raw, 'locale');
+      // A locale-only v2 file predates the separate preference field. It may
+      // have been an explicit choice, and there is no reliable way to tell an
+      // old default English value apart from a deliberate English choice, so
+      // preserve the known locale as the safest manual migration.
+      const preference = hasPreference
         ? languagePreferenceSchema.parse(parsed.languagePreference)
-        : defaultLanguagePreference;
+        : hasLocale
+          ? parsed.locale
+          : defaultLanguagePreference;
       const workspace = workspaceSchema.parse({
         ...parsed,
         languagePreference: preference,
-        locale: resolveLocale(preference, preferredSystemLanguages),
+        locale:
+          hasPreference || !hasLocale
+            ? resolveLocale(preference, preferredSystemLanguages)
+            : parsed.locale,
       });
       // Version 2 files written before the separate preference existed were
-      // valid enough to parse, but their locale must not become an implicit
-      // manual choice. Archive and rewrite them with an explicit system
+      // valid enough to parse. Archive and rewrite them with an explicit
       // preference while retaining every site field unchanged.
-      if (!hasOwn(raw, 'languagePreference') || !hasOwn(raw, 'locale')) {
+      if (!hasPreference || !hasLocale) {
         await this.archive('workspace.json');
         await this.saveWorkspace(workspace);
       }
