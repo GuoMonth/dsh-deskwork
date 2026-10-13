@@ -128,7 +128,7 @@ await test(
         .toBe(true);
 
       await shell.evaluate(async () => {
-        await window.deskwork?.command({ type: 'language', locale: 'zh' });
+        await window.deskwork?.command({ type: 'language', preference: 'zh' });
       });
       await expect
         .poll(() =>

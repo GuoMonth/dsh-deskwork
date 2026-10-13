@@ -77,7 +77,10 @@ await test(
     const menuLabels = (application: ElectronApplication): Promise<string[]> =>
       application.evaluate(({ Menu }) => {
         const menu = Menu.getApplicationMenu();
-        return menu?.items[0]?.submenu?.items.map((item) => item.label) ?? [];
+        const shellMenu = menu?.items.find((item) =>
+          item.submenu?.items.some((child) => child.id === 'deskwork-open'),
+        );
+        return shellMenu?.submenu?.items.map((item) => item.label) ?? [];
       });
     let app = await launch('en');
     try {
