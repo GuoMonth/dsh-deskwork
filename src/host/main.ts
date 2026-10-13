@@ -6,7 +6,7 @@ import { PluginManager } from './plugin-manager.ts';
 import { PluginMarket } from './plugin-market.ts';
 import { pluginCommandSchema } from '../core/plugin-contracts.ts';
 import { pluginLoadSchema } from '../core/plugin-contracts.ts';
-import { app, BrowserWindow, ipcMain, safeStorage, Menu, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -21,7 +21,8 @@ import { Pages } from './pages.ts';
 import { startToolServer } from '../runtime/tool-server.ts';
 import { DshRuntime } from '../runtime/dsh-runtime.ts';
 import { shellLocation } from './shell-location.ts';
-import { nativeMenuTemplate } from './native-menu.ts';
+import { createDesktopShell } from './desktop-shell.ts';
+import type { DesktopShell } from './desktop-shell.ts';
 
 const profileArgument = process.argv.find((argument) =>
   argument.startsWith('--profile-directory='),
@@ -93,6 +94,7 @@ async function main(): Promise<void> {
   const saved = await store.load();
   let activeSiteId = workspace.sites[0]?.id ?? '';
   let closing = false;
+  const desktopShellRef: { current?: DesktopShell } = {};
   let runtime: DshRuntime | undefined;
   let runtimeSiteId: string | undefined;
   let runtimeLocale: typeof workspace.locale | undefined;
@@ -164,24 +166,6 @@ async function main(): Promise<void> {
       nodeIntegration: false,
     },
   });
-  const refreshNativeMenu = (): void => {
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate(
-        nativeMenuTemplate(
-          workspace.locale,
-          () => {
-            if (window.isMinimized()) window.restore();
-            window.show();
-            window.focus();
-          },
-          (): void => {
-            window.close();
-          },
-        ),
-      ),
-    );
-  };
-  refreshNativeMenu();
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
     if (url !== shellURL) event.preventDefault();
@@ -214,7 +198,7 @@ async function main(): Promise<void> {
     clearTimeout(streamPublishTimer);
     streamPublishTimer = undefined;
     if (!window.isDestroyed()) window.webContents.send('deskwork:state', snapshot());
-    refreshNativeMenu();
+    desktopShellRef.current?.refresh();
   }
   function publishStream(): void {
     streamPublishTimer ??= setTimeout(publish, 80);
@@ -882,13 +866,23 @@ async function main(): Promise<void> {
       publish();
     }
   });
-  window.on('close', (event) => {
-    if (closing) return;
-    event.preventDefault();
-    closing = true;
-    const cleanup = async (): Promise<void> => {
+  const desktopShell: DesktopShell = createDesktopShell({
+    window,
+    iconDirectory: join(app.getAppPath(), 'dist/brand'),
+    getLocale: () => workspace.locale,
+    getTaskStatus: () => {
+      if (development?.active) return 'development';
+      return controllers.get(runningSite() ?? activeSiteId)?.state.status ?? 'idle';
+    },
+    onQuit: async (): Promise<void> => {
+      closing = true;
+      clearTimeout(streamPublishTimer);
       for (const controller of controllers.values())
-        if (['running', 'waiting-user'].includes(controller.state.status)) await controller.stop();
+        if (
+          controller.isBusy() ||
+          ['running', 'waiting-user', 'verifying'].includes(controller.state.status)
+        )
+          await controller.stop();
       await stopRuntime();
       await development?.close();
       await plugins.close();
@@ -896,16 +890,14 @@ async function main(): Promise<void> {
       await persist();
       await pages.close();
       window.destroy();
-      app.quit();
-    };
-    void cleanup().catch((error: unknown) => {
-      console.error(error);
-      app.exit(1);
-    });
+    },
   });
+  desktopShellRef.current = desktopShell;
   await window.loadURL(shellURL);
 }
-void main().catch((error: unknown) => {
-  console.error(error);
-  app.exit(1);
-});
+if (app.requestSingleInstanceLock()) {
+  void main().catch((error: unknown) => {
+    console.error(error);
+    app.exit(1);
+  });
+} else app.quit();
