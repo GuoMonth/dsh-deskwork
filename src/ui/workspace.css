@@ -186,15 +186,6 @@ kbd {
   width: 24px;
   flex-shrink: 0;
   height: 24px;
-  border-radius: var(--radius-control);
-  background: var(--color-text);
-  color: var(--color-surface);
-  text-align: center;
-  font-size: 19px;
-  line-height: 24px;
-}
-.brand-mark span {
-  color: var(--color-agent-soft);
 }
 .section-label {
   display: flex;

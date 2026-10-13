@@ -24,7 +24,8 @@
     "experiment:electron-session": "node scripts/run-electron-experiment.ts host",
     "experiment:electron-session:chromium": "node scripts/run-electron-experiment.ts chromium",
     "tokens:generate": "node scripts/generate-tokens.ts",
-    "dev": "npm run tokens:generate && vite",
+    "brand:generate": "node scripts/generate-brand-assets.ts",
+    "dev": "npm run tokens:generate && npm run brand:generate && vite",
     "dev:desktop": "node scripts/dev-desktop.ts",
     "build": "node scripts/build.ts",
     "start": "npm run build && electron .",
@@ -120,6 +121,7 @@
     "pnpm": "11.20.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "0.35.5",
     "zod": "4.5.4"
   },
   "main": "dist/host/main.cjs",
@@ -140,6 +142,7 @@
     "asarUnpack": [],
     "npmRebuild": true,
     "mac": {
+      "icon": "packaging/brand/app.icns",
       "target": [
         {
           "target": "dmg",
@@ -153,6 +156,9 @@
       "hardenedRuntime": true,
       "entitlements": "packaging/macos-entitlements.plist",
       "entitlementsInherit": "packaging/macos-entitlements.plist"
+    },
+    "linux": {
+      "icon": "packaging/brand/app.png"
     },
     "artifactName": "DSH-Deskwork-${version}-${os}-${arch}.${ext}",
     "extraResources": [
