@@ -1,16 +1,17 @@
 import type { ReactElement, SVGProps } from 'react';
 import markSvg from '../../../packaging/brand/mark.svg?raw';
+import { brandMark } from './mark-content.ts';
 
-const markContent = markSvg.replace(/^<[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+const mark = brandMark(markSvg);
 
 export function BrandMark(props: SVGProps<SVGSVGElement>): ReactElement {
   return (
     <svg
-      viewBox="0 0 256 256"
+      viewBox={mark.viewBox}
       aria-hidden="true"
       focusable="false"
       {...props}
-      dangerouslySetInnerHTML={{ __html: markContent }}
+      dangerouslySetInnerHTML={{ __html: mark.content }}
     />
   );
 }

@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { sealRuntime, verifyRuntime } from '../src/runtime/desktop-runtime.ts';
+import { stageBrandAssets } from './brand-assets.ts';
 import { runtimeFileExclusion } from './runtime-file-policy.ts';
 
 const run = promisify(execFile);
@@ -83,7 +84,7 @@ try {
   await mkdir(application, { recursive: true });
   await cp('dist/host', join(application, 'dist/host'), { recursive: true });
   await cp('dist/ui', join(application, 'dist/ui'), { recursive: true });
-  await cp('dist/brand', join(application, 'dist/brand'), { recursive: true });
+  await stageBrandAssets(join(application, 'dist/brand'));
   await writeFile(
     join(application, 'package.json'),
     JSON.stringify({ ...manifest, dependencies: {}, devDependencies: undefined }, null, 2),

@@ -2,15 +2,31 @@ import { z } from 'zod';
 import { verifyRuntime } from '../src/runtime/desktop-runtime.ts';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, cp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, cp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { extractFile, listPackage } from '@electron/asar';
+import { buildBrandAssets } from './brand-assets.ts';
 
 const { values } = parseArgs({ options: { app: { type: 'string' } } });
 if (values.app && process.platform !== 'darwin') {
   throw new Error('--app is only supported for macOS app bundles');
+}
+
+/** The shell resolves its icons from `dist/brand` inside the archive, so verify the packed bytes. */
+async function verifyPackagedBrand(bundle: string): Promise<void> {
+  const archive = join(bundle, 'resources/app.asar');
+  const expected = await buildBrandAssets(await readFile('packaging/brand/mark.svg', 'utf8'));
+  const listed = new Set(listPackage(archive, { isPack: false }));
+  for (const [name, contents] of expected) {
+    const path = `dist/brand/${name}`;
+    if (!listed.has(`/${path}`)) throw new Error(`发行包缺少品牌资源 ${path}`);
+    if (!extractFile(archive, path).equals(contents))
+      throw new Error(`发行包品牌资源与 packaging/brand/mark.svg 不一致：${path}`);
+  }
+  console.log(`Verified ${String(expected.size)} brand assets inside app.asar.`);
 }
 
 const verification = await mkdtemp(join(tmpdir(), 'deskwork-installed-'));
@@ -38,6 +54,7 @@ try {
     `Verified packaged DSH ${descriptor.dshVersion}, Node ${descriptor.nodeVersion}, ${String(descriptor.files.length)} runtime files.`,
   );
   await access(join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'));
+  await verifyPackagedBrand(bundle);
   const smoke = await promisify(execFile)(
     executable,
     ['-e', "require('koffi'); console.log(JSON.stringify(process.versions))"],

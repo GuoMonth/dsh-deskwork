@@ -9,6 +9,7 @@ import { _electron as electron, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { startWebsite } from './fixtures/websites.ts';
 import { startModel } from './fixtures/model.ts';
+import { brandMark } from '../src/ui/brand/mark-content.ts';
 await test(
   'config-only websites: real DSH + Electron, confirmations, readback, isolated conversations and restart',
   { timeout: 180000 },
@@ -40,6 +41,16 @@ await test(
     try {
       let shell = await shellPage();
       await expect(shell.getByRole('heading', { name: 'Your work, in one place.' })).toBeVisible();
+      const renderedMark = shell.locator('.brand .brand-mark');
+      await expect(renderedMark).toBeVisible();
+      const canonical = brandMark(
+        await readFile(join(resolve('.'), 'packaging/brand/mark.svg'), 'utf8'),
+      );
+      assert.equal(await renderedMark.getAttribute('viewBox'), canonical.viewBox);
+      assert.equal(
+        await renderedMark.locator('path').getAttribute('d'),
+        /<path[^>]*\bd="([^"]+)"/.exec(canonical.content)?.[1],
+      );
       await application.evaluate(({ BrowserWindow }) => {
         BrowserWindow.getAllWindows()[0]?.setSize(1366, 768);
       });

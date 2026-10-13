@@ -1,6 +1,6 @@
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
-import { generateBrandAssets } from './brand-assets.ts';
+import { stageBrandAssets } from './brand-assets.ts';
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await generateBrandAssets();
+const files = await stageBrandAssets();
+console.log(
+  `Staged ${String(files.length)} brand assets in dist/brand from packaging/brand/mark.svg.`,
+);
