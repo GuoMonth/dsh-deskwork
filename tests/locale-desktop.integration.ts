@@ -9,8 +9,13 @@ import type { ElectronApplication } from '@playwright/test';
 import { readMessagesRequest, writeMessagesResponse } from './fixtures/messages.ts';
 
 await test(
-  'desktop defaults to English, switches UI and model language, and restores Chinese after restart',
-  { timeout: 90000 },
+  'desktop follows system language, manual overrides, native menus, and restart migration',
+  {
+    timeout: 90000,
+    // Linux accepts a child LANGUAGE/LC_ALL override. macOS language is host-controlled; the
+    // resolver and state-store tests cover that path without mutating the host settings.
+    skip: process.platform === 'darwin',
+  },
   async () => {
     const root = await mkdtemp(join(tmpdir(), 'deskwork-language-desktop-'));
     let expectedLocale: 'en' | 'zh' = 'en';
@@ -51,8 +56,14 @@ await test(
       address && typeof address !== 'string' && modelAddress && typeof modelAddress !== 'string',
     );
     const executablePath = process.env['DESKWORK_TEST_EXECUTABLE'];
-    const launch = (): Promise<ElectronApplication> =>
-      electron.launch({
+    const launch = (systemLocale: 'en' | 'zh'): Promise<ElectronApplication> => {
+      const systemTag = systemLocale === 'zh' ? 'zh-CN' : 'en-US';
+      const environment =
+        process.platform === 'linux'
+          ? { ...process.env, LANGUAGE: systemTag, LC_ALL: systemTag, LANG: systemTag }
+          : undefined;
+      return electron.launch({
+        ...(environment ? { env: environment } : {}),
         ...(executablePath ? { executablePath } : {}),
         cwd: process.env['DESKWORK_TEST_WORKING_DIRECTORY'] ?? resolve('.'),
         args: [
@@ -62,11 +73,21 @@ await test(
           ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
         ],
       });
-    let app = await launch();
+    };
+    const menuLabels = (application: ElectronApplication): Promise<string[]> =>
+      application.evaluate(({ Menu }) => {
+        const menu = Menu.getApplicationMenu();
+        const shellMenu = menu?.items.find((item) =>
+          item.submenu?.items.some((child) => child.id === 'deskwork-open'),
+        );
+        return shellMenu?.submenu?.items.map((item) => item.label) ?? [];
+      });
+    let app = await launch('en');
     try {
       const shell = await app.firstWindow();
       await expect(shell.getByRole('button', { name: 'Add website', exact: true })).toBeVisible();
       assert.equal(await shell.locator('html').getAttribute('lang'), 'en');
+      assert.ok((await menuLabels(app)).includes('Open Deskwork'));
       await shell.evaluate(
         async (url) => {
           await window.deskwork?.command({ type: 'add-site', url, name: '原名' });
@@ -98,6 +119,7 @@ await test(
       await expect(shell.getByLabel('语言')).toHaveValue('zh');
       await expect(shell.getByRole('button', { name: '复制', exact: true })).toBeVisible();
       assert.equal(await shell.locator('html').getAttribute('lang'), 'zh-CN');
+      assert.ok((await menuLabels(app)).includes('打开 Deskwork'));
       await shell.getByRole('button', { name: '关闭对话框' }).click();
       await shell.getByRole('button', { name: '插件', exact: true }).click();
       await expect(shell.getByRole('button', { name: '发现', exact: true })).toBeVisible();
@@ -114,8 +136,15 @@ await test(
       await expect
         .poll(async () => (await shell.evaluate(() => window.deskwork?.snapshot()))?.runningSiteId)
         .toBeNull();
+      await shell.getByRole('button', { name: '模型设置', exact: true }).click();
+      await shell.getByLabel('语言').selectOption('system');
+      expectedLocale = 'en';
+      await expect(shell.getByLabel('Language')).toHaveValue('system');
+      assert.equal(await shell.locator('html').getAttribute('lang'), 'en');
+      assert.ok((await menuLabels(app)).includes('Open Deskwork'));
+      await shell.getByRole('button', { name: 'Close dialog' }).click();
       await app.close();
-      app = await launch();
+      app = await launch('zh');
       await expect
         .poll(() => app.windows().some((page) => page.url().startsWith('file:')))
         .toBe(true);
@@ -123,6 +152,7 @@ await test(
       assert.ok(restored);
       await expect(restored.getByRole('button', { name: '模型设置', exact: true })).toBeVisible();
       assert.equal(await restored.locator('html').getAttribute('lang'), 'zh-CN');
+      assert.ok((await menuLabels(app)).includes('打开 Deskwork'));
       await expect(restored.getByText('English fixture answer', { exact: true })).toBeVisible();
       await expect(restored.getByRole('tab', { name: '原名', exact: true })).toBeVisible();
       await restored.getByRole('button', { name: '模型设置', exact: true }).click();
@@ -131,6 +161,7 @@ await test(
       await restored.getByRole('button', { name: 'Close dialog' }).click();
       await restored.screenshot({ path: '.artifacts/desktop/language-en.png' });
       assert.equal(await restored.locator('html').getAttribute('lang'), 'en');
+      assert.ok((await menuLabels(app)).includes('Open Deskwork'));
       assert.equal(modelCalls, 2);
     } finally {
       await app.close();

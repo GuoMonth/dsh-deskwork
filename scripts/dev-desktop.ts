@@ -6,7 +6,10 @@ import type { ChildProcess } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { desktopBuildOptions } from './desktop-build-options.ts';
+import { stageBrandAssets } from './brand-assets.ts';
 import './generate-tokens.ts';
+
+await stageBrandAssets();
 
 const executable: unknown = createRequire(import.meta.url)('electron');
 if (typeof executable !== 'string') throw new Error('请先运行 npm run experiment:prepare');
