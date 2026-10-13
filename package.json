@@ -24,6 +24,7 @@
     "experiment:electron-session": "node scripts/run-electron-experiment.ts host",
     "experiment:electron-session:chromium": "node scripts/run-electron-experiment.ts chromium",
     "tokens:generate": "node scripts/generate-tokens.ts",
+    "brand:generate": "node scripts/generate-brand-assets.ts",
     "dev": "npm run tokens:generate && vite",
     "dev:desktop": "node scripts/dev-desktop.ts",
     "build": "node scripts/build.ts",
@@ -76,6 +77,7 @@
     "micromark-util-sanitize-uri": "2.0.1",
     "micromark-util-symbol": "2.0.1",
     "prettier": "3.9.6",
+    "sharp": "0.35.5",
     "shiki": "4.3.1",
     "simple-icons": "16.31.0",
     "typescript": "6.0.3",
@@ -140,6 +142,7 @@
     "asarUnpack": [],
     "npmRebuild": true,
     "mac": {
+      "icon": "dist/brand/app.icns",
       "target": [
         {
           "target": "dmg",
@@ -153,6 +156,9 @@
       "hardenedRuntime": true,
       "entitlements": "packaging/macos-entitlements.plist",
       "entitlementsInherit": "packaging/macos-entitlements.plist"
+    },
+    "linux": {
+      "icon": "dist/brand/app.png"
     },
     "artifactName": "DSH-Deskwork-${version}-${os}-${arch}.${ext}",
     "extraResources": [
