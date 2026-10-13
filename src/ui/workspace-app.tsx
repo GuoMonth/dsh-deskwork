@@ -917,13 +917,14 @@ export function WorkspaceApp({ bridge }: { bridge: DeskworkBridge }): ReactEleme
                   {t('Language')}
                   <select
                     aria-label={t('Language')}
-                    value={snapshot.workspace.locale}
+                    value={snapshot.workspace.languagePreference}
                     onChange={(event) => {
-                      const locale = event.target.value;
-                      if (locale === 'en' || locale === 'zh')
-                        sendCommand({ type: 'language', locale });
+                      const preference = event.target.value;
+                      if (preference === 'system' || preference === 'en' || preference === 'zh')
+                        sendCommand({ type: 'language', preference });
                     }}
                   >
+                    <option value="system">{t('System')}</option>
                     <option value="en">English</option>
                     <option value="zh">中文</option>
                   </select>

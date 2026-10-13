@@ -1,4 +1,4 @@
-import { localizeMessage } from '../core/locale.ts';
+import { localizeMessage, resolveLocale } from '../core/locale.ts';
 import { readRuntimeDescriptor } from '../runtime/desktop-runtime.ts';
 import { DevelopmentSession } from './development-session.ts';
 import type { DevelopmentState } from '../core/development-contracts.ts';
@@ -21,6 +21,7 @@ import { Pages } from './pages.ts';
 import { startToolServer } from '../runtime/tool-server.ts';
 import { DshRuntime } from '../runtime/dsh-runtime.ts';
 import { shellLocation } from './shell-location.ts';
+import { nativeMenuTemplate } from './native-menu.ts';
 
 const profileArgument = process.argv.find((argument) =>
   argument.startsWith('--profile-directory='),
@@ -86,7 +87,8 @@ async function main(): Promise<void> {
   });
   await plugins.load();
   const market = new PluginMarket();
-  const store = new StateStore(directory);
+  const preferredSystemLanguages = app.getPreferredSystemLanguages();
+  const store = new StateStore(directory, preferredSystemLanguages);
   let workspace = await store.loadWorkspace();
   const saved = await store.load();
   let activeSiteId = workspace.sites[0]?.id ?? '';
@@ -162,14 +164,24 @@ async function main(): Promise<void> {
       nodeIntegration: false,
     },
   });
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      { role: 'appMenu' },
-      { role: 'editMenu' },
-      { role: 'viewMenu' },
-      { role: 'windowMenu' },
-    ]),
-  );
+  const refreshNativeMenu = (): void => {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        nativeMenuTemplate(
+          workspace.locale,
+          () => {
+            if (window.isMinimized()) window.restore();
+            window.show();
+            window.focus();
+          },
+          (): void => {
+            window.close();
+          },
+        ),
+      ),
+    );
+  };
+  refreshNativeMenu();
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
     if (url !== shellURL) event.preventDefault();
@@ -202,6 +214,7 @@ async function main(): Promise<void> {
     clearTimeout(streamPublishTimer);
     streamPublishTimer = undefined;
     if (!window.isDestroyed()) window.webContents.send('deskwork:state', snapshot());
+    refreshNativeMenu();
   }
   function publishStream(): void {
     streamPublishTimer ??= setTimeout(publish, 80);
@@ -763,7 +776,11 @@ async function main(): Promise<void> {
           await pages.reload(command.siteId);
           break;
         case 'language': {
-          const updated = workspaceSchema.parse({ ...workspace, locale: command.locale });
+          const updated = workspaceSchema.parse({
+            ...workspace,
+            languagePreference: command.preference,
+            locale: resolveLocale(command.preference, preferredSystemLanguages),
+          });
           await store.saveWorkspace(updated);
           workspace = updated;
           publish();
