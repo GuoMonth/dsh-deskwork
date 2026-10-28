@@ -35,7 +35,7 @@
 - ERP `docs:check`、类型检查、84 项测试和包外制品冒烟通过；冒烟覆盖标准安装、原生 Browser Use、审批、SQLite、知识记录/查询、Skill 分享与进程清理。
 - `node scripts/verify-package.ts` 在仓库外、空 PATH 下校验封装运行时：41010 个文件、DSH 0.2.1-rc.3、Node 24.21.0、Electron 44.7.0，16 项随包集成通过；使用 ERP 0.1.2 TGZ 的跨仓库原生测试也通过。
 - Linux 目录包由本地 Electron 44.7.0 分发物构建；electron-builder 从 GitHub 下载默认分发物在本机网络失败，因此使用 `-c.electronDist=node_modules/electron/dist`。macOS arm64 由 Desktop preview CI 单独构建和安装验证。
-- 真实市场探针本轮未完成：`awesome-dsh-plugin.com` 在本机连接超时。该结果不改变随包运行时与 ERP 联合验证结论，但本轮不能声称市场安装再次通过。
+- 真实市场探针：公开目录当前约 9.5 MB，宿主改为流式限额读取；目录中的 `dsh-tool-calculator@0.0.1` 仍声明 `<0.2.0` 的 `dsh-invariants`/`dsh-tools` peer，被 DSH 0.2.1-rc.3 的官方版本门禁拒绝。验证记录该拒绝，不绕过门禁，也不声称本轮有可用的市场计算器安装。
 
 ## 范围与限制
 

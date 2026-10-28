@@ -60,71 +60,106 @@ const model = createServer((request, response) => {
   });
 });
 let runtime: DshRuntime | undefined;
+let marketInstalled = false;
 try {
   await manager.load();
-  await manager.install(source);
-  await new Promise<void>((resolve) => {
-    model.listen(0, '127.0.0.1', resolve);
-  });
-  const address = model.address();
-  assert.ok(address && typeof address !== 'string');
-  const home = join(directory, 'runtime');
-  const plugins = await manager.prepareRuntime(home, 'market-site');
-  runtime = new DshRuntime({
-    executable,
-    cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
-    mcpPath: join(resources, 'dist/runtime/mcp-server.mjs'),
-    dataDirectory: home,
-    plugins,
-    apiKey: 'fixture-key',
-    model: 'deepseek-v4-flash',
-    baseURL: `http://127.0.0.1:${String(address.port)}`,
-    toolEndpoint: bridge.endpoint,
-    toolToken: bridge.token,
-    onNotification: (method, params): void => {
-      if (
-        method === 'session.status' &&
-        z.object({ status: z.string() }).parse(params).status === 'idle' &&
-        requests === 2
-      )
-        idle?.();
-    },
-  });
-  await runtime.prompt('market-test', 'Calculate 15 + 27 * sqrt(9)');
-  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([
-      completed,
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => {
-          reject(new Error('Market tool did not complete'));
-        }, 15000);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timeout);
+    await manager.install(source);
+    marketInstalled = true;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (!/incompatible with dsh 0\.2\.1-rc\.3/.test(detail)) throw error;
+    assert.match(detail, /@deepseek-ai\/dsh-tools/);
+    assert.match(detail, /@deepseek-ai\/dsh-invariants/);
+    await mkdir('.artifacts/market-runtime', { recursive: true });
+    await writeFile(
+      '.artifacts/market-runtime/result.json',
+      JSON.stringify(
+        {
+          source,
+          catalog: 'https://awesome-dsh-plugin.com/plugins.json',
+          dsh: '0.2.1-rc.3',
+          platform: process.platform,
+          arch: process.arch,
+          installed: [],
+          compatibilityRejected: true,
+          requirements: {
+            '@deepseek-ai/dsh-invariants': '>=0.0.1-rc.1 <0.2.0',
+            '@deepseek-ai/dsh-tools': '>=0.0.1-rc.1 <0.2.0',
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      'Live market calculator rejected by the official DSH version gate; no positive market-install claim.',
+    );
   }
-  assert.equal(requests, 2);
-  await mkdir('.artifacts/market-runtime', { recursive: true });
-  await writeFile(
-    '.artifacts/market-runtime/result.json',
-    JSON.stringify(
-      {
-        source,
-        catalog: 'https://awesome-dsh-plugin.com/plugins.json',
-        installed: manager.state().installed.map(({ name, version }) => ({ name, version })),
-        dsh: '0.2.1-rc.3',
-        platform: process.platform,
-        arch: process.arch,
-        tool: 'calculator',
-        result: 96,
-        requests,
+  if (marketInstalled) {
+    await new Promise<void>((resolve) => {
+      model.listen(0, '127.0.0.1', resolve);
+    });
+    const address = model.address();
+    assert.ok(address && typeof address !== 'string');
+    const home = join(directory, 'runtime');
+    const plugins = await manager.prepareRuntime(home, 'market-site');
+    runtime = new DshRuntime({
+      executable,
+      cliPath: join(resources, 'node_modules/@deepseek-ai/dsh/lib/bin.js'),
+      mcpPath: join(resources, 'dist/runtime/mcp-server.mjs'),
+      dataDirectory: home,
+      plugins,
+      apiKey: 'fixture-key',
+      model: 'deepseek-v4-flash',
+      baseURL: `http://127.0.0.1:${String(address.port)}`,
+      toolEndpoint: bridge.endpoint,
+      toolToken: bridge.token,
+      onNotification: (method, params): void => {
+        if (
+          method === 'session.status' &&
+          z.object({ status: z.string() }).parse(params).status === 'idle' &&
+          requests === 2
+        )
+          idle?.();
       },
-      null,
-      2,
-    ),
-  );
-  console.log('Live market calculator installed and invoked: 96, 2 model calls.');
+    });
+    await runtime.prompt('market-test', 'Calculate 15 + 27 * sqrt(9)');
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        completed,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => {
+            reject(new Error('Market tool did not complete'));
+          }, 15000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timeout);
+    }
+    assert.equal(requests, 2);
+    await mkdir('.artifacts/market-runtime', { recursive: true });
+    await writeFile(
+      '.artifacts/market-runtime/result.json',
+      JSON.stringify(
+        {
+          source,
+          catalog: 'https://awesome-dsh-plugin.com/plugins.json',
+          installed: manager.state().installed.map(({ name, version }) => ({ name, version })),
+          dsh: '0.2.1-rc.3',
+          platform: process.platform,
+          arch: process.arch,
+          tool: 'calculator',
+          result: 96,
+          requests,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log('Live market calculator installed and invoked: 96, 2 model calls.');
+  }
 } finally {
   await runtime?.close();
   await manager.close();
