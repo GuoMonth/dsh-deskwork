@@ -5,6 +5,7 @@ import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
+import { verifyRuntime } from '../src/runtime/desktop-runtime.ts';
 import { PluginManager } from '../src/host/plugin-manager.ts';
 import { PluginMarket } from '../src/host/plugin-market.ts';
 import { startToolServer } from '../src/runtime/tool-server.ts';
@@ -27,6 +28,7 @@ const resources = resolve(
 const executable = resolve(
   process.env['DESKWORK_TEST_EXECUTABLE'] ?? '.artifacts/releases/linux-unpacked/dsh-deskwork',
 );
+const runtimeDescriptor = await verifyRuntime(resources);
 const manager = new PluginManager({
   directory: join(directory, 'plugins'),
   executable,
@@ -68,32 +70,41 @@ try {
     marketInstalled = true;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    if (!/incompatible with dsh 0\.2\.1-rc\.3/.test(detail)) throw error;
-    assert.match(detail, /@deepseek-ai\/dsh-tools/);
-    assert.match(detail, /@deepseek-ai\/dsh-invariants/);
+    const line = detail
+      .split('\n')
+      .find((entry) => entry.startsWith('dsh: installation rejected:'));
+    assert.ok(line, detail);
+    const match =
+      /^dsh: installation rejected: Plugin (\S+)@(\S+) is incompatible with dsh (\S+): requirements (\{.*?\})\./.exec(
+        line,
+      );
+    assert.ok(match, line);
+    const [, pluginName, pluginVersion, rejectedDshVersion, requirementsText] = match;
+    assert.ok(pluginName && pluginVersion && rejectedDshVersion && requirementsText, line);
+    assert.equal(rejectedDshVersion, runtimeDescriptor.dshVersion);
+    const requirements = z.record(z.string(), z.string()).parse(JSON.parse(requirementsText));
+    assert.ok(Object.hasOwn(requirements, '@deepseek-ai/dsh-tools'));
+    assert.ok(Object.hasOwn(requirements, '@deepseek-ai/dsh-invariants'));
+    assert.equal(manager.state().installed.length, 0);
     await mkdir('.artifacts/market-runtime', { recursive: true });
     await writeFile(
-      '.artifacts/market-runtime/result.json',
+      '.artifacts/market-runtime/rejected.json',
       JSON.stringify(
         {
           source,
           catalog: 'https://awesome-dsh-plugin.com/plugins.json',
-          dsh: '0.2.1-rc.3',
+          dsh: runtimeDescriptor.dshVersion,
           platform: process.platform,
           arch: process.arch,
-          installed: [],
-          compatibilityRejected: true,
-          requirements: {
-            '@deepseek-ai/dsh-invariants': '>=0.0.1-rc.1 <0.2.0',
-            '@deepseek-ai/dsh-tools': '>=0.0.1-rc.1 <0.2.0',
-          },
+          verified: false,
+          rejection: { plugin: pluginName, version: pluginVersion, requirements },
         },
         null,
         2,
       ),
     );
     console.log(
-      'Live market calculator rejected by the official DSH version gate; no positive market-install claim.',
+      `Market plugin ${pluginName}@${pluginVersion} rejected by dsh ${runtimeDescriptor.dshVersion} version gate; no install registered.`,
     );
   }
   if (marketInstalled) {
