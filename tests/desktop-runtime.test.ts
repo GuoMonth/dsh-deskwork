@@ -29,20 +29,20 @@ await test('runtime descriptor rejects a wrong target and missing or changed nat
     for (const name of ['@deepseek-ai/dsh', 'pnpm'])
       await writeFile(
         join(root, 'node_modules', name, 'package.json'),
-        JSON.stringify({ name, version: name === 'pnpm' ? '11.20.0' : '0.2.0-rc.2' }),
+        JSON.stringify({ name, version: name === 'pnpm' ? '11.28.5' : '0.2.1-rc.3' }),
       );
     await sealRuntime(root, {
       schemaVersion: 1,
       appVersion: '0.2.0-alpha.2',
-      dshVersion: '0.2.0-rc.2',
-      electronVersion: '44.0.0',
-      nodeVersion: '24.18.1',
+      dshVersion: '0.2.1-rc.3',
+      electronVersion: '44.7.0',
+      nodeVersion: '24.21.0',
       nodeAbi: '149',
-      pnpmVersion: '11.20.0',
+      pnpmVersion: '11.28.5',
       lockSha256: 'fixture',
       platform: 'darwin',
       arch: 'arm64',
-      packages: { '@deepseek-ai/dsh': '0.2.0-rc.2', pnpm: '11.20.0' },
+      packages: { '@deepseek-ai/dsh': '0.2.1-rc.3', pnpm: '11.28.5' },
     });
     const target = { platform: 'darwin', arch: 'arm64' };
     await verifyRuntime(root, target);
@@ -80,6 +80,34 @@ await test('runtime materialization retains target natives and unknown assets', 
   assert.equal(
     runtimeFileExclusion('node_modules/@koromix/koffi-darwin-x64/darwin_x64/koffi.node', target),
     true,
+  );
+  assert.equal(
+    runtimeFileExclusion('node_modules/@koromix/koffi-win32-x64/win32_x64/koffi.lib', target),
+    true,
+  );
+  assert.equal(
+    runtimeFileExclusion('node_modules/@mixmark-io/domino/.yarn/releases/yarn.js', target),
+    true,
+  );
+  assert.equal(
+    runtimeFileExclusion('node_modules/@mixmark-io/domino/test/fixture.html', target),
+    true,
+  );
+  assert.equal(
+    runtimeFileExclusion('node_modules/fs-ext/build/Release/obj/fs_ext/src/fs-ext.o', target),
+    true,
+  );
+  assert.equal(runtimeFileExclusion('node_modules/fs-ext/build/Release/fs_ext.pdb', target), true);
+  assert.equal(
+    runtimeFileExclusion('node_modules/node-pty/third_party/conpty/src/winpty.cc', target),
+    true,
+  );
+  assert.equal(
+    runtimeFileExclusion('node_modules/node-pty/third_party/conpty/src/winpty.cc', {
+      platform: 'win32',
+      arch: 'x64',
+    }),
+    false,
   );
   assert.equal(runtimeFileExclusion('node_modules/extension/assets/unknown.bin', target), false);
 });

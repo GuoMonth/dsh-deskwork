@@ -26,6 +26,6 @@ ERP uses the current website and task browser; it owns configuration and storage
 
 macOS data lives in `~/Library/Application Support/dsh-deskwork`; updates retain websites and conversations. Login after restart depends on the website's cookie lifetime. Old confirmations do not become new authorization.
 
-Regression checks cover ordinary DOM forms, links, buttons and native selects. Cross-origin frames, closed Shadow DOM, Canvas, complex controls, upload/download and general SSO remain unaccepted; take over when needed. This release's deterministic regression and installation checks are in the [release notes](releases/0.2.2.md#english). Live-model business tasks and user macOS acceptance remain pending.
+Regression checks cover ordinary DOM forms, links, buttons and native selects. Cross-origin frames, closed Shadow DOM, Canvas, complex controls, upload/download and general SSO remain unaccepted; take over when needed. This release's deterministic regression and installation checks are in the [release notes](releases/0.2.3.md#english). Live-model business tasks and user macOS acceptance remain pending.
 
 Local commands, fixtures and checks are in [Contributing](../CONTRIBUTING.md).

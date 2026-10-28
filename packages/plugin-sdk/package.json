@@ -1,6 +1,6 @@
 {
   "name": "@guomonth/deskwork-plugin-sdk",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Typed task browser client for DSH Deskwork plugins",
   "license": "MIT",
   "type": "module",
@@ -27,8 +27,8 @@
     "zod": "4.5.4"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.4",
-    "@deepseek-ai/dsh-browser-use": "0.2.0-rc.2"
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-browser-use": "0.2.1-rc.3"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {

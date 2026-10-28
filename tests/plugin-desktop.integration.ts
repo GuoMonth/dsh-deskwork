@@ -92,7 +92,7 @@ await test(
       const installationId = (await readdir(installations))[0];
       assert.ok(installationId);
       const installation = z
-        .object({ executable: z.string(), node: z.string(), electron: z.literal('44.0.0') })
+        .object({ executable: z.string(), node: z.string(), electron: z.literal('44.7.0') })
         .parse(
           JSON.parse(
             await readFile(

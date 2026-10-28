@@ -31,6 +31,7 @@ export class DshRuntime {
   private transport: JsonRpcLineTransport | undefined;
   private stderr = '';
   private closed = false;
+  private readonly openedSessions = new Set<string>();
   private readonly options: RuntimeOptions;
   constructor(options: RuntimeOptions) {
     this.options = options;
@@ -65,10 +66,11 @@ export class DshRuntime {
       ...[
         'persistent-bash',
         'persistent-pwsh',
-        'str-replace-editor',
         'terminal-bash',
         'terminal-pwsh',
         'pty',
+        'tool-fs',
+        'tool-working-directory',
       ].map((id) => ({ id, disabled: true })),
       {
         id: 'llm-deepseek',
@@ -214,11 +216,22 @@ export class DshRuntime {
 
   async prompt(sessionId: string, text: string): Promise<void> {
     await this.start();
-    const receipt = await this.request('deskwork/session/prompt', {
+    if ((this.options.resumeSession ?? false) && !this.openedSessions.has(sessionId)) {
+      try {
+        await this.request('session/resume', { sessionId });
+      } catch (error) {
+        throw new Error(
+          'The native conversation log is missing. Keep the saved conversation and start a new task; it cannot be reconstructed from chat text.',
+          { cause: error },
+        );
+      }
+      this.openedSessions.add(sessionId);
+    }
+    const receipt = await this.request('session/prompt', {
       sessionId,
-      text,
-      mustResume: this.options.resumeSession ?? false,
+      contentBlocks: [{ type: 'text', text }],
     });
+    this.openedSessions.add(sessionId);
     z.object({ messageId: z.string() }).parse(receipt);
   }
 

@@ -137,7 +137,7 @@ await test(
       completed = new Promise<void>((resolve) => {
         complete = resolve;
       });
-      runtime = new DshRuntime(options);
+      runtime = new DshRuntime({ ...options, resumeSession: true });
       await runtime.prompt('deskwork-test', '恢复后继续说明');
       await Promise.race([
         completed,

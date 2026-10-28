@@ -26,6 +26,6 @@ ERP 使用当前网站与任务浏览器，配置和存储由插件管理。经�
 
 macOS 数据目录为 `~/Library/Application Support/dsh-deskwork`，升级保留网址和对话。重启后的登录取决于网站 Cookie 有效期；旧任务确认不会迁移为新授权。
 
-普通 DOM 表单、链接、按钮和原生选择框有回归覆盖。跨域 iframe、封闭 Shadow DOM、Canvas、复杂控件、上传下载和通用 SSO 未完成验收，遇到时请接手。当前版本的确定性回归与安装验证见[发布说明](releases/0.2.2.md#中文)；真实模型业务任务和用户 macOS 验收待完成。
+普通 DOM 表单、链接、按钮和原生选择框有回归覆盖。跨域 iframe、封闭 Shadow DOM、Canvas、复杂控件、上传下载和通用 SSO 未完成验收，遇到时请接手。当前版本的确定性回归与安装验证见[发布说明](releases/0.2.3.md#中文)；真实模型业务任务和用户 macOS 验收待完成。
 
 本地开发命令、夹具和验证方式见[参与开发](../CONTRIBUTING.md)。

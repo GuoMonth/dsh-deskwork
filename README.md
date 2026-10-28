@@ -4,7 +4,7 @@
 
 Sign in to your business systems and work with AI in the same browser session. Deskwork is a local desktop workspace powered by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Copilot shows the page beside the conversation; Agent expands the conversation while keeping the same task.
 
-Current release: **0.2.2**, with **DSH 0.2.0-rc.2** (upstream prerelease). ERP integration uses **0.1.1**. See [release notes](docs/releases/0.2.2.md#english).
+Current release: **0.2.3**, with **DSH 0.2.1-rc.3** (upstream prerelease). ERP integration uses **0.1.2**. See [release notes](docs/releases/0.2.3.md#english).
 
 ## Download
 
