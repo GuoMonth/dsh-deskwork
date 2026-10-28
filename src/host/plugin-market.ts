@@ -15,6 +15,36 @@ const entrySchema = z.object({
   npm: z.string().nullish(),
   tarball: z.string().nullish(),
 });
+async function readCatalogBody(response: Response): Promise<string> {
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > marketCatalogMaxBytes)
+    throw new Error('Marketplace directory too large');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > marketCatalogMaxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error('Marketplace directory too large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
 export function parseMarketCatalog(raw: unknown): MarketPlugin[] {
   return catalogSchema.parse(raw).plugins.flatMap((item) => {
     const entry = entrySchema.safeParse(item);
@@ -39,8 +69,7 @@ export class PluginMarket {
         throw new Error(
           `Marketplace loading failed (${String(response.status)}). Try again later.`,
         );
-      const body = await response.text();
-      if (body.length > marketCatalogMaxBytes) throw new Error('Marketplace directory too large');
+      const body = await readCatalogBody(response);
       const raw: unknown = JSON.parse(body);
       this.cache = { at: Date.now(), entries: parseMarketCatalog(raw) };
     }
