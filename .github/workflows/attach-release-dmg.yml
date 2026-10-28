@@ -1,0 +1,55 @@
+name: Attach release DMG
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing GitHub release tag
+        required: true
+        type: string
+      artifact_run_id:
+        description: Actions run containing the macOS DMG artifact
+        required: true
+        type: string
+      artifact_name:
+        description: Artifact name
+        required: true
+        default: macos-arm64-preview
+        type: string
+      asset_name:
+        description: Release asset filename
+        required: true
+        default: DSH-Deskwork-mac-arm64.dmg
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+      - name: Upload DMG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          ASSET_NAME: ${{ inputs.asset_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+\.[0-9]+)?$ ]]
+          [[ "$ASSET_NAME" =~ ^[A-Za-z0-9._-]+\.dmg$ ]]
+          dmg=$(find artifact -type f -name '*.dmg' -print -quit)
+          test -n "$dmg"
+          cp "$dmg" "$ASSET_NAME"
+          sha=$(sha256sum "$ASSET_NAME" | cut -d' ' -f1)
+          echo "DMG_SHA256=$sha" >> "$GITHUB_STEP_SUMMARY"
+          echo "DMG_SHA256=$sha"
+          gh release upload "$RELEASE_TAG" "$ASSET_NAME" --repo "$GITHUB_REPOSITORY"
