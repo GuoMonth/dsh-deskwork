@@ -4,6 +4,8 @@ import type { MarketPlugin } from '../core/plugin-contracts.ts';
 
 // The same public catalog used by dsh-market; never execute its `install` shell text.
 export const marketCatalogURL = 'https://awesome-dsh-plugin.com/plugins.json';
+/** Bound the public catalog well above its current ~9.5 MB while rejecting runaway responses. */
+export const marketCatalogMaxBytes = 32_000_000;
 const catalogSchema = z.object({ plugins: z.array(z.unknown()).max(20000) });
 const entrySchema = z.object({
   name: z.string(),
@@ -38,7 +40,7 @@ export class PluginMarket {
           `Marketplace loading failed (${String(response.status)}). Try again later.`,
         );
       const body = await response.text();
-      if (body.length > 8000000) throw new Error('Marketplace directory too large');
+      if (body.length > marketCatalogMaxBytes) throw new Error('Marketplace directory too large');
       const raw: unknown = JSON.parse(body);
       this.cache = { at: Date.now(), entries: parseMarketCatalog(raw) };
     }
