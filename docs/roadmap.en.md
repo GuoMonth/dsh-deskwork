@@ -2,7 +2,7 @@
 
 [简体中文](roadmap.md) · [Documentation](README.en.md)
 
-[0.2.2](releases/0.2.2.md#english) is released: configured websites, native session recovery, task approvals and plugin website context are available. See [verification](experiments/2026-10-10-rc2-native-convergence.md); Issues track tasks.
+[0.2.3](releases/0.2.3.md#english) is released: configured websites, native session recovery, task approvals and plugin website context are available, aligned with DSH 0.2.1-rc.3. See [verification](experiments/2026-10-28-dsh-021-alignment.md); Issues track tasks.
 
 | Area                                                    | Delivered                                                       | Next                                                                                              |
 | ------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |

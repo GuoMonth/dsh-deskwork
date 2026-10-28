@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'node:http';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DshRuntime } from '../src/runtime/dsh-runtime.ts';
@@ -112,14 +112,35 @@ for (const outcome of [
         assert.equal(executions, outcome === 'allowed-once' ? 1 : 0);
         const events = audit.map((raw) => JSON.stringify(raw));
         assert.equal(events.filter((raw) => raw.includes('approval/asked')).length, 1);
-        assert.equal(events.filter((raw) => raw.includes('approval/decided')).length, 1);
-        assert.ok(
-          events.some(
-            (raw) =>
-              raw.includes('approval/decided') &&
-              raw.includes(outcome === 'late-answer' ? 'cancelled' : outcome),
-          ),
-        );
+        if (outcome === 'late-answer') {
+          // The official SDK unsubscribes session notifications before disposing
+          // agents, so the shutdown cancellation is durable but not live.
+          const files = await readdir(join(directory, 'sessions'), { recursive: true });
+          const sessionFile = files.find((file) => file.endsWith('.jsonl'));
+          assert.ok(sessionFile);
+          const durable = (await readFile(join(directory, 'sessions', sessionFile), 'utf8'))
+            .trim()
+            .split('\n')
+            .map((line): unknown => JSON.parse(line))
+            .filter(
+              (entry): entry is { type: string; data: { outcome?: string } } =>
+                typeof entry === 'object' &&
+                entry !== null &&
+                'type' in entry &&
+                typeof entry.type === 'string',
+            );
+          assert.equal(durable.filter((entry) => entry.type === 'approval/asked').length, 1);
+          assert.equal(durable.filter((entry) => entry.type === 'approval/decided').length, 1);
+          assert.equal(
+            durable.find((entry) => entry.type === 'approval/decided')?.data.outcome,
+            'cancelled',
+          );
+        } else {
+          assert.equal(events.filter((raw) => raw.includes('approval/decided')).length, 1);
+          assert.ok(
+            events.some((raw) => raw.includes('approval/decided') && raw.includes(outcome)),
+          );
+        }
       } finally {
         decision.resolve({ outcome: 'cancelled' });
         await runtime.close();

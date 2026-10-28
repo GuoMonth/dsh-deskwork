@@ -58,9 +58,11 @@ await test(
     const executablePath = process.env['DESKWORK_TEST_EXECUTABLE'];
     const launch = (systemLocale: 'en' | 'zh'): Promise<ElectronApplication> => {
       const systemTag = systemLocale === 'zh' ? 'zh-CN' : 'en-US';
+      // Electron 44.7 rejects LC_ALL/LANG names whose locale is not installed.
+      // LANGUAGE alone selects Chromium's locale; keep the POSIX locale valid.
       const environment =
         process.platform === 'linux'
-          ? { ...process.env, LANGUAGE: systemTag, LC_ALL: systemTag, LANG: systemTag }
+          ? { ...process.env, LANGUAGE: systemTag, LC_ALL: 'C.UTF-8', LANG: 'C.UTF-8' }
           : undefined;
       return electron.launch({
         ...(environment ? { env: environment } : {}),

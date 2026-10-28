@@ -32,10 +32,10 @@ export async function searchDocuments(
 }
 
 export const developmentCapabilities = {
-  version: '0.1.0-alpha.3',
-  dshVersion: '0.2.0-rc.2',
+  version: '0.1.0-alpha.4',
+  dshVersion: '0.2.1-rc.3',
   sdkPackage: '@guomonth/deskwork-plugin-sdk',
-  sdkVersion: '0.1.0-alpha.3',
+  sdkVersion: '0.1.0-alpha.4',
   documentation: 'offline',
   browserConnection: 'explicit-desktop-connection',
   browserSdk: ['observe', 'act'],

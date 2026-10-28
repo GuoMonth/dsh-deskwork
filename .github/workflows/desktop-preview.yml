@@ -29,8 +29,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p .artifacts/erp-package
-          npm pack @guosheng_047/dsh-erp@0.1.1 --ignore-scripts --pack-destination .artifacts/erp-package
-          printf 'DESKWORK_ERP_TARBALL=%s/.artifacts/erp-package/guosheng_047-dsh-erp-0.1.1.tgz\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          npm pack @guosheng_047/dsh-erp@0.1.2 --ignore-scripts --pack-destination .artifacts/erp-package
+          printf 'DESKWORK_ERP_TARBALL=%s/.artifacts/erp-package/guosheng_047-dsh-erp-0.1.2.tgz\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
       - run: node --test tests/runtime.integration.ts tests/native-approval.integration.ts tests/desktop.integration.ts tests/browser-boundary.integration.ts tests/plugin-runtime.integration.ts tests/plugin-desktop.integration.ts tests/development-desktop.integration.ts tests/locale-desktop.integration.ts
       - run: node --test tests/native-erp.integration.ts
       - run: npm run package:prepare > .artifacts/package-mac.log 2>&1

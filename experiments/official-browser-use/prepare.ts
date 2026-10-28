@@ -17,7 +17,7 @@ await writeFile(
           '@deepseek-ai/dsh',
           '@deepseek-ai/dsh-browser-use',
           '@deepseek-ai/dsh-experimental-browser-use-playwright-mcp',
-        ].map((name) => [name, '0.2.0-rc.2']),
+        ].map((name) => [name, '0.2.1-rc.3']),
       ),
     },
     null,
