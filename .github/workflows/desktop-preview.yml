@@ -34,7 +34,11 @@ jobs:
       - run: node --test tests/runtime.integration.ts tests/native-approval.integration.ts tests/desktop.integration.ts tests/browser-boundary.integration.ts tests/plugin-runtime.integration.ts tests/plugin-desktop.integration.ts tests/development-desktop.integration.ts tests/locale-desktop.integration.ts
       - run: node --test tests/native-erp.integration.ts
       - run: npm run package:prepare > .artifacts/package-mac.log 2>&1
-      - run: node node_modules/electron-builder/cli.js --mac --arm64 --publish never >> .artifacts/package-mac.log 2>&1
+      - run: |
+          # The sealed runtime has >40k files; macOS signing exhausts the default
+          # open-file limit while walking them.
+          ulimit -n 65536 || ulimit -n 10240
+          node node_modules/electron-builder/cli.js --mac --arm64 --publish never >> .artifacts/package-mac.log 2>&1
         env:
           # Preview uses ad-hoc signing only; this job receives no signing credentials.
           CSC_FOR_PULL_REQUEST: 'true'
