@@ -15,6 +15,7 @@ export default function afterSign(context) {
     'codesign',
     [
       '--force',
+      '--deep',
       '--sign',
       '-',
       '--options',
