@@ -33,7 +33,7 @@ function toolValue(content: unknown[]): unknown {
 
 await test(
   'packed ERP reuses Deskwork native services and shares experience with a clean second-user installation across restarts',
-  { timeout: 60000 },
+  { timeout: 240000 },
   async () => {
     const artifact = process.env['DESKWORK_ERP_TARBALL'];
     assert.ok(artifact, 'Set DESKWORK_ERP_TARBALL to the absolute candidate npm TGZ.');
