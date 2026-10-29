@@ -15,6 +15,11 @@ import {
   messagesText,
 } from '../tests/fixtures/messages.ts';
 
+if (process.env['DESKWORK_LIVE_MARKET'] !== '1') {
+  console.log('Live market probe is manual and external; set DESKWORK_LIVE_MARKET=1 to run it.');
+  process.exit(0);
+}
+
 const source =
   'https://codeload.github.com/omdsh-dev/dsh-tool-calculator/tar.gz/b2007a13f06bcf75bf07b9d277ee8d434a316490';
 const entries = await new PluginMarket().search('dsh-tool-calculator');

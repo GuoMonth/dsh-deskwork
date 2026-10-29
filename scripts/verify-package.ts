@@ -100,7 +100,10 @@ try {
   ]);
   if (code === 0 && process.env['DESKWORK_ERP_TARBALL'])
     code = await runChecks(['--test', 'tests/native-erp.integration.ts']);
-  if (code === 0) code = await runChecks(['experiments/market-runtime.integration.ts']);
+  if (code === 0 && process.env['DESKWORK_LIVE_MARKET'] === '1')
+    code = await runChecks(['experiments/market-runtime.integration.ts']);
+  else if (code === 0)
+    console.log('Skipped the external live-market probe; set DESKWORK_LIVE_MARKET=1 to run it.');
   if (code === 0) await verifyRuntime(resources);
   process.exitCode = code;
 } finally {
