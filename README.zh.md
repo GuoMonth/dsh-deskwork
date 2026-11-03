@@ -4,7 +4,7 @@
 
 登录业务系统，在同一浏览器会话里与 AI 协作。Deskwork 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的本地桌面工作台。Copilot 并排显示页面和对话；Agent 展开对话，保留当前任务。
 
-当前版本 **0.2.3**，使用 **DSH 0.2.1-rc.3**（上游预发布版），ERP 集成使用 **0.1.2**。详见[发布说明](docs/releases/0.2.3.md#中文)。
+当前源码锁定 **DSH 0.2.1-rc.5**（npm `latest` / `next`，上游预发布版）。已发布的 **0.2.3** 与 ERP **0.1.2** 使用 DSH 0.2.1-rc.3 构建。官方插件门禁会拒绝该 ERP 包，直到它按 rc.5 重新发布。详见[发布说明](docs/releases/0.2.3.md#中文)与 [rc.5 对齐记录](docs/experiments/2026-11-03-dsh-021-rc5-alignment.md)。
 
 ## 下载
 
