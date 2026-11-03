@@ -29,12 +29,12 @@ await test('runtime descriptor rejects a wrong target and missing or changed nat
     for (const name of ['@deepseek-ai/dsh', 'pnpm'])
       await writeFile(
         join(root, 'node_modules', name, 'package.json'),
-        JSON.stringify({ name, version: name === 'pnpm' ? '11.28.5' : '0.2.1-rc.3' }),
+        JSON.stringify({ name, version: name === 'pnpm' ? '11.28.5' : '0.2.1-rc.5' }),
       );
     await sealRuntime(root, {
       schemaVersion: 1,
       appVersion: '0.2.0-alpha.2',
-      dshVersion: '0.2.1-rc.3',
+      dshVersion: '0.2.1-rc.5',
       electronVersion: '44.7.0',
       nodeVersion: '24.21.0',
       nodeAbi: '149',
@@ -42,7 +42,7 @@ await test('runtime descriptor rejects a wrong target and missing or changed nat
       lockSha256: 'fixture',
       platform: 'darwin',
       arch: 'arm64',
-      packages: { '@deepseek-ai/dsh': '0.2.1-rc.3', pnpm: '11.28.5' },
+      packages: { '@deepseek-ai/dsh': '0.2.1-rc.5', pnpm: '11.28.5' },
     });
     const target = { platform: 'darwin', arch: 'arm64' };
     await verifyRuntime(root, target);

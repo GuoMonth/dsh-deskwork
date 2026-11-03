@@ -306,7 +306,7 @@ await test(
         .object({ serverInfo: z.object({ version: z.string() }) })
         .parse(initialized).serverInfo.version;
       const runtimeVersion = z
-        .object({ version: z.literal('0.2.1-rc.3') })
+        .object({ version: z.literal('0.2.1-rc.5') })
         .parse(
           JSON.parse(
             await readFile(join(official, 'node_modules/@deepseek-ai/dsh/package.json'), 'utf8'),
@@ -352,7 +352,7 @@ await test(
           {
             dsh: runtimeVersion,
             sdkProtocolVersion: protocolVersion,
-            provider: '0.2.1-rc.3',
+            provider: runtimeVersion,
             playwrightMcp: '0.0.80',
             electron: '44.7.0',
             isolation: 'host',

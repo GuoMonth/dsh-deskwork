@@ -163,7 +163,7 @@ try {
           source,
           catalog: 'https://awesome-dsh-plugin.com/plugins.json',
           installed: manager.state().installed.map(({ name, version }) => ({ name, version })),
-          dsh: '0.2.1-rc.3',
+          dsh: runtimeDescriptor.dshVersion,
           platform: process.platform,
           arch: process.arch,
           tool: 'calculator',

@@ -28,7 +28,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-browser-use": "0.2.1-rc.3"
+    "@deepseek-ai/dsh-browser-use": "0.2.1-rc.5"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
